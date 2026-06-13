@@ -8,10 +8,10 @@ Package the server as a single container with the embedding model baked in at bu
 
 ## Acceptance criteria
 
-- [ ] A Docker image builds with the embedding model included; the container starts with no outbound network needed for embeddings
-- [ ] Data persists across container restarts via a mounted volume
-- [ ] Example environment/config (`.env.example`, compose file) is provided
-- [ ] A real agent connects to the running container and completes post → query → confirm
+- [x] A Docker image builds with the embedding model included; the container starts with no outbound network needed for embeddings
+- [x] Data persists across container restarts via a mounted volume
+- [x] Example environment/config (`.env.example`, compose file) is provided
+- [x] A real agent connects to the running container and completes post → query → confirm
 
 ## Blocked by
 

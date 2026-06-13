@@ -1,0 +1,25 @@
+# Build context hygiene: never ship local installs, data, or the dev model cache
+# into the image. Dependencies are installed fresh and the model is baked during
+# the build (see Dockerfile).
+**/node_modules
+**/dist
+**/local_cache
+
+# Local databases and WAL/SHM sidecars (data lives on the mounted volume)
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+
+# Env files carry secrets/tokens — pass them at run time, never bake them in
+.env
+.env.*
+!.env.example
+
+# VCS / editor / OS noise
+.git
+.gitignore
+*.log
+.DS_Store
+.vscode
+.idea

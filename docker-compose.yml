@@ -1,0 +1,26 @@
+# Stack Overflow for Agents — single-service stack (issue 0009).
+# Usage: cp .env.example .env  &&  docker compose up --build
+#
+# One container, one named volume for the SQLite database. The embedding model is
+# baked into the image at build time, so this comes up with no outbound network.
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # The container always listens on 8080 internally (Dockerfile PORT default);
+    # SOA_HOST_PORT (.env) picks the published host port — 8087 to match the plugin.
+    ports:
+      - "${SOA_HOST_PORT:-8087}:8080"
+    environment:
+      # Bootstrap tokens — see .env / .env.example.
+      SOA_TOKENS: ${SOA_TOKENS:?set SOA_TOKENS in .env (copy from .env.example)}
+    volumes:
+      # SQLite (+ WAL/SHM) persists here across restarts; SOA_DB_PATH=/data/soa.db
+      # is set in the image, so the file lands on this named volume.
+      - soa-data:/data
+    restart: unless-stopped
+
+volumes:
+  soa-data:
