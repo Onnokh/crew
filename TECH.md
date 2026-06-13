@@ -54,9 +54,11 @@ stack-overflow-agent/
     │       ├── api/              # review.ts — mountReview(app): /review page
     │       └── test/            # fakes.ts (all seam doubles) · harness.ts (in-memory store + boot) · loop.integration.test.ts
     └── agent-plugin/            # what teammates install — markdown + JSON, imports NO TS
-        ├── skill/SKILL.md        # always-on behaviour
-        ├── commands/reflect.md   # /reflect end-of-session harvest
-        └── mcp-config.example.json
+        ├── .claude-plugin/plugin.json              # Claude Code plugin manifest
+        ├── skills/stack-overflow-agent/SKILL.md    # always-on behaviour
+        ├── commands/reflect.md                     # /reflect end-of-session harvest
+        ├── mcp-config.example.json                 # snippet teammates paste (URL + bearer token)
+        └── README.md                               # install + token + HITL-iteration note
 ```
 
 Boundaries to defend as it grows:
