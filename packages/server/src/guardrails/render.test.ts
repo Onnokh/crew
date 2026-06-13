@@ -17,6 +17,7 @@ function post(overrides: Partial<Post> = {}): Post {
     createdBy: "user_alice",
     createdAt: NOW - 3 * DAY,
     lastConfirmed: null,
+    views: 0,
     ...overrides,
   };
 }
@@ -24,7 +25,7 @@ function post(overrides: Partial<Post> = {}): Post {
 describe("renderResults (guardrail envelope)", () => {
   it("frames results as colleague notes to verify, not ground truth", () => {
     const out = renderResults(
-      [{ post: post(), authorName: "Alice", confirms: 0, flags: 0, notes: [] }],
+      [{ post: post(), authorName: "Alice", confirms: 0, flags: 0, views: 0, notes: [] }],
       NOW,
     );
     // Guardrail framing must be present: colleague-notes + data-not-instructions.
@@ -34,7 +35,7 @@ describe("renderResults (guardrail envelope)", () => {
 
   it("renders situation, body, and a provenance line per Post", () => {
     const out = renderResults(
-      [{ post: post(), authorName: "Alice", confirms: 0, flags: 0, notes: [] }],
+      [{ post: post(), authorName: "Alice", confirms: 0, flags: 0, views: 0, notes: [] }],
       NOW,
     );
     expect(out).toContain(
@@ -44,13 +45,13 @@ describe("renderResults (guardrail envelope)", () => {
       "Pin onnxruntime-node to the version fastembed expects.",
     );
     expect(out).toContain(
-      "posted by Alice in stack-overflow-agent, 3d ago · 0 confirms / 0 flags",
+      "post_1 · posted by Alice in stack-overflow-agent, 3d ago · 0 confirms / 0 flags / 0 views",
     );
   });
 
   it("snapshot: a single result envelope", () => {
     const out = renderResults(
-      [{ post: post(), authorName: "Alice", confirms: 0, flags: 0, notes: [] }],
+      [{ post: post(), authorName: "Alice", confirms: 0, flags: 0, views: 0, notes: [] }],
       NOW,
     );
     expect(out).toMatchInlineSnapshot(`
@@ -62,7 +63,7 @@ describe("renderResults (guardrail envelope)", () => {
 
       Pin onnxruntime-node to the version fastembed expects.
 
-      _posted by Alice in stack-overflow-agent, 3d ago · 0 confirms / 0 flags_"
+      _post_1 · posted by Alice in stack-overflow-agent, 3d ago · 0 confirms / 0 flags / 0 views_"
     `);
   });
 
@@ -78,14 +79,23 @@ describe("renderResults (guardrail envelope)", () => {
 
   it("appends last-confirmed only when the Post has been confirmed", () => {
     const confirmed: RenderResult = {
-      post: post({ lastConfirmed: NOW - 2 * DAY }),
+      post: post({ lastConfirmed: NOW - 2 * DAY, views: 7 }),
       authorName: "Alice",
       confirms: 3,
       flags: 1,
+      views: 7,
       notes: [],
     };
     const out = renderResults([confirmed], NOW);
-    expect(out).toContain("3 confirms / 1 flags · last confirmed 2d ago");
+    expect(out).toContain("3 confirms / 1 flags / 7 views · last confirmed 2d ago");
+  });
+
+  it("shows the view tally in the provenance line, even with no confirms or flags", () => {
+    const out = renderResults(
+      [{ post: post({ views: 42 }), authorName: "Alice", confirms: 0, flags: 0, views: 42, notes: [] }],
+      NOW,
+    );
+    expect(out).toContain("0 confirms / 0 flags / 42 views");
   });
 
   it("separates multiple results with a horizontal rule", () => {
@@ -96,6 +106,7 @@ describe("renderResults (guardrail envelope)", () => {
           authorName: "Alice",
           confirms: 0,
           flags: 0,
+          views: 0,
           notes: [],
         },
         {
@@ -103,6 +114,7 @@ describe("renderResults (guardrail envelope)", () => {
           authorName: "Bob",
           confirms: 0,
           flags: 0,
+          views: 0,
           notes: [],
         },
       ],
@@ -118,6 +130,7 @@ describe("renderResults (guardrail envelope)", () => {
       authorName: "Alice",
       confirms: 2,
       flags: 1,
+      views: 0,
       notes: [
         { verdict: "confirm", createdAt: NOW - 2 * DAY, text: "works on Node 22" },
         { verdict: "flag", createdAt: NOW - 7 * DAY, text: "key renamed in v6" },

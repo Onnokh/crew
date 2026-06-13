@@ -75,6 +75,16 @@ export type PostRepository = {
   getEventsForPosts(postIds: readonly string[]): Promise<PostEvent[]>;
 
   /**
+   * Increment the denormalized `views` counter by one for each of the given
+   * Posts — recorded when `query` surfaces them. Unlike {@link recordEvent} this
+   * writes no event: a view is a display-only popularity signal, not a trust
+   * signal, so it is a bare counter with nothing richer to recompute later. A
+   * no-op for ids that don't exist and for an empty list. Best-effort batched
+   * write; it never affects ranking.
+   */
+  recordViews(postIds: readonly string[]): Promise<void>;
+
+  /**
    * The most recently created Posts, newest first, capped at `limit`. Unlike the
    * search legs this returns Posts of EVERY status — the human review page
    * (slice 0007) must see retired Posts too, so they can be restored. Agent

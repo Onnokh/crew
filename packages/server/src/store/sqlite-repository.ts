@@ -50,6 +50,7 @@ export class SqliteRepository implements PostRepository {
       createdBy: input.createdBy,
       createdAt: this.clock.now(),
       lastConfirmed: null,
+      views: 0,
     };
 
     // Embed BEFORE the transaction: embedding is async and can throw, and a
@@ -145,6 +146,17 @@ export class SqliteRepository implements PostRepository {
     return eventsForPosts(this.raw, postIds).map(fromEventRow);
   }
 
+  async recordViews(postIds: readonly string[]): Promise<void> {
+    if (postIds.length === 0) return;
+    // One batched UPDATE: bump the display-only counter for every surfaced Post.
+    // No event row and no existence check — a missing id simply matches nothing,
+    // and the count never feeds ranking, so this stays a cheap single statement.
+    const placeholders = postIds.map(() => "?").join(", ");
+    this.raw
+      .prepare(`UPDATE posts SET views = views + 1 WHERE id IN (${placeholders})`)
+      .run(...postIds);
+  }
+
   async listRecentPosts(limit: number): Promise<Post[]> {
     const rows = this.db
       .select()
@@ -163,7 +175,7 @@ export class SqliteRepository implements PostRepository {
     const rows = this.raw
       .prepare(
         `SELECT p.id, p.situation, p.body, p.environment, p.repo, p.status,
-                p.created_by, p.created_at, p.last_confirmed
+                p.created_by, p.created_at, p.last_confirmed, p.views
            FROM posts p
            JOIN (
              SELECT post_id, MAX(created_at) AS last_flagged
@@ -184,6 +196,7 @@ export class SqliteRepository implements PostRepository {
       created_by: string;
       created_at: number;
       last_confirmed: number | null;
+      views: number;
     }>;
     return rows.map((r) => ({
       id: r.id,
@@ -195,6 +208,7 @@ export class SqliteRepository implements PostRepository {
       createdBy: r.created_by,
       createdAt: r.created_at,
       lastConfirmed: r.last_confirmed,
+      views: r.views,
     }));
   }
 
@@ -240,6 +254,7 @@ function toRow(post: Post): PostRow {
     createdBy: post.createdBy,
     createdAt: post.createdAt,
     lastConfirmed: post.lastConfirmed,
+    views: post.views,
   };
 }
 
@@ -266,5 +281,6 @@ function fromRow(row: PostRow): Post {
     createdBy: row.createdBy,
     createdAt: row.createdAt,
     lastConfirmed: row.lastConfirmed,
+    views: row.views,
   };
 }

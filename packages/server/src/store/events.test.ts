@@ -109,3 +109,34 @@ describe("recordEvent (post_events log)", () => {
     expect(await repo.getEventsForPosts([])).toEqual([]);
   });
 });
+
+describe("recordViews (display-only counter)", () => {
+  it("starts at zero and increments per surfacing, batched across Posts", async () => {
+    const a = await seed();
+    const b = await seed();
+    expect((await repo.getPost(a))!.views).toBe(0);
+
+    await repo.recordViews([a, b]);
+    await repo.recordViews([a]);
+
+    expect((await repo.getPost(a))!.views).toBe(2);
+    expect((await repo.getPost(b))!.views).toBe(1);
+  });
+
+  it("is a no-op for an empty list and for unknown ids", async () => {
+    const a = await seed();
+    await repo.recordViews([]);
+    await repo.recordViews(["post_nope"]); // matches nothing, does not throw
+    expect((await repo.getPost(a))!.views).toBe(0);
+  });
+
+  it("never touches the trust counts or last_confirmed", async () => {
+    const a = await seed();
+    await repo.recordViews([a]);
+    await repo.recordViews([a]);
+    const post = (await repo.getPost(a))!;
+    expect(post.views).toBe(2);
+    expect(post.lastConfirmed).toBeNull();
+    expect(await repo.getEventsForPosts([a])).toEqual([]);
+  });
+});

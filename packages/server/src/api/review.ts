@@ -116,12 +116,13 @@ async function authenticateToken(
   return deps.auth.authenticate(incoming);
 }
 
-/** A Post plus the confirm/flag counts the review page shows beside it. */
+/** A Post plus the confirm/flag/view counts the review page shows beside it. */
 type ReviewRow = {
   post: Post;
   authorName: string;
   confirms: number;
   flags: number;
+  views: number;
 };
 
 /**
@@ -147,6 +148,8 @@ async function toRows(deps: Deps, posts: Post[]): Promise<ReviewRow[]> {
       authorName: author?.name ?? "unknown",
       confirms: agg.confirms,
       flags: agg.flags,
+      // A bare counter on the Post, not derived from the event log like the counts above.
+      views: post.views,
     });
   }
   return rows;
@@ -191,7 +194,7 @@ function section(
 
 /** One Post card: situation, body, provenance with counts, and the action control. */
 function card(row: ReviewRow, now: number): string {
-  const { post, authorName, confirms, flags } = row;
+  const { post, authorName, confirms, flags, views } = row;
   const retired = post.status === "retired";
   const action = retired
     ? `<form method="post" action="/review/${esc(post.id)}/restore"><button type="submit">Restore</button></form>`
@@ -204,7 +207,7 @@ function card(row: ReviewRow, now: number): string {
       <p class="body">${esc(post.body)}</p>
       <p class="prov">posted by ${esc(authorName)} in <code>${esc(post.repo)}</code>, ${esc(
         age(post.createdAt, now),
-      )} · ${confirms} confirms / ${flags} flags</p>
+      )} · ${confirms} confirms / ${flags} flags / ${views} views</p>
       <div class="actions">${action}</div>
     </article>`;
 }

@@ -32,6 +32,8 @@ export type RenderResult = {
   confirms: number;
   /** Number of Flags recorded against the Post. */
   flags: number;
+  /** How many times `query` has surfaced this Post — a display-only popularity tally. */
+  views: number;
   /**
    * The few most recent Notes attached to this Post's Confirms/Flags, newest
    * first, already capped by the tool. Empty when no Note-bearing events exist.
@@ -102,16 +104,19 @@ function noteLine(note: RenderNote, now: number): string {
 }
 
 /**
- * The provenance line: who posted it, in which repo, how long ago, and the
- * verdict tally. `last confirmed` is appended only when the Post has a
- * `lastConfirmed` timestamp (none until the confirm slice). Italicized so it
- * reads as metadata, not body.
+ * The provenance line: the Post id, who posted it, in which repo, how long ago,
+ * and the verdict + view tally. The id leads so the querying agent has the `post_xxx`
+ * handle to pass back to `confirm`/`flag` — without it the result is unciteable.
+ * `last confirmed` is appended only when the Post has a `lastConfirmed`
+ * timestamp (none until the confirm slice). Italicized so it reads as metadata,
+ * not body.
  */
 function provenanceLine(result: RenderResult, now: number): string {
-  const { post, authorName, confirms, flags } = result;
+  const { post, authorName, confirms, flags, views } = result;
   const parts = [
+    post.id,
     `posted by ${authorName} in ${post.repo}, ${age(post.createdAt, now)}`,
-    `${confirms} confirms / ${flags} flags`,
+    `${confirms} confirms / ${flags} flags / ${views} views`,
   ];
   if (post.lastConfirmed !== null) {
     parts.push(`last confirmed ${age(post.lastConfirmed, now)}`);

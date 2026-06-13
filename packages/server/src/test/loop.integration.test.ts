@@ -192,6 +192,41 @@ describe("core loop: keyword query → confirm/flag → re-rank, over real FTS5"
   });
 });
 
+describe("query records a view per surfaced Post, display-only", () => {
+  let srv: RunningServer;
+  beforeAll(async () => {
+    srv = await startTestServer();
+  });
+  afterAll(() => srv.stop());
+
+  it("counts up one per query, and the tally shown is the count before this query", async () => {
+    const client = await connect(srv.port);
+    try {
+      const situation = "duckdb segfaults on parquet glob over s3";
+      await callText(client, "post", {
+        situation,
+        body: "Read the files individually instead of a glob.",
+        environment: "duckdb 0.10, s3fs",
+        repo: "analytics",
+      });
+
+      // First surfacing: the Post has never been viewed, so it reads 0 views.
+      let text = await callText(client, "query", { situation });
+      expect(text).toContain("0 confirms / 0 flags / 0 views");
+
+      // Each query records a view, so the tally climbs by one each time. The
+      // count shown is always the value BEFORE the current query's own view.
+      text = await callText(client, "query", { situation });
+      expect(text).toContain("0 confirms / 0 flags / 1 views");
+
+      text = await callText(client, "query", { situation });
+      expect(text).toContain("0 confirms / 0 flags / 2 views");
+    } finally {
+      await client.close();
+    }
+  });
+});
+
 describe("vector leg fuses with keyword: paraphrase finds the Post, over real sqlite-vec", () => {
   let srv: RunningServer;
   beforeAll(async () => {

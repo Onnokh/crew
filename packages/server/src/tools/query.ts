@@ -75,7 +75,8 @@ export type QueryArgs = z.infer<typeof queryParameters>;
  * `rrf × trust × recency × repo_boost` (pure `search/score`). A confirmed Post
  * outranks an equal-relevance unconfirmed one; flags sink a Post; same-repo
  * Posts get a boost when the query carries a `repo`. The few most recent Notes
- * ride along inline.
+ * ride along inline. Each returned Post also has its display-only `views` counter
+ * bumped (it never feeds ranking — purely a popularity tally shown in provenance).
  *
  * Both legs are over-fetched (so trust can lift a Post that ranked lower on pure
  * relevance into the top `limit`), fused, scored, sorted by final score, then
@@ -140,6 +141,9 @@ export function makeQueryTool(repo: PostRepository, clock: Clock) {
             authorName: author?.name ?? "unknown",
             confirms: agg.confirms,
             flags: agg.flags,
+            // The counter as it stood BEFORE this query — the view we record
+            // below counts toward the next query's tally, not this one's.
+            views: post.views,
             notes: recentNotes(events),
           },
           final,
@@ -150,6 +154,11 @@ export function makeQueryTool(repo: PostRepository, clock: Clock) {
       // then keep the top `limit`. Stable: ties hold their fused order.
       scored.sort((a, b) => b.final - a.final);
       const results = scored.slice(0, limit).map((s) => s.result);
+
+      // Every Post we return was surfaced to an agent — bump its view counter.
+      // Display-only (it never feeds ranking), and recorded after scoring so it
+      // can't influence the order it appears in here.
+      await repo.recordViews(results.map((s) => s.post.id));
 
       return renderResults(results, now);
     },

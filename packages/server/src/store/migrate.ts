@@ -18,7 +18,21 @@ export function migrate(db: Database.Database): void {
     .sort();
   for (const file of files) {
     const sqlText = readFileSync(join(dir, file), "utf8");
-    db.exec(sqlText);
+    try {
+      db.exec(sqlText);
+    } catch (err) {
+      // Idempotency for `ALTER ... ADD COLUMN` migrations: SQLite has no
+      // `ADD COLUMN IF NOT EXISTS`, so re-running a file whose column already
+      // exists throws "duplicate column name". Every migration here is written to
+      // be safely re-runnable (the CREATE statements use IF NOT EXISTS); treat an
+      // already-applied column add the same way and skip it. Any other error is a
+      // real migration failure and still aborts boot.
+      if (
+        !(err instanceof Error && /duplicate column name/i.test(err.message))
+      ) {
+        throw err;
+      }
+    }
   }
 }
 

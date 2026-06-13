@@ -32,6 +32,13 @@ export type Post = {
    * purely so ranking avoids a per-query aggregate. Set by a later slice.
    */
   lastConfirmed: number | null;
+  /**
+   * How many times `query` has surfaced this Post — a display-only popularity
+   * counter, incremented on each surfacing. Unlike Confirms/Flags it is a bare
+   * counter, not derived from the event log: a view is not a trust signal and
+   * never feeds ranking, so there is nothing richer to recompute from a log.
+   */
+  views: number;
 };
 
 export type PostStatus = "active" | "retired";

@@ -44,6 +44,12 @@ export const posts = sqliteTable("posts", {
    * Post is confirmed. Source of truth is `post_events` (a later slice).
    */
   lastConfirmed: integer("last_confirmed"),
+  /**
+   * How many times `query` has surfaced this Post — a display-only popularity
+   * counter, NOT a trust signal. Incremented on each surfacing (see
+   * migrations/0005); never feeds ranking.
+   */
+  views: integer("views").notNull().default(0),
 });
 
 /** One Confirm or Flag recorded against a Post — the trust signal source. */
