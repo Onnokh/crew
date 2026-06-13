@@ -29,6 +29,9 @@ importers:
       fastmcp:
         specifier: ^4.1.0
         version: 4.1.0
+      hono:
+        specifier: ^4.12.25
+        version: 4.12.25
       nanoid:
         specifier: ^5.1.5
         version: 5.1.11

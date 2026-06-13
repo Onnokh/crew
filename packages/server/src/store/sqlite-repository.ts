@@ -1,5 +1,5 @@
 import type { Database } from "better-sqlite3";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { NewPostEvent, PostEvent } from "../core/post-event.js";
 import type { NewPost, Post } from "../core/post.js";
@@ -143,6 +143,75 @@ export class SqliteRepository implements PostRepository {
 
   async getEventsForPosts(postIds: readonly string[]): Promise<PostEvent[]> {
     return eventsForPosts(this.raw, postIds).map(fromEventRow);
+  }
+
+  async listRecentPosts(limit: number): Promise<Post[]> {
+    const rows = this.db
+      .select()
+      .from(posts)
+      .orderBy(desc(posts.createdAt), desc(posts.id))
+      .limit(limit)
+      .all();
+    return rows.map(fromRow);
+  }
+
+  async listFlaggedPosts(limit: number): Promise<Post[]> {
+    // A Post is "flagged" if it has at least one flag event; order by its most
+    // recent flag (newest-flagged first). Raw SQL because the ordering key is a
+    // per-Post aggregate over post_events that Drizzle's typed builder doesn't
+    // express cleanly; the store still returns plain Posts, no counts.
+    const rows = this.raw
+      .prepare(
+        `SELECT p.id, p.situation, p.body, p.environment, p.repo, p.status,
+                p.created_by, p.created_at, p.last_confirmed
+           FROM posts p
+           JOIN (
+             SELECT post_id, MAX(created_at) AS last_flagged
+               FROM post_events
+              WHERE verdict = 'flag'
+              GROUP BY post_id
+           ) f ON f.post_id = p.id
+          ORDER BY f.last_flagged DESC, p.id DESC
+          LIMIT ?`,
+      )
+      .all(limit) as Array<{
+      id: string;
+      situation: string;
+      body: string;
+      environment: string;
+      repo: string;
+      status: string;
+      created_by: string;
+      created_at: number;
+      last_confirmed: number | null;
+    }>;
+    return rows.map((r) => ({
+      id: r.id,
+      situation: r.situation,
+      body: r.body,
+      environment: r.environment,
+      repo: r.repo,
+      status: r.status as Post["status"],
+      createdBy: r.created_by,
+      createdAt: r.created_at,
+      lastConfirmed: r.last_confirmed,
+    }));
+  }
+
+  async retirePost(id: string): Promise<void> {
+    this.db
+      .update(posts)
+      .set({ status: "retired" })
+      .where(eq(posts.id, id))
+      .run();
+  }
+
+  async restorePost(id: string): Promise<void> {
+    this.db
+      .update(posts)
+      .set({ status: "active" })
+      .where(eq(posts.id, id))
+      .run();
   }
 
   async findUserByTokenHash(tokenHash: string): Promise<User | null> {

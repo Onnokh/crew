@@ -6,3 +6,6 @@ dist/
 *.sqlite-*
 *.db
 *.db-*
+
+# fastembed model cache (downloaded on first boot, ~30 MB)
+local_cache/

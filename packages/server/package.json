@@ -15,6 +15,7 @@
     "drizzle-orm": "^0.45.2",
     "fastembed": "^2.1.0",
     "fastmcp": "^4.1.0",
+    "hono": "^4.12.25",
     "nanoid": "^5.1.5",
     "sqlite-vec": "^0.1.9",
     "zod": "^4.1.13"

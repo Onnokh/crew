@@ -1,5 +1,6 @@
 import { FastMCP } from "fastmcp";
 import type { IncomingMessage } from "node:http";
+import { mountReview } from "./api/review.js";
 import type { User } from "./core/user.js";
 import type { Deps } from "./deps.js";
 import { registerTools } from "./mcp/register.js";
@@ -30,6 +31,10 @@ export function buildServer(deps: Deps): FastMCP<User> {
   });
 
   registerTools(server, deps);
+
+  // The human surface (slice 0007) hangs off the same Hono app FastMCP exposes,
+  // behind the same auth seam — one app, one port (see TECH.md "Human surface").
+  mountReview(server.getApp(), deps);
 
   return server;
 }

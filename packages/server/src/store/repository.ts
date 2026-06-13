@@ -8,7 +8,7 @@ import type { Candidate, VecCandidate } from "./queries.js";
  * about ranking: it persists Posts and returns them by id, but never ranks or
  * searches them — that lives in `search` (see TECH.md "Storage knows nothing
  * about ranking"). The real implementation is {@link SqliteRepository}; tests
- * use {@link FakePostRepository}.
+ * exercise that same store over an in-memory database (there is no fake repo).
  *
  * Slice 0002 added the write half: {@link createPost} plus the reads needed to
  * attribute a Post and assert it back in tests. Slice 0003 added keyword search
@@ -73,6 +73,36 @@ export type PostRepository = {
    * batched read so a query over k Posts needs one events call, not k.
    */
   getEventsForPosts(postIds: readonly string[]): Promise<PostEvent[]>;
+
+  /**
+   * The most recently created Posts, newest first, capped at `limit`. Unlike the
+   * search legs this returns Posts of EVERY status — the human review page
+   * (slice 0007) must see retired Posts too, so they can be restored. Agent
+   * retrieval never calls this; it goes through the active-only search path.
+   */
+  listRecentPosts(limit: number): Promise<Post[]>;
+
+  /**
+   * Posts that carry at least one Flag, newest-flagged first, capped at `limit`.
+   * Drives the "flagged" section of the review page — the human backstop for the
+   * misinformation loop. Returns Posts of every status (a flagged-then-retired
+   * Post stays visible so it can be restored if the flag was wrong). Counting and
+   * trust still live in `trust/aggregate`; this only selects WHICH Posts to show.
+   */
+  listFlaggedPosts(limit: number): Promise<Post[]>;
+
+  /**
+   * Set a Post's status to `retired`, removing it from agent `query` results
+   * (both search legs filter to `status = 'active'`). The review page's human
+   * backstop; a no-op if the Post does not exist. Idempotent.
+   */
+  retirePost(id: string): Promise<void>;
+
+  /**
+   * Set a Post's status back to `active`, returning it to agent `query` results.
+   * The inverse of {@link retirePost}; a no-op if the Post does not exist.
+   */
+  restorePost(id: string): Promise<void>;
 
   /** Look up a User by the sha256 hash of their bearer token (for auth). */
   findUserByTokenHash(tokenHash: string): Promise<User | null>;
