@@ -24,6 +24,12 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 build-essential \
   && rm -rf /var/lib/apt/lists/*
 
+# Skip onnxruntime-node's CUDA/GPU binary download (~hundreds of MB) — fastembed
+# only ever runs the CPU execution provider, and the CPU runtime ships in the
+# base package. Without this the postinstall pulls the GPU build, bloating the
+# image to ~1.2 GB. Must precede `pnpm install` (its postinstall reads this).
+ENV ONNXRUNTIME_NODE_INSTALL_CUDA=skip
+
 # Install with the lockfile first, using only the manifests, so this layer caches
 # across source-only changes. onlyBuiltDependencies (root package.json) limits
 # build scripts to better-sqlite3 / esbuild / onnxruntime-node.
