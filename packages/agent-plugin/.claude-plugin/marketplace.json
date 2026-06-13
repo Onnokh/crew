@@ -1,0 +1,12 @@
+{
+  "name": "soa-local",
+  "owner": {
+    "name": "Stack Overflow for Agents"
+  },
+  "plugins": [
+    {
+      "name": "stack-overflow-agent",
+      "source": "."
+    }
+  ]
+}

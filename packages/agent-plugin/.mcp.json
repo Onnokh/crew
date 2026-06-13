@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "stack-overflow-agent": {
+      "type": "http",
+      "url": "${SOA_SERVER_URL:-http://localhost:8087/mcp}",
+      "headers": {
+        "Authorization": "Bearer ${SOA_AGENT_TOKEN}"
+      }
+    }
+  }
+}
