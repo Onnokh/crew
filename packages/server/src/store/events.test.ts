@@ -1,0 +1,111 @@
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import * as sqliteVec from "sqlite-vec";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { FakeClock, FakeEmbedder, FakeIdGen } from "../test/fakes.js";
+import { migrate } from "./migrate.js";
+import { SqliteRepository } from "./sqlite-repository.js";
+
+let raw: Database.Database;
+let clock: FakeClock;
+let repo: SqliteRepository;
+
+beforeEach(() => {
+  raw = new Database(":memory:");
+  raw.pragma("foreign_keys = ON");
+  sqliteVec.load(raw);
+  migrate(raw);
+  const db = drizzle(raw);
+  raw
+    .prepare("INSERT INTO users (id, name, token_hash) VALUES (?, ?, ?)")
+    .run("user_alice", "Alice", "hash-alice");
+  clock = new FakeClock();
+  repo = new SqliteRepository(db, raw, clock, new FakeIdGen(), new FakeEmbedder());
+});
+
+afterEach(() => {
+  raw.close();
+});
+
+async function seed(): Promise<string> {
+  const post = await repo.createPost({
+    situation: "s",
+    body: "b",
+    environment: "e",
+    repo: "r",
+    createdBy: "user_alice",
+  });
+  return post.id;
+}
+
+describe("recordEvent (post_events log)", () => {
+  it("records a Confirm with optional note and refreshes last_confirmed", async () => {
+    const id = await seed();
+    expect((await repo.getPost(id))!.lastConfirmed).toBeNull();
+
+    clock.advance(1000);
+    const at = clock.now();
+    const event = await repo.recordEvent({
+      postId: id,
+      verdict: "confirm",
+      note: "worked",
+      createdBy: "user_alice",
+    });
+
+    expect(event.verdict).toBe("confirm");
+    expect(event.reason).toBeNull();
+    expect(event.note).toBe("worked");
+    expect(event.createdAt).toBe(at);
+    // A Confirm refreshes the denormalized last_confirmed.
+    expect((await repo.getPost(id))!.lastConfirmed).toBe(at);
+  });
+
+  it("records a Flag with reason and does NOT touch last_confirmed", async () => {
+    const id = await seed();
+    await repo.recordEvent({
+      postId: id,
+      verdict: "flag",
+      reason: "stale",
+      createdBy: "user_alice",
+    });
+    const events = await repo.getEventsForPosts([id]);
+    expect(events).toHaveLength(1);
+    expect(events[0]!.verdict).toBe("flag");
+    expect(events[0]!.reason).toBe("stale");
+    expect((await repo.getPost(id))!.lastConfirmed).toBeNull();
+  });
+
+  it("rejects an event against a non-existent Post", async () => {
+    await expect(
+      repo.recordEvent({
+        postId: "post_nope",
+        verdict: "confirm",
+        createdBy: "user_alice",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("returns events newest-first and batched across Posts", async () => {
+    const a = await seed();
+    const b = await seed();
+
+    clock.advance(10);
+    await repo.recordEvent({ postId: a, verdict: "confirm", createdBy: "user_alice" });
+    clock.advance(10);
+    await repo.recordEvent({ postId: b, verdict: "flag", reason: "incorrect", createdBy: "user_alice" });
+    clock.advance(10);
+    await repo.recordEvent({ postId: a, verdict: "flag", reason: "duplicate", createdBy: "user_alice" });
+
+    const events = await repo.getEventsForPosts([a, b]);
+    expect(events).toHaveLength(3);
+    // Newest first across the batch.
+    expect(events[0]!.createdAt).toBeGreaterThanOrEqual(events[1]!.createdAt);
+    expect(events[1]!.createdAt).toBeGreaterThanOrEqual(events[2]!.createdAt);
+    expect(events.filter((e) => e.postId === a)).toHaveLength(2);
+    expect(events.filter((e) => e.postId === b)).toHaveLength(1);
+  });
+
+  it("returns an empty array for no ids", async () => {
+    expect(await repo.getEventsForPosts([])).toEqual([]);
+  });
+});
