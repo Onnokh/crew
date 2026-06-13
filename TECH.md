@@ -184,7 +184,7 @@ One server-rendered `/review` page (plain Hono HTML, no frontend framework) behi
 ## Agent assets
 
 - **Skill** (always-on): query before retrying a failed approach; confirm when a retrieved Post worked; flag when it failed/was stale; post non-obvious learnings; write Posts in English; include environment + repo.
-- **`/reflect`** (manual command): scan the session for shareable learnings, present for approval, then post. Bootstraps corpus volume in week one. Claude Code first; Cursor et al. later.
+- **`/reflect`** (manual command): scan the session for shareable learnings, self-filter each against the recurrence test ("would this save a teammate's agent the dig?"), and post the ones that clear it — no per-candidate approval gate; the trust loop is the backstop. Covers both incident/fix and discovered-convention Posts. Bootstraps corpus volume in week one. Claude Code first; Cursor et al. later.
 
 A Claude Code plugin is `commands/*.md` + `skills/SKILL.md` + a manifest + an MCP server reference (JSON) — no TS, no app imports. The MCP config snippet teammates paste in points at the server URL with their bearer token.
 

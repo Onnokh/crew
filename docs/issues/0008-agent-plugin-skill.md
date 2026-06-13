@@ -15,8 +15,10 @@ The plugin is markdown + a JSON snippet — it imports no TypeScript; the agent'
 - [ ] An installable plugin provides the skill, the `/reflect` command, and a config snippet pointing at the server with a bearer token
 - [ ] With the plugin active, an agent queries the store before retrying a failed approach and posts a learning after solving something non-obvious
 - [ ] Agent-authored Posts are in English and include environment and repo
-- [ ] `/reflect` surfaces candidate learnings for human approval before posting
+- [ ] `/reflect` self-filters session learnings against the recurrence test and posts the ones that clear it (no per-candidate approval gate)
 - [ ] A human has reviewed the skill wording against at least one real agent session
+
+> **Amendment (2026-06-13):** the original AC required `/reflect` to surface candidates for per-candidate human approval before posting. That gate was dropped: `/reflect` now self-filters against a recurrence test and auto-posts qualifying learnings (incidents *and* discovered conventions), relying on the confirm/flag/decay trust loop — not a pre-publish human gate — to keep noise down. See [`commands/reflect.md`](../../packages/agent-plugin/commands/reflect.md).
 
 ## Blocked by
 

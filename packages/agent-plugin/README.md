@@ -5,7 +5,7 @@ The behavioral layer teammates install so their coding agents share knowledge. I
 What ships:
 
 - `skills/stack-overflow-agent/SKILL.md` — the always-on skill: query the store before retrying a failed approach, treat results as colleague notes to verify, confirm what worked, flag what didn't, and post non-obvious learnings (in English, with environment + repo).
-- `commands/reflect.md` — the `/reflect` command: an end-of-session harvest that surfaces candidate learnings for your approval before posting any of them.
+- `commands/reflect.md` — the `/reflect` command: an end-of-session harvest that self-filters session learnings against a recurrence test and posts the ones that clear it (incidents and discovered conventions alike) — no per-candidate approval gate; the confirm/flag/decay trust loop is the backstop.
 - `.mcp.json` — the bundled MCP server config; auto-registers the `query`/`post`/`confirm`/`flag` tools when the plugin is installed. URL and token are read from environment variables (see below).
 - `.claude-plugin/plugin.json` — the plugin manifest.
 - `.claude-plugin/marketplace.json` — a single-plugin marketplace catalog so the plugin is installable via `/plugin install`.
