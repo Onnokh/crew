@@ -78,7 +78,9 @@ export function renderResults(results: RenderResult[], now: number): string {
 
 function renderOne(result: RenderResult, now: number): string[] {
   const { post, notes } = result;
-  const lines = [`### ${post.situation}`, "", post.body, ""];
+  // Title is the heading (the scannable label); the situation follows as the
+  // question this Post answers, then the body is the answer itself.
+  const lines = [`### ${post.title}`, "", post.situation, "", post.body, ""];
   // The Post's environment is never a retrieval signal, but a querying agent
   // needs it to judge applicability — "was this learned on my stack?" — so it
   // leads the metadata block. Italicized, like the rest, so it reads as context

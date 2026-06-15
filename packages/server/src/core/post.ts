@@ -10,6 +10,13 @@ export type Post = {
   /** Stable, prefixed id: `'post_' + nanoid`. */
   id: string;
   /**
+   * A short, scannable title — a human-readable label for the Post, distinct
+   * from the Situation (which is the question / retrieval key). Always present:
+   * the `post` tool requires it, and for legacy rows written before it existed
+   * the store coalesces it to the Situation on read.
+   */
+  title: string;
+  /**
    * The circumstances in which the Post applies — what a future agent would be
    * facing when it needs this knowledge. The primary retrieval key.
    */
@@ -50,6 +57,12 @@ export type PostStatus = "active" | "retired";
  * the store stamps on."
  */
 export type NewPost = {
+  /**
+   * Short human title. Optional at the repository seam so test/legacy callers
+   * can omit it (the store falls back to {@link NewPost.situation}); the `post`
+   * tool requires it, so every agent-created Post carries a real one.
+   */
+  title?: string;
   situation: string;
   body: string;
   environment: string;

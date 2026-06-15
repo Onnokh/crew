@@ -20,6 +20,8 @@
 
 /** The fields a Post carries into the scan; matches the `post` tool input. */
 export type ScanInput = {
+  /** Optional so existing callers/tests need not supply it; scanned when present. */
+  title?: string;
   situation: string;
   body: string;
   environment: string;
@@ -139,9 +141,13 @@ const RULES: Rule[] = [
  * `environment` is as dangerous as one in `body`.
  */
 export function scanPost(input: ScanInput): ScanResult {
-  const text = [input.situation, input.body, input.environment, input.repo].join(
-    "\n",
-  );
+  const text = [
+    input.title ?? "",
+    input.situation,
+    input.body,
+    input.environment,
+    input.repo,
+  ].join("\n");
   for (const rule of RULES) {
     if (rule.pattern.test(text)) {
       return { ok: false, category: rule.category, reason: rule.reason };

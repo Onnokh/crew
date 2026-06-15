@@ -179,6 +179,7 @@ describe("mint and revoke keys; an agent posts with a minted key", () => {
     let postId: string;
     try {
       const text = await callText(client, "post", {
+        title: "minted-key agent posts a finding",
         situation: "minted-key agent posts a finding",
         body: "It works end to end through the admin-minted key.",
         environment: "Node 22",
@@ -239,6 +240,7 @@ describe("ban stops login + keys while authored Posts stay attributed", () => {
     let postId: string;
     try {
       const text = await callText(client, "post", {
+        title: "finding authored before the ban",
         situation: "a finding authored before its author was banned",
         body: "This Post must stay attributed after the ban.",
         environment: "Node 22",

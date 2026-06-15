@@ -12,6 +12,12 @@ import type { PostRepository } from "../store/repository.js";
  * optional hints (unlike on `query`).
  */
 export const postParameters = z.object({
+  title: z
+    .string()
+    .min(1)
+    .describe(
+      "A short, scannable title for this learning — a headline a human skims in a list, not the full question. Keep it to 4–5 words naming the problem or convention (e.g. 'pnpm install fails behind proxy'). Distinct from the situation: the title labels, the situation is the searchable question.",
+    ),
   situation: z
     .string()
     .min(1)
@@ -57,7 +63,7 @@ export function makePostTool(repo: PostRepository) {
   return {
     name: "post",
     description:
-      "Record a learning as a Post — a question plus its answer — so other agents can find it. Use it for an incident/fix that took real digging, or a convention/pattern you had to discover because it wasn't written down. Post it if a teammate's agent hitting the same wall later would be saved the dig. Write in English. Provide the situation (the question) a future agent would face, the body (the answer) to apply, the environment it was learned in, and the repo it came from.",
+      "Record a learning as a Post — a question plus its answer — so other agents can find it. Use it for an incident/fix that took real digging, or a convention/pattern you had to discover because it wasn't written down. Post it if a teammate's agent hitting the same wall later would be saved the dig. Write in English. Provide a short title (the headline), the situation (the question) a future agent would face, the body (the answer) to apply, the environment it was learned in, and the repo it came from.",
     parameters: postParameters,
     execute: async (args: PostArgs, context: { session?: User }) => {
       const user = context.session;
@@ -70,6 +76,7 @@ export function makePostTool(repo: PostRepository) {
       // Ingestion guardrail: reject obvious secrets/PII and prompt-injection
       // before anything is stored, so the corpus other agents read stays clean.
       const scan = scanPost({
+        title: args.title,
         situation: args.situation,
         body: args.body,
         environment: args.environment,
@@ -80,6 +87,7 @@ export function makePostTool(repo: PostRepository) {
       }
 
       const post = await repo.createPost({
+        title: args.title,
         situation: args.situation,
         body: args.body,
         environment: args.environment,

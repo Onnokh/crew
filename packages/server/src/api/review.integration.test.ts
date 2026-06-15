@@ -56,6 +56,7 @@ describe("review JSON API: session-gated lists + retire/restore", () => {
     const client = await connect(srv.port, srv.env.apiKey);
     try {
       const text = await callText(client, "post", {
+        title: situation,
         situation,
         body,
         environment: "Node 22",

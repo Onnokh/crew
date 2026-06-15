@@ -38,6 +38,7 @@ const LIST_LIMIT = 50;
  */
 export type ReviewRow = {
   id: string;
+  title: string;
   situation: string;
   body: string;
   environment: string;
@@ -113,6 +114,7 @@ async function toRows(deps: Deps, posts: Post[]): Promise<ReviewRow[]> {
     const author = await deps.repo.getUser(post.createdBy);
     rows.push({
       id: post.id,
+      title: post.title,
       situation: post.situation,
       body: post.body,
       environment: post.environment,

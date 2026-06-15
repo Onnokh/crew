@@ -42,6 +42,9 @@ export class SqliteRepository implements PostRepository {
   async createPost(input: NewPost): Promise<Post> {
     const post: Post = {
       id: this.idGen.next("post"),
+      // Title is required at the tool boundary; here it falls back to the
+      // situation so test/legacy callers that omit it still produce a valid Post.
+      title: input.title ?? input.situation,
       situation: input.situation,
       body: input.body,
       environment: input.environment,
@@ -174,7 +177,7 @@ export class SqliteRepository implements PostRepository {
     // express cleanly; the store still returns plain Posts, no counts.
     const rows = this.raw
       .prepare(
-        `SELECT p.id, p.situation, p.body, p.environment, p.repo, p.status,
+        `SELECT p.id, p.title, p.situation, p.body, p.environment, p.repo, p.status,
                 p.created_by, p.created_at, p.last_confirmed, p.views
            FROM posts p
            JOIN (
@@ -188,6 +191,7 @@ export class SqliteRepository implements PostRepository {
       )
       .all(limit) as Array<{
       id: string;
+      title: string | null;
       situation: string;
       body: string;
       environment: string;
@@ -200,6 +204,7 @@ export class SqliteRepository implements PostRepository {
     }>;
     return rows.map((r) => ({
       id: r.id,
+      title: r.title ?? r.situation,
       situation: r.situation,
       body: r.body,
       environment: r.environment,
@@ -242,6 +247,7 @@ export class SqliteRepository implements PostRepository {
 function toRow(post: Post): PostRow {
   return {
     id: post.id,
+    title: post.title,
     situation: post.situation,
     body: post.body,
     environment: post.environment,
@@ -269,6 +275,8 @@ function fromEventRow(row: PostEventRow): PostEvent {
 function fromRow(row: PostRow): Post {
   return {
     id: row.id,
+    // Legacy rows (pre-0006) have a null title; fall back to the situation.
+    title: row.title ?? row.situation,
     situation: row.situation,
     body: row.body,
     environment: row.environment,

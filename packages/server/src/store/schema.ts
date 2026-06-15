@@ -22,6 +22,14 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 /** One stored item of shared agent knowledge. */
 export const posts = sqliteTable("posts", {
   id: text("id").primaryKey(),
+  /**
+   * Short human title — a scannable label for the review console and query
+   * results, distinct from the situation (the question / retrieval key). Nullable
+   * in the DB only because it was added by migration 0006 to a table with
+   * existing rows (see that migration); always written for new Posts and
+   * coalesced to `situation` on read for legacy rows.
+   */
+  title: text("title"),
   situation: text("situation").notNull(),
   body: text("body").notNull(),
   /** Freeform LLM-written environment summary. */

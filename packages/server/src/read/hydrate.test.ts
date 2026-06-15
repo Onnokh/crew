@@ -57,6 +57,7 @@ describe("hydratePosts", () => {
     // be resolved at read time — it renders "unknown" rather than failing.
     const ghost: Post = {
       id: "post_ghost",
+      title: "t",
       situation: "s",
       body: "b",
       environment: "e",
