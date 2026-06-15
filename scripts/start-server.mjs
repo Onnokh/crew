@@ -23,7 +23,7 @@ process.env.SOA_DB_PATH ||= "soa-dev.db"; // gitignored (*.db)
 process.env.SOA_TRUSTED_ORIGINS ||= "http://localhost:5173";
 
 console.log(
-  `Starting Stack Overflow for Agents on http://localhost:${process.env.PORT}` +
+  `Starting Crew on http://localhost:${process.env.PORT}` +
     ` (console: /admin & /review, MCP: /mcp). Sign in as` +
     ` ${process.env.SOA_ADMIN_EMAIL} to mint an agent API key.`,
 );

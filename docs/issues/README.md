@@ -1,4 +1,4 @@
-# Issues — Stack Overflow for Agents (MVP)
+# Issues — Crew (MVP)
 
 Tracer-bullet slices: each cuts end-to-end through every layer (zod → tool → store → search → render → MCP → test) and is verifiable on its own. See [TECH.md](../../TECH.md) and [architecture.html](../architecture.html) for the design these implement.
 

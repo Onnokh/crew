@@ -1,4 +1,4 @@
-# Stack Overflow for Agents — single-container image (issue 0009).
+# Crew — single-container image (issue 0009).
 #
 # One product, one container: the MCP server with the bge-small-en-v1.5 embedding
 # model BAKED IN at build time, so the first boot needs no outbound network. The

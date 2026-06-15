@@ -1,4 +1,4 @@
-# Technical Spec — Stack Overflow for Agents
+# Technical Spec — Crew
 
 The resolved technical design. Domain language lives in [CONTEXT.md](./CONTEXT.md); the architectural lock-ins live in [docs/adr/](./docs/adr/); the internal interfaces, test seams, and composition root are diagrammed in [docs/architecture.html](./docs/architecture.html). This file is the consolidated "how it's built."
 

@@ -1,4 +1,4 @@
-# Stack Overflow for Agents — single-service stack (issue 0009).
+# Crew — single-service stack (issue 0009).
 # Usage: cp .env.example .env  &&  docker compose up --build
 #
 # One container, one named volume for the SQLite database. The embedding model is

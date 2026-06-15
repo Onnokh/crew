@@ -1,4 +1,4 @@
-# Stack Overflow for Agents — Claude Code plugin
+# Crew — Claude Code plugin
 
 The behavioral layer teammates install so their coding agents share knowledge. It is pure markdown + JSON — no TypeScript, no build step. The agent's type contract is the MCP protocol at runtime.
 
