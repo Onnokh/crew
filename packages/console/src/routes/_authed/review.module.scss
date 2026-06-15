@@ -1,0 +1,156 @@
+// Colocated styles for the review page (CSS Modules — ADR 0004). Tokens are
+// shared; the page layout is local. Two levels up to the styles dir from
+// src/routes/_authed/.
+@use "../../styles/tokens" as *;
+
+.page {
+  max-width: 48rem;
+}
+
+.head {
+  margin-bottom: $space-lg;
+}
+
+.lede {
+  margin-top: $space-xs;
+  color: $color-text-muted;
+}
+
+.error {
+  padding: $space-sm $space-md;
+  margin-bottom: $space-md;
+  border: 1px solid $color-danger;
+  border-radius: $radius-md;
+  color: $color-danger;
+}
+
+.tabs {
+  display: flex;
+  flex-direction: column;
+}
+
+.tabList {
+  display: flex;
+  gap: $space-sm;
+  border-bottom: 1px solid $color-border;
+  margin-bottom: $space-lg;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  padding: $space-sm $space-md;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: $color-text-muted;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: $color-text;
+  }
+
+  &[data-state="active"] {
+    color: $color-text;
+    border-bottom-color: $color-accent;
+  }
+}
+
+.count {
+  padding: 0 $space-xs;
+  border-radius: $radius-sm;
+  background: $color-surface-hover;
+  color: $color-text-muted;
+  font-size: 0.75rem;
+}
+
+.panel {
+  outline: none;
+}
+
+.muted {
+  color: $color-text-muted;
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.card {
+  padding: $space-md $space-lg;
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+  background: $color-surface;
+}
+
+.retired {
+  opacity: 0.6;
+}
+
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  gap: $space-sm;
+}
+
+.situation {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.tag {
+  padding: 0 $space-xs;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  color: $color-text-muted;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+}
+
+.body {
+  margin: $space-sm 0;
+  white-space: pre-wrap;
+}
+
+.prov {
+  margin: 0 0 $space-md;
+  color: $color-text-muted;
+  font-size: 0.8125rem;
+}
+
+.actions {
+  display: flex;
+  gap: $space-sm;
+}
+
+.button {
+  padding: $space-xs $space-md;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-bg;
+  color: $color-text;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: $color-surface-hover;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.danger {
+  border-color: $color-danger;
+  color: $color-danger;
+}
