@@ -1,7 +1,9 @@
 import { FastMCP } from "fastmcp";
 import type { IncomingMessage } from "node:http";
+import { mountAdmin } from "./api/admin.js";
 import { mountAuth } from "./api/auth.js";
 import { mountConsole } from "./api/console.js";
+import { mountReview } from "./api/review.js";
 import type { User } from "./core/user.js";
 import type { Deps } from "./deps.js";
 import { registerTools } from "./mcp/register.js";
@@ -39,6 +41,12 @@ export function buildServer(deps: Deps): FastMCP<User> {
   // FastMCP exposes — one app, one port (see ADR 0003/0004). The review/admin
   // JSON API (later slices) mounts here too.
   mountAuth(server.getApp(), deps.authInstance);
+
+  // The human JSON API: admin user-management (role-gated, slice 0012) and the
+  // review backstop (any signed-in User, slice 0013). Both mount under
+  // `/api/*`, BEFORE the console so its SPA catch-all never shadows them.
+  mountAdmin(server.getApp(), deps);
+  mountReview(server.getApp(), deps);
 
   // The built console SPA is served statically off the same app, with a
   // client-route fallback. Mounted LAST so its catch-all only ever sees what
