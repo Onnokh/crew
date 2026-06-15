@@ -1,0 +1,64 @@
+// Colocated styles for the ban confirm dialog (Radix AlertDialog — ADR 0004).
+@use "../styles/tokens" as *;
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  width: 90vw;
+  max-width: 26rem;
+  padding: $space-xl;
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+  background: $color-surface;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.description {
+  margin: 0;
+  color: $color-text-muted;
+  font-size: 0.875rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-sm;
+  margin-top: $space-sm;
+}
+
+.cancel,
+.confirm {
+  padding: $space-sm $space-lg;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancel {
+  background: $color-surface-hover;
+  color: $color-text;
+}
+
+.confirm {
+  border-color: $color-danger;
+  background: $color-danger;
+  color: $color-accent-contrast;
+}

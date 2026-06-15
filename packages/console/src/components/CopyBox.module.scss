@@ -1,0 +1,52 @@
+// Colocated styles for the show-once secret box (CSS Modules — ADR 0004).
+// Shared design tokens live in `src/styles/_tokens.scss`.
+@use "../styles/tokens" as *;
+
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  padding: $space-md;
+  border: 1px solid $color-accent;
+  border-radius: $radius-md;
+  background: $color-surface;
+}
+
+.label {
+  color: $color-text-muted;
+  font-size: 0.8125rem;
+}
+
+.row {
+  display: flex;
+  gap: $space-sm;
+  align-items: stretch;
+}
+
+.secret {
+  flex: 1;
+  padding: $space-sm;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-bg;
+  color: $color-text;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875rem;
+  word-break: break-all;
+}
+
+.copy {
+  padding: 0 $space-md;
+  border: none;
+  border-radius: $radius-sm;
+  background: $color-accent;
+  color: $color-accent-contrast;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: $color-accent-hover;
+  }
+}
