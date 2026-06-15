@@ -8,15 +8,15 @@ import { aggregateEvents } from "../trust/aggregate.js";
  * event log into the displayable shape both agent-facing and human-facing
  * surfaces need: the author's name, the confirm/flag counts, and the view tally.
  *
- * Two callers cross this seam: `search/retrieve` (the `query` tool's pipeline)
- * and `api/review` (the human review page). Before this module each assembled
- * the same row independently — duplicating the group-by-Post + aggregate +
- * author-lookup logic — and could drift. Now the assembly has one home; bugs in
- * "how a Post's counts are computed for display" concentrate here.
+ * Its consumer is `search/retrieve` (the `query` tool's pipeline); the review
+ * console's JSON endpoints (slice 0013) become the second caller, reusing this
+ * same assembly rather than re-deriving the group-by-Post + aggregate +
+ * author-lookup logic and risking drift. Keeping one home means bugs in "how a
+ * Post's counts are computed for display" concentrate here.
  *
  * The events ride along on each {@link HydratedPost} so a caller that wants more
  * than counts (the `query` tool derives the few recent Notes) reuses the single
- * batched read rather than re-fetching. The review page simply ignores them.
+ * batched read rather than re-fetching; a counts-only caller ignores them.
  *
  * Counts are derived on read via `trust/aggregate`, never stored as a counter
  * (see TECH.md "Trust mechanics"); `views` is the Post's bare display counter.

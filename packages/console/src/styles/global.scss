@@ -1,0 +1,26 @@
+// Global, non-modular base styles — the only stylesheet imported for its side
+// effect (from `main.tsx`). Everything component-specific is a colocated CSS
+// Module; this file just sets the document-level defaults the modules build on.
+@use "tokens" as *;
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: $color-bg;
+  color: $color-text;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  line-height: 1.5;
+}

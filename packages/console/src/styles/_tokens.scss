@@ -1,0 +1,28 @@
+// Design tokens for the console — the ONE place spacing/colour/radius values
+// live, `@use`d by every `*.module.scss`. We own our tokens (no third-party
+// theme — ADR 0004); a future light/dark split would layer CSS custom
+// properties on top of these, but the MVP ships one dark surface.
+
+// Spacing scale (rem).
+$space-xs: 0.25rem;
+$space-sm: 0.5rem;
+$space-md: 0.75rem;
+$space-lg: 1.25rem;
+$space-xl: 2rem;
+
+// Radii.
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 10px;
+
+// Palette.
+$color-bg: #0f1115;
+$color-surface: #171a21;
+$color-surface-hover: #1f232c;
+$color-border: #2a2f3a;
+$color-text: #e6e8eb;
+$color-text-muted: #9aa1ad;
+$color-danger: #f87171;
+$color-accent: #4f7cff;
+$color-accent-hover: #3f6af0;
+$color-accent-contrast: #ffffff;

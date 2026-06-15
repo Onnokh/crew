@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS post_events (
   verdict    TEXT NOT NULL,
   reason     TEXT,
   note       TEXT,
-  created_by TEXT NOT NULL REFERENCES users(id),
+  created_by TEXT NOT NULL REFERENCES "user"(id),
   created_at INTEGER NOT NULL
 );
 

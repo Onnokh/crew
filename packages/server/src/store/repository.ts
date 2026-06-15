@@ -114,12 +114,11 @@ export type PostRepository = {
    */
   restorePost(id: string): Promise<void>;
 
-  /** Look up a User by the sha256 hash of their bearer token (for auth). */
-  findUserByTokenHash(tokenHash: string): Promise<User | null>;
-
   /**
-   * Look up a User by id, or null if none exists. Used to resolve a Post's
-   * author into a display name for the rendered provenance line.
+   * Look up a User by id in better-auth's canonical `user` table, or null if
+   * none exists. Used to resolve a Post's author into a display name for the
+   * rendered provenance line. Authentication itself lives in the Authenticator
+   * seam (better-auth), never here — this is a read-only name lookup.
    */
   getUser(id: string): Promise<User | null>;
 };

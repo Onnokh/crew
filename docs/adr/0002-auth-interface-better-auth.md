@@ -1,4 +1,10 @@
+---
+status: partially superseded by ADR 0003
+---
+
 # Auth behind an `authenticate()` interface; static tokens first, better-auth OAuth provider later
+
+> **Amended by [ADR 0003](./0003-better-auth-now-apikey-not-oauth.md):** the `authenticate()` seam holds, but better-auth was pulled forward and the agent path is now the **`apiKey` plugin** (Bearer key), **not** the OAuth provider. Read 0003 for the current auth shape.
 
 The server must authenticate two kinds of callers — MCP agents (which the MCP spec expects to authenticate via OAuth) and humans opening the `/review` page in a browser — and we want the interesting work (the core query/post/confirm/flag loop) to start before the fiddliest dependency is in place. We decided to put all authentication behind a single in-house interface, `authenticate(request) → User | null`, and implement it in two stages: static hashed bearer tokens in a `users` table for week one, then better-auth's **OAuth Provider plugin** (for agents) plus cookie sessions (for the `/review` page) as the v1.1 swap.
 

@@ -25,6 +25,18 @@ The surfaces around the core MCP: humans, distribution, ops.
 | [0008](./0008-agent-plugin-skill.md) | Agent plugin — SKILL.md + /reflect + config snippet | HITL | 0005 |
 | [0009](./0009-dockerize-deploy.md) | Dockerize + deploy artifact | AFK | 0007 |
 
+## Milestone C — Auth + Admin console
+
+better-auth replaces static tokens, and the human surface becomes a React SPA with a user-management admin section. See [ADR 0003](../adr/0003-better-auth-now-apikey-not-oauth.md) (auth pivot — `apiKey` plugin, not OAuth) and [ADR 0004](../adr/0004-web-console-react-spa-on-hono.md) (React/Radix SPA on Hono). Scoped for concurrent agents: after the shell, the admin and review tracks own disjoint files and run in parallel.
+
+| # | Slice | Type | Blocked by |
+|---|-------|------|-----------|
+| [0010](./0010-better-auth-substrate.md) | better-auth substrate + schema recreate | AFK | — |
+| [0011](./0011-console-shell-login.md) | Console shell + session login | AFK | 0010 |
+| [0012](./0012-admin-user-management.md) | Admin user management (end-to-end) | AFK | 0011 |
+| [0013](./0013-review-console-page.md) | Review page (console) + JSON endpoints | AFK | 0011 |
+| [0014](./0014-dockerize-console-build.md) | Dockerize multi-stage console build | AFK | 0012, 0013 |
+
 ## Dependency graph
 
 ```
@@ -32,6 +44,10 @@ The surfaces around the core MCP: humans, distribution, ops.
                     │               └─ 0008  (HITL)   ← Milestone B
                     └─ 0006
         └──────── Milestone A ──────────┘
+
+0010 ─ 0011 ─┬─ 0012 (admin)  ─┐
+             └─ 0013 (review) ─┴─ 0014               ← Milestone C
+                                                       (0012 ∥ 0013)
 ```
 
-Not in MVP: better-auth OAuth provider (ADR 0002 v1.1), per-kind decay / distinct-confirmer trust, Postgres/pgvector migration.
+Not in MVP: MCP OAuth provider (dropped — see ADR 0003), per-kind decay / distinct-confirmer trust, Postgres/pgvector migration.

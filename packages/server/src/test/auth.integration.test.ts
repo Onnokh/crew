@@ -1,0 +1,116 @@
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import type { IncomingMessage } from "node:http";
+import * as sqliteVec from "sqlite-vec";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { BetterAuthAuthenticator } from "../auth/better-auth-authenticator.js";
+import { createAuth, type Auth } from "../auth/better-auth.js";
+import { migrate } from "../store/migrate.js";
+import { SqliteRepository } from "../store/sqlite-repository.js";
+import { FakeClock, FakeEmbedder, FakeIdGen } from "./fakes.js";
+import { connect, startTestServer, type RunningServer } from "./harness.js";
+
+/**
+ * The auth seam, end to end against REAL better-auth (see ADR 0003). The MCP loop
+ * test (loop.integration) already proves the agent API-key path through a booted
+ * server; this file pins the two things that path doesn't touch: the human
+ * session branch of the {@link BetterAuthAuthenticator} seam, and that
+ * better-auth's own routes mount on the Hono app without colliding with `/mcp`.
+ */
+
+/** A request the seam can read, carrying just the headers under test. */
+function reqWith(headers: Record<string, string>): IncomingMessage {
+  return { headers } as unknown as IncomingMessage;
+}
+
+describe("BetterAuthAuthenticator resolves both caller shapes", () => {
+  let auth: Auth;
+  let authn: BetterAuthAuthenticator;
+  let adminId: string;
+  let apiKey: string;
+
+  beforeAll(async () => {
+    const raw = new Database(":memory:");
+    raw.pragma("foreign_keys = ON");
+    sqliteVec.load(raw);
+    migrate(raw);
+    const repo = new SqliteRepository(
+      drizzle(raw),
+      raw,
+      new FakeClock(),
+      new FakeIdGen(),
+      new FakeEmbedder(),
+    );
+    auth = createAuth(raw, {
+      secret: "test-secret-test-secret-test-secret",
+      baseURL: "http://localhost",
+    });
+    authn = new BetterAuthAuthenticator(auth, repo);
+
+    // Seed a first admin exactly as main.ts does: sign up, then promote the row
+    // directly (the very first admin can't go through the admin-gated API).
+    const signUp = await auth.api.signUpEmail({
+      body: { email: "boss@test.local", password: "password1234", name: "Boss" },
+    });
+    adminId = signUp.user.id;
+    raw.prepare(`UPDATE "user" SET role = 'admin' WHERE id = ?`).run(adminId);
+
+    apiKey = (await auth.api.createApiKey({ body: { name: "k", userId: adminId } }))
+      .key;
+  });
+
+  it("resolves an agent's Bearer API key to its owning User", async () => {
+    const user = await authn.authenticate(
+      reqWith({ authorization: `Bearer ${apiKey}` }),
+    );
+    expect(user?.id).toBe(adminId);
+    expect(user?.name).toBe("Boss");
+  });
+
+  it("resolves a human's session cookie to the User, carrying the admin role", async () => {
+    const res = await auth.api.signInEmail({
+      body: { email: "boss@test.local", password: "password1234" },
+      asResponse: true,
+    });
+    const cookie = (res.headers.get("set-cookie") ?? "").split(";")[0]!;
+    expect(cookie).toBeTruthy();
+
+    const user = await authn.authenticate(reqWith({ cookie }));
+    expect(user?.id).toBe(adminId);
+    expect(user?.role).toBe("admin");
+  });
+
+  it("rejects a missing credential and a bogus Bearer key", async () => {
+    expect(await authn.authenticate(reqWith({}))).toBeNull();
+    expect(
+      await authn.authenticate(reqWith({ authorization: "Bearer nope" })),
+    ).toBeNull();
+  });
+});
+
+describe("better-auth routes mount on the Hono app beside /mcp", () => {
+  let srv: RunningServer;
+  beforeAll(async () => {
+    srv = await startTestServer();
+  });
+  afterAll(() => srv.stop());
+
+  it("serves better-auth's sign-in route without /mcp shadowing it", async () => {
+    // The harness seeds Alice with this password; a successful sign-in proves the
+    // /api/auth/* handler is reachable and distinct from the MCP endpoint.
+    const res = await fetch(`http://localhost:${srv.port}/api/auth/sign-in/email`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        email: "alice@test.local",
+        password: "password1234",
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("set-cookie")).toBeTruthy();
+  });
+
+  it("still rejects an unauthenticated MCP request on the same port", async () => {
+    await expect(connect(srv.port, null)).rejects.toThrow();
+  });
+});

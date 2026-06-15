@@ -1,0 +1,88 @@
+// Colocated styles for the login page (CSS Modules — class names are hashed and
+// scoped to this component, see ADR 0004). Shared design tokens live in
+// `src/styles/_tokens.scss`; import them where a value is reused across pages.
+@use "../styles/tokens" as *;
+
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: $space-lg;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  width: 100%;
+  max-width: 22rem;
+  padding: $space-xl;
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+  background: $color-surface;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 0 0 $space-sm;
+  color: $color-text-muted;
+  font-size: 0.875rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.input {
+  padding: $space-sm;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-bg;
+  color: $color-text;
+  font-size: 0.9375rem;
+
+  &:focus-visible {
+    outline: 2px solid $color-accent;
+    outline-offset: 1px;
+  }
+}
+
+.error {
+  margin: 0;
+  color: $color-danger;
+  font-size: 0.8125rem;
+}
+
+.submit {
+  margin-top: $space-sm;
+  padding: $space-sm;
+  border: none;
+  border-radius: $radius-md;
+  background: $color-accent;
+  color: $color-accent-contrast;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: $color-accent-hover;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+}

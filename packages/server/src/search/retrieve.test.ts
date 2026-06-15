@@ -6,6 +6,7 @@ import type { NewPost } from "../core/post.js";
 import { migrate } from "../store/migrate.js";
 import { SqliteRepository } from "../store/sqlite-repository.js";
 import { FakeClock, FakeEmbedder, FakeIdGen } from "../test/fakes.js";
+import { seedUser } from "../test/seed-user.js";
 import { retrieve } from "./retrieve.js";
 
 /**
@@ -24,9 +25,7 @@ beforeEach(() => {
   sqliteVec.load(raw);
   migrate(raw);
   const db = drizzle(raw);
-  raw
-    .prepare("INSERT INTO users (id, name, token_hash) VALUES (?, ?, ?)")
-    .run("user_alice", "Alice", "hash-alice");
+  seedUser(raw, "user_alice", "Alice");
   clock = new FakeClock();
   repo = new SqliteRepository(db, raw, clock, new FakeIdGen(), new FakeEmbedder());
 });

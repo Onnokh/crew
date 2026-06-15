@@ -4,24 +4,20 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
  * Drizzle TABLE definitions — NOT the tools' zod input schemas (a different
  * concern; see TECH.md "Two unrelated schemas"). drizzle-kit reads this file to
  * generate migrations, so it must stay inside `packages/server` and never move
- * to a shared package. This slice introduces `users` and `posts`; later slices
- * add `post_events` and the hand-written FTS5/vec0 virtual tables (drizzle-kit
- * does not model virtual tables).
+ * to a shared package. It defines `posts` and `post_events`; the hand-written
+ * FTS5/vec0 virtual tables live in `migrations/` (drizzle-kit does not model
+ * virtual tables).
+ *
+ * The identity store is deliberately ABSENT here: better-auth owns the `user`
+ * table (and session/account/verification/apikey), created by the hand-written
+ * `migrations/0000_better_auth.sql` — keeping its tables out of this file means
+ * drizzle-kit never tries to manage them (see ADR 0003 and TECH.md data model).
+ * `created_by` is therefore a plain text column here; the foreign key into
+ * `user(id)` is declared in the SQL migration, not via Drizzle `.references()`
+ * (which only feeds migration generation we don't use for that FK).
  *
  * The store knows SQL only — it imports no ranking, search, or trust code.
- *
- * Slice 0005 adds `post_events`, the Confirm/Flag event log. The hand-written
- * FTS5/vec0 virtual tables still live in `migrations/` (drizzle-kit does not
- * model virtual tables).
  */
-
-/** A human team member; all of their agents act under one bearer token. */
-export const users = sqliteTable("users", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  /** sha256 of the bearer token — the raw token is never stored. */
-  tokenHash: text("token_hash").notNull().unique(),
-});
 
 /** One stored item of shared agent knowledge. */
 export const posts = sqliteTable("posts", {
@@ -34,9 +30,8 @@ export const posts = sqliteTable("posts", {
   repo: text("repo").notNull(),
   /** active | retired. */
   status: text("status").notNull().default("active"),
-  createdBy: text("created_by")
-    .notNull()
-    .references(() => users.id),
+  /** Owning User's id (FK to better-auth's `user(id)`, enforced in SQL). */
+  createdBy: text("created_by").notNull(),
   /** Creation timestamp, unix ms. */
   createdAt: integer("created_at").notNull(),
   /**
@@ -64,13 +59,11 @@ export const postEvents = sqliteTable("post_events", {
   reason: text("reason"),
   /** Optional one-line Note anchored to the verdict. */
   note: text("note"),
-  createdBy: text("created_by")
-    .notNull()
-    .references(() => users.id),
+  /** Acting User's id (FK to better-auth's `user(id)`, enforced in SQL). */
+  createdBy: text("created_by").notNull(),
   /** When the event was recorded, unix ms. */
   createdAt: integer("created_at").notNull(),
 });
 
-export type UserRow = typeof users.$inferSelect;
 export type PostRow = typeof posts.$inferSelect;
 export type PostEventRow = typeof postEvents.$inferSelect;

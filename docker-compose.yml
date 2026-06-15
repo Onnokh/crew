@@ -14,8 +14,15 @@ services:
     ports:
       - "${SOA_HOST_PORT:-8087}:8080"
     environment:
-      # Bootstrap tokens — see .env / .env.example.
-      SOA_TOKENS: ${SOA_TOKENS:?set SOA_TOKENS in .env (copy from .env.example)}
+      # Auth config — see .env / .env.example (ADR 0003). The secret signs
+      # sessions; the admin pair seeds the first Admin on a fresh database.
+      SOA_AUTH_SECRET: ${SOA_AUTH_SECRET:?set SOA_AUTH_SECRET in .env (copy from .env.example)}
+      SOA_ADMIN_EMAIL: ${SOA_ADMIN_EMAIL:?set SOA_ADMIN_EMAIL in .env (copy from .env.example)}
+      SOA_ADMIN_PASSWORD: ${SOA_ADMIN_PASSWORD:?set SOA_ADMIN_PASSWORD in .env (copy from .env.example)}
+      SOA_ADMIN_NAME: ${SOA_ADMIN_NAME:-Admin}
+      # Public origin better-auth builds routes/cookies against (defaults to
+      # http://localhost:<PORT> inside the container if unset).
+      SOA_BASE_URL: ${SOA_BASE_URL:-}
     volumes:
       # SQLite (+ WAL/SHM) persists here across restarts; SOA_DB_PATH=/data/soa.db
       # is set in the image, so the file lands on this named volume.

@@ -1,0 +1,133 @@
+// Colocated styles for the signed-in chrome (CSS Modules — ADR 0004). Tokens are
+// shared; component layout is local.
+@use "../styles/tokens" as *;
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-sm $space-lg;
+  border-bottom: 1px solid $color-border;
+  background: $color-surface;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.brand {
+  margin-right: $space-sm;
+  font-weight: 700;
+}
+
+.link {
+  color: $color-text-muted;
+  text-decoration: none;
+  font-size: 0.9375rem;
+
+  &:hover {
+    color: $color-text;
+  }
+}
+
+.linkActive {
+  color: $color-text;
+  font-weight: 600;
+}
+
+.userButton {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-xs $space-sm;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-bg;
+  color: $color-text;
+  cursor: pointer;
+
+  &:hover {
+    background: $color-surface-hover;
+  }
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: $color-accent;
+  overflow: hidden;
+}
+
+.avatarFallback {
+  color: $color-accent-contrast;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.userName {
+  font-size: 0.875rem;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  padding: $space-xs;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-surface;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+}
+
+.menuHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: $space-sm;
+}
+
+.menuName {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.menuEmail {
+  color: $color-text-muted;
+  font-size: 0.75rem;
+}
+
+.menuSeparator {
+  height: 1px;
+  margin: $space-xs 0;
+  background: $color-border;
+}
+
+.menuItem {
+  padding: $space-sm;
+  border-radius: $radius-sm;
+  font-size: 0.875rem;
+  cursor: pointer;
+  outline: none;
+
+  &:hover,
+  &[data-highlighted] {
+    background: $color-surface-hover;
+  }
+}
+
+.main {
+  flex: 1;
+  padding: $space-xl $space-lg;
+}

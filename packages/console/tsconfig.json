@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // The console is a browser bundle built by Vite, not a Node program, so it
+    // overrides the base's Node-leaning knobs: bundler resolution (Vite owns the
+    // graph, so imports stay extensionless), DOM libs, the React JSX transform,
+    // and `noEmit` (tsc only type-checks — Vite/esbuild emits). The base's
+    // strictness (strict, noUncheckedIndexedAccess, verbatimModuleSyntax,
+    // isolatedModules) carries over unchanged.
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "jsx": "react-jsx",
+    "noEmit": true,
+    // Vite emits the JS; tsc never produces declarations for an app bundle, and
+    // turning this off avoids the base's declaration-emit requirement that every
+    // exported inferred type be nameable (mirrors the server's tsconfig).
+    "declaration": false
+  },
+  "include": ["src", "vite.config.ts"]
+}

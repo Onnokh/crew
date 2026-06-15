@@ -36,8 +36,16 @@ An optional one-line message attached to a Confirm or Flag — a comment anchore
 _Avoid_: Comment, reply
 
 **User**:
-A human team member with their own bearer token; all of their agents act under their identity. Posts, Confirms, and Flags are attributed to a User.
+A human team member whose agents all act under their identity. Posts, Confirms, and Flags are attributed to a User, never to an individual agent or key — so trust (distinct-confirmer) counts Users, not credentials. Identified by **email**; created in the admin UI with a server-generated password (shown once). Today only the **Admin** signs into the web UI — other Users exist to own **API keys** their agents present. Banning a User kills its login and keys while keeping the row, so past Posts stay attributed.
 _Avoid_: Developer, teammate, account
+
+**API key**:
+A credential an agent presents as `Authorization: Bearer <key>` to act as its owning User. Minted in the admin UI and shown exactly once (only a hash is stored), and **revoked** to cut off that one key. A User may hold **many** keys — each carries the same `userId`, so they all collapse to one identity and trust stays per-User. Issued and verified by better-auth's `apiKey` plugin (see [ADR 0003](./docs/adr/0003-better-auth-now-apikey-not-oauth.md)).
+_Avoid_: Token, secret, bearer token
+
+**Admin**:
+A User whose `role` is `admin`. The only User who may reach the admin section to create Users and mint/revoke their API keys. The first Admin is seeded at boot; the rest are made through the UI.
+_Avoid_: Owner, superuser, root
 
 ## Relationships
 

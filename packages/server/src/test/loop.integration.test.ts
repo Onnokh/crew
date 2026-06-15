@@ -1,22 +1,19 @@
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-  buildFakeDeps,
-  buildSqliteRepo,
   callText,
   connect,
   startTestServer,
-  TEST_USER,
-  VALID_TOKEN,
   type RunningServer,
 } from "./harness.js";
 
 /**
  * The one end-to-end integration test: boot the REAL server — real FTS5 +
- * sqlite-vec over an in-memory SQLite, only the embedder/clock/id faked — and
- * drive it over a real streamable-HTTP MCP transport. Each `describe` boots a
- * fresh server with its own corpus so the legs stay isolated; the shared
- * harness (startTestServer/connect/callText) keeps the boilerplate in one place.
+ * sqlite-vec over an in-memory SQLite AND real better-auth, only the
+ * embedder/clock/id faked — and drive it over a real streamable-HTTP MCP
+ * transport with a genuine minted API key (see ADR 0003). Each `describe` boots
+ * a fresh server with its own corpus and its own seeded User + key, so the legs
+ * stay isolated; the shared harness keeps the boilerplate in one place.
  *
  * Per-leg mechanics (RRF fusion, trust math, the scan rules, FTS5/vec queries)
  * are covered by the colocated pure-function and store unit tests; this file
@@ -30,8 +27,8 @@ describe("auth boundary + empty corpus", () => {
   });
   afterAll(() => srv.stop());
 
-  it("a valid bearer token lists the four tools", async () => {
-    const client = await connect(srv.port);
+  it("a valid agent API key lists the four tools", async () => {
+    const client = await connect(srv.port, srv.env.apiKey);
     try {
       const { tools } = await client.listTools();
       const names = tools.map((t) => t.name);
@@ -43,13 +40,13 @@ describe("auth boundary + empty corpus", () => {
     }
   });
 
-  it("a missing or invalid bearer token is rejected", async () => {
+  it("a missing or invalid API key is rejected", async () => {
     await expect(connect(srv.port, null)).rejects.toThrow();
     await expect(connect(srv.port, "bogus-token")).rejects.toThrow();
   });
 
   it("query on an empty corpus returns the framed, empty envelope", async () => {
-    const client = await connect(srv.port);
+    const client = await connect(srv.port, srv.env.apiKey);
     try {
       const text = await callText(client, "query", { situation: "anything" });
       expect(text).toContain("Shared agent knowledge");
@@ -61,16 +58,14 @@ describe("auth boundary + empty corpus", () => {
 });
 
 describe("post write path", () => {
-  // A handle on the real repo so we can assert what was persisted.
-  const repo = buildSqliteRepo();
   let srv: RunningServer;
   beforeAll(async () => {
-    srv = await startTestServer(buildFakeDeps(repo));
+    srv = await startTestServer();
   });
   afterAll(() => srv.stop());
 
   it("advertises the post tool with every input field described and required", async () => {
-    const client = await connect(srv.port);
+    const client = await connect(srv.port, srv.env.apiKey);
     try {
       const { tools } = await client.listTools();
       const post = tools.find((t) => t.name === "post");
@@ -89,8 +84,8 @@ describe("post write path", () => {
     }
   });
 
-  it("persists a Post attributed to the token's user, asserted via the repository", async () => {
-    const client = await connect(srv.port);
+  it("persists a Post attributed to the key's owning User, asserted via the repository", async () => {
+    const client = await connect(srv.port, srv.env.apiKey);
     try {
       const text = await callText(client, "post", {
         situation: "fastembed throws on Node 22 with onnxruntime mismatch",
@@ -102,9 +97,9 @@ describe("post write path", () => {
       const id = text.match(/post_[A-Za-z0-9_-]+/)?.[0];
       expect(id).toBeTruthy();
 
-      const stored = await repo.getPost(id!);
+      const stored = await srv.env.repo.getPost(id!);
       expect(stored).not.toBeNull();
-      expect(stored!.createdBy).toBe(TEST_USER.id);
+      expect(stored!.createdBy).toBe(srv.env.user.id);
       expect(stored!.status).toBe("active");
       expect(stored!.createdAt).toBeGreaterThan(0);
     } finally {
@@ -128,7 +123,7 @@ describe("core loop: keyword query → confirm/flag → re-rank, over real FTS5"
   };
 
   it("a confirmed Post outranks an equal-relevance one; flags sink it again", async () => {
-    const client = await connect(srv.port);
+    const client = await connect(srv.port, srv.env.apiKey);
     try {
       // Two near-identical Posts so RRF relevance is ~equal — only the trust
       // signal can separate them.
@@ -173,7 +168,7 @@ describe("core loop: keyword query → confirm/flag → re-rank, over real FTS5"
   });
 
   it("flag rejects a reason outside the closed set", async () => {
-    const client = await connect(srv.port);
+    const client = await connect(srv.port, srv.env.apiKey);
     try {
       const id = idFrom(
         await callText(client, "post", {
@@ -200,7 +195,7 @@ describe("query records a view per surfaced Post, display-only", () => {
   afterAll(() => srv.stop());
 
   it("counts up one per query, and the tally shown is the count before this query", async () => {
-    const client = await connect(srv.port);
+    const client = await connect(srv.port, srv.env.apiKey);
     try {
       const situation = "duckdb segfaults on parquet glob over s3";
       await callText(client, "post", {
@@ -235,7 +230,7 @@ describe("vector leg fuses with keyword: paraphrase finds the Post, over real sq
   afterAll(() => srv.stop());
 
   it("a paraphrased query with no keyword overlap surfaces the relevant Post above a decoy", async () => {
-    const client = await connect(srv.port);
+    const client = await connect(srv.port, srv.env.apiKey);
     try {
       await callText(client, "post", {
         situation: "fastembed throws on Node 22 with onnxruntime mismatch",
@@ -273,7 +268,7 @@ describe("ingestion guardrail rejects before the store", () => {
   afterAll(() => srv.stop());
 
   it("a prompt-injection post is rejected and never persisted", async () => {
-    const client = await connect(srv.port);
+    const client = await connect(srv.port, srv.env.apiKey);
     try {
       const result = await client.callTool({
         name: "post",

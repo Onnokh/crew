@@ -5,88 +5,111 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { createServer } from "node:net";
 import type { AddressInfo } from "node:net";
 import * as sqliteVec from "sqlite-vec";
+import { BetterAuthAuthenticator } from "../auth/better-auth-authenticator.js";
+import { createAuth, type Auth } from "../auth/better-auth.js";
 import type { User } from "../core/user.js";
 import type { Deps } from "../deps.js";
 import { buildServer } from "../server.js";
 import { migrate } from "../store/migrate.js";
 import { SqliteRepository } from "../store/sqlite-repository.js";
-import { FakeAuthenticator, FakeClock, FakeEmbedder, FakeIdGen } from "./fakes.js";
+import { FakeClock, FakeEmbedder, FakeIdGen } from "./fakes.js";
 
-export const TEST_USER: User = { id: "user_alice", name: "Alice" };
-export const VALID_TOKEN = "test-token-alice";
+/** Fixed boot config for the test better-auth instance (≥16-char secret). */
+const TEST_SECRET = "test-secret-test-secret-test-secret";
+const TEST_BASE_URL = "http://localhost";
+
+/** Everything a booted test server is assembled from, plus the seeded creds. */
+export type TestEnv = {
+  deps: Deps;
+  repo: SqliteRepository;
+  auth: Auth;
+  /** The seeded User (real better-auth id), author of attributed Posts. */
+  user: User;
+  /** A freshly minted agent API key bound to `user`, for the Bearer header. */
+  apiKey: string;
+};
 
 /**
- * A real {@link SqliteRepository} over an in-memory database — the SAME store
- * `main.ts` runs in production, with only the embedder, clock, and id generator
- * swapped for deterministic fakes. There is deliberately no fake repository:
- * integration tests must exercise the real FTS5 + sqlite-vec query path, and a
- * `:memory:` SQLite gives that with no file and no model download. Seeds
- * {@link TEST_USER} so `getUser` resolves the author name in rendered provenance
- * and the `created_by` foreign key holds.
+ * Assemble a real {@link Deps} backed by REAL better-auth over an in-memory
+ * SQLite — the same store and auth seam `main.ts` runs in production, with only
+ * the embedder, clock, and id generator faked (a `:memory:` SQLite needs no file
+ * and the fake embedder skips the 30 MB model download). There is deliberately
+ * no fake repository or fake authenticator: the integration test must exercise
+ * the real FTS5 + sqlite-vec path AND the real api-key verification seam.
+ *
+ * Seeds one User through better-auth's email sign-up and mints an agent API key
+ * bound to it, so an MCP client can authenticate with a genuine Bearer key and
+ * persisted Posts attribute to a real `user(id)` (see ADR 0003).
  */
-export function buildSqliteRepo(): SqliteRepository {
+export async function buildTestEnv(): Promise<TestEnv> {
   const raw = new Database(":memory:");
   raw.pragma("foreign_keys = ON");
   sqliteVec.load(raw);
   migrate(raw);
-  raw
-    .prepare("INSERT INTO users (id, name, token_hash) VALUES (?, ?, ?)")
-    .run(TEST_USER.id, TEST_USER.name, `hash-${TEST_USER.id}`);
-  return new SqliteRepository(
+
+  const repo = new SqliteRepository(
     drizzle(raw),
     raw,
     new FakeClock(),
     new FakeIdGen(),
     new FakeEmbedder(),
   );
-}
+  const auth = createAuth(raw, { secret: TEST_SECRET, baseURL: TEST_BASE_URL });
 
-/**
- * Assembles a {@link Deps} for integration tests. Mirrors `main.ts`'s
- * `buildRealDeps()` in shape — the same `buildServer(deps)` runs against it —
- * but with a `:memory:` store and a {@link FakeAuthenticator} (raw token → User,
- * no hashing). Pass a repo to share one corpus across calls; otherwise a fresh
- * one is built.
- */
-export function buildFakeDeps(
-  repo = buildSqliteRepo(),
-  overrides: Partial<Deps> = {},
-): Deps {
-  return {
-    auth: new FakeAuthenticator({ [VALID_TOKEN]: TEST_USER }),
+  const signUp = await auth.api.signUpEmail({
+    body: { email: "alice@test.local", password: "password1234", name: "Alice" },
+  });
+  const userId = signUp.user.id;
+  const minted = await auth.api.createApiKey({
+    body: { name: "alice-agent", userId },
+  });
+
+  const deps: Deps = {
+    auth: new BetterAuthAuthenticator(auth, repo),
+    authInstance: auth,
     repo,
     clock: new FakeClock(),
-    ...overrides,
+  };
+  return {
+    deps,
+    repo,
+    auth,
+    user: { id: userId, name: "Alice", role: null },
+    apiKey: minted.key,
   };
 }
 
-/** A booted MCP server on a free port, with a teardown handle. */
+/** A booted MCP server on a free port, with its environment and a teardown handle. */
 export type RunningServer = {
   port: number;
   stop: () => Promise<void>;
+  env: TestEnv;
 };
 
 /**
- * Boot a stateless streamable-HTTP MCP server from the given deps on a free
- * port. Replaces the freePort/start/stop boilerplate every integration test
- * used to copy.
+ * Boot a stateless streamable-HTTP MCP server on a free port. Builds a fresh
+ * {@link TestEnv} (real store + better-auth + a minted key) unless one is passed,
+ * so callers that need the repo/key before asserting can share one env.
  */
-export async function startTestServer(
-  deps: Deps = buildFakeDeps(),
-): Promise<RunningServer> {
+export async function startTestServer(env?: TestEnv): Promise<RunningServer> {
+  const resolved = env ?? (await buildTestEnv());
   const port = await freePort();
-  const server = buildServer(deps);
+  const server = buildServer(resolved.deps);
   await server.start({
     transportType: "httpStream",
     httpStream: { port, stateless: true, enableJsonResponse: true },
   });
-  return { port, stop: () => server.stop() };
+  return { port, stop: () => server.stop(), env: resolved };
 }
 
-/** Connect an MCP client to the test server; pass `null` to omit the token. */
+/**
+ * Connect an MCP client to the test server. Pass the minted `env.apiKey` for a
+ * valid agent; pass `null` to omit the Bearer header, or a bogus string to test
+ * rejection.
+ */
 export async function connect(
   port: number,
-  token: string | null = VALID_TOKEN,
+  token: string | null,
 ): Promise<Client> {
   const url = new URL(`http://localhost:${port}/mcp`);
   const headers: Record<string, string> = {};

@@ -3,23 +3,21 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
 import { beforeEach, describe, expect, it } from "vitest";
 import { FakeClock, FakeEmbedder, FakeIdGen } from "../test/fakes.js";
-import { hashToken } from "../auth/token-authenticator.js";
+import { seedUser } from "../test/seed-user.js";
 import { migrate } from "./migrate.js";
-import { users } from "./schema.js";
 import { SqliteRepository } from "./sqlite-repository.js";
 
 function freshRepo(clock: FakeClock, idGen: FakeIdGen): {
   repo: SqliteRepository;
-  db: ReturnType<typeof drizzle>;
+  raw: Database.Database;
 } {
   const raw = new Database(":memory:");
   raw.pragma("foreign_keys = ON");
   sqliteVec.load(raw);
   migrate(raw);
-  const db = drizzle(raw);
   return {
-    repo: new SqliteRepository(db, raw, clock, idGen, new FakeEmbedder()),
-    db,
+    repo: new SqliteRepository(drizzle(raw), raw, clock, idGen, new FakeEmbedder()),
+    raw,
   };
 }
 
@@ -27,15 +25,13 @@ describe("SqliteRepository (real store, in-memory SQLite)", () => {
   let clock: FakeClock;
   let idGen: FakeIdGen;
   let repo: SqliteRepository;
-  let db: ReturnType<typeof drizzle>;
+  let raw: Database.Database;
 
   beforeEach(() => {
     clock = new FakeClock(1_700_000_000_000);
     idGen = new FakeIdGen();
-    ({ repo, db } = freshRepo(clock, idGen));
-    db.insert(users)
-      .values({ id: "user_alice", name: "Alice", tokenHash: hashToken("tok") })
-      .run();
+    ({ repo, raw } = freshRepo(clock, idGen));
+    seedUser(raw, "user_alice", "Alice");
   });
 
   it("persists a Post with a prefixed id, timestamp, and active status", async () => {
@@ -56,12 +52,13 @@ describe("SqliteRepository (real store, in-memory SQLite)", () => {
     expect(fetched?.createdBy).toBe("user_alice");
   });
 
-  it("resolves a User by token hash", async () => {
-    expect(await repo.findUserByTokenHash(hashToken("tok"))).toEqual({
+  it("resolves a User's display name and role by id from the user table", async () => {
+    expect(await repo.getUser("user_alice")).toEqual({
       id: "user_alice",
       name: "Alice",
+      role: null,
     });
-    expect(await repo.findUserByTokenHash(hashToken("nope"))).toBeNull();
+    expect(await repo.getUser("user_nobody")).toBeNull();
   });
 
   it("returns null for an unknown Post id", async () => {

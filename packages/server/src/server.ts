@@ -1,6 +1,7 @@
 import { FastMCP } from "fastmcp";
 import type { IncomingMessage } from "node:http";
-import { mountReview } from "./api/review.js";
+import { mountAuth } from "./api/auth.js";
+import { mountConsole } from "./api/console.js";
 import type { User } from "./core/user.js";
 import type { Deps } from "./deps.js";
 import { registerTools } from "./mcp/register.js";
@@ -12,8 +13,10 @@ import { registerTools } from "./mcp/register.js";
  * the integration test calls it with fakes — neither duplicates the wiring.
  *
  * Auth is bridged through FastMCP's `authenticate` hook, whose shape matches our
- * {@link Authenticator} seam: a valid token resolves to the session `User`; a
- * missing or invalid token throws, which FastMCP turns into a 401 (see ADR 0002).
+ * {@link Authenticator} seam: a valid agent API key (Bearer) resolves to the
+ * owning `User`; a missing or invalid credential throws, which FastMCP turns into
+ * a 401 (see ADR 0003). better-auth's own routes are mounted on the same Hono app
+ * for human sessions and the admin/api-key endpoints.
  */
 export function buildServer(deps: Deps): FastMCP<User> {
   const server = new FastMCP<User>({
@@ -24,7 +27,7 @@ export function buildServer(deps: Deps): FastMCP<User> {
       if (user === null) {
         // FastMCP/mcp-proxy maps a thrown "Unauthorized" error to a 401 in
         // stateless HTTP mode; our Authenticator seam owns the null decision.
-        throw new Error("Unauthorized: invalid or missing bearer token");
+        throw new Error("Unauthorized: invalid or missing API key");
       }
       return user;
     },
@@ -32,9 +35,16 @@ export function buildServer(deps: Deps): FastMCP<User> {
 
   registerTools(server, deps);
 
-  // The human surface (slice 0007) hangs off the same Hono app FastMCP exposes,
-  // behind the same auth seam — one app, one port (see TECH.md "Human surface").
-  mountReview(server.getApp(), deps);
+  // better-auth's session/api-key/admin routes hang off the same Hono app
+  // FastMCP exposes — one app, one port (see ADR 0003/0004). The review/admin
+  // JSON API (later slices) mounts here too.
+  mountAuth(server.getApp(), deps.authInstance);
+
+  // The built console SPA is served statically off the same app, with a
+  // client-route fallback. Mounted LAST so its catch-all only ever sees what
+  // `/api/auth/*` and `/mcp` left behind. No-ops gracefully when the console
+  // hasn't been built (dev, tests) — see `mountConsole`.
+  mountConsole(server.getApp());
 
   return server;
 }

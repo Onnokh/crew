@@ -1,4 +1,5 @@
 import type { Authenticator } from "./auth/authenticator.js";
+import type { Auth } from "./auth/better-auth.js";
 import type { Clock } from "./platform/clock.js";
 import type { PostRepository } from "./store/repository.js";
 
@@ -15,6 +16,14 @@ import type { PostRepository } from "./store/repository.js";
  */
 export type Deps = {
   auth: Authenticator;
+  /**
+   * The better-auth instance itself (see ADR 0003). Distinct from `auth`, the
+   * {@link Authenticator} seam the tools resolve identity through: this is the
+   * concrete server whose `handler` mounts the auth/session routes on the Hono
+   * app and whose `api` the admin/review endpoints call in later slices. Kept in
+   * Deps so `buildServer` — the one composition root — wires the routes.
+   */
+  authInstance: Auth;
   repo: PostRepository;
   clock: Clock;
 };

@@ -1,27 +1,29 @@
-import { TokenAuthenticator, hashToken } from "./auth/token-authenticator.js";
+import type { Database } from "better-sqlite3";
+import { BetterAuthAuthenticator } from "./auth/better-auth-authenticator.js";
+import { createAuth, type Auth } from "./auth/better-auth.js";
 import type { Deps } from "./deps.js";
 import { FastEmbedder } from "./embedding/fastembed.js";
 import { NanoidGen } from "./platform/nanoid-gen.js";
 import { SystemClock } from "./platform/system-clock.js";
 import { openDatabase } from "./store/db.js";
 import { pinOrCheckEmbeddingModel } from "./store/meta.js";
-import { users } from "./store/schema.js";
 import { SqliteRepository } from "./store/sqlite-repository.js";
 import { buildServer } from "./server.js";
 
 /**
  * Real entry point: assemble real implementations, hand them to the single
- * composition root, and start the server over streamable HTTP in stateless
- * mode. This slice (0002) wires the SQLite store: migrations run on open, the
- * repository persists Posts and resolves Users for auth, and the platform
- * Clock/IdGen seams stamp ids and timestamps.
+ * composition root, and start the server over streamable HTTP in stateless mode.
+ * Migrations run on open (creating better-auth's tables from
+ * `migrations/0000_better_auth.sql` plus our posts/post_events), the repository
+ * persists Posts and resolves author names, and the platform Clock/IdGen seams
+ * stamp ids and timestamps.
  *
- * Users are bootstrapped from the `SOA_TOKENS` env var ("token:UserName"
- * comma-separated) into the `users` table at startup so an operator can boot
- * with working tokens before any user-provisioning UI exists. The repository
- * itself is the authoritative {@link TokenStore} the authenticator reads.
+ * Identity is better-auth's now (see ADR 0003): agents authenticate with API
+ * keys, humans with email + password. The only bootstrap is the FIRST admin,
+ * seeded from `SOA_ADMIN_EMAIL`/`SOA_ADMIN_PASSWORD`; every other User and key is
+ * provisioned through the admin console. The old `SOA_TOKENS` seeding is gone.
  */
-async function buildRealDeps(): Promise<Deps> {
+async function buildRealDeps(port: number): Promise<Deps> {
   const dbPath = process.env.SOA_DB_PATH ?? "soa.db";
   const { db, raw } = openDatabase(dbPath);
   const clock = new SystemClock();
@@ -34,33 +36,76 @@ async function buildRealDeps(): Promise<Deps> {
 
   const repo = new SqliteRepository(db, raw, clock, new NanoidGen(), embedder);
 
-  seedUsersFromEnv(db);
+  // better-auth shares the one better-sqlite3 handle, so its tables and ours
+  // live in the same file and the `created_by` FKs into `user(id)` hold.
+  const authInstance = createAuth(raw, {
+    secret: requireSecret(),
+    baseURL: process.env.SOA_BASE_URL ?? `http://localhost:${port}`,
+  });
+  await seedFirstAdmin(authInstance, raw);
 
   return {
-    auth: new TokenAuthenticator(repo),
+    auth: new BetterAuthAuthenticator(authInstance, repo),
+    authInstance,
     repo,
     clock,
   };
 }
 
-/** Upsert env-provided bootstrap Users (`SOA_TOKENS`) into the `users` table. */
-function seedUsersFromEnv(db: ReturnType<typeof openDatabase>["db"]): void {
-  const raw = process.env.SOA_TOKENS ?? "";
-  for (const pair of raw.split(",").map((p) => p.trim()).filter(Boolean)) {
-    const sep = pair.indexOf(":");
-    if (sep === -1) continue;
-    const token = pair.slice(0, sep).trim();
-    const name = pair.slice(sep + 1).trim();
-    if (!token || !name) continue;
-    db.insert(users)
-      .values({ id: `user_${name}`, name, tokenHash: hashToken(token) })
-      .onConflictDoNothing()
-      .run();
+/**
+ * The session-signing secret. Required in production — a missing or trivially
+ * short secret would make sessions forgeable, so we refuse to boot rather than
+ * fall back to a default.
+ */
+function requireSecret(): string {
+  const secret = process.env.SOA_AUTH_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      "SOA_AUTH_SECRET must be set to a random string of at least 32 characters " +
+        "(e.g. `openssl rand -hex 32`).",
+    );
   }
+  return secret;
+}
+
+/**
+ * Seed the first Admin so an operator can sign into the console on a fresh
+ * database. Idempotent: if a User already owns the configured email we only
+ * ensure its role is `admin` (the very first admin can't be promoted through the
+ * admin-gated API — there is no admin yet — so we set the role directly on the
+ * row). Skipped with a warning if the env vars are absent.
+ */
+async function seedFirstAdmin(auth: Auth, raw: Database): Promise<void> {
+  const email = process.env.SOA_ADMIN_EMAIL;
+  const password = process.env.SOA_ADMIN_PASSWORD;
+  if (!email || !password) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "No SOA_ADMIN_EMAIL/SOA_ADMIN_PASSWORD set — skipping first-admin seed.",
+    );
+    return;
+  }
+
+  const existing = raw
+    .prepare(`SELECT id, role FROM "user" WHERE email = ?`)
+    .get(email) as { id: string; role: string | null } | undefined;
+  if (existing) {
+    if (existing.role !== "admin") {
+      raw.prepare(`UPDATE "user" SET role = 'admin' WHERE id = ?`).run(existing.id);
+    }
+    return;
+  }
+
+  const result = await auth.api.signUpEmail({
+    body: { email, password, name: process.env.SOA_ADMIN_NAME ?? "Admin" },
+  });
+  raw.prepare(`UPDATE "user" SET role = 'admin' WHERE id = ?`).run(result.user.id);
+  // eslint-disable-next-line no-console
+  console.log(`Seeded first admin: ${email}`);
 }
 
 const port = Number(process.env.PORT ?? 8080);
-const server = buildServer(await buildRealDeps());
+const server = buildServer(await buildRealDeps(port));
 
 await server.start({
   transportType: "httpStream",

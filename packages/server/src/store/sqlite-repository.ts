@@ -15,7 +15,7 @@ import {
   vectorSearch,
 } from "./queries.js";
 import type { PostRepository } from "./repository.js";
-import { postEvents, posts, users } from "./schema.js";
+import { postEvents, posts } from "./schema.js";
 import type { PostRow } from "./schema.js";
 
 /**
@@ -228,18 +228,14 @@ export class SqliteRepository implements PostRepository {
       .run();
   }
 
-  async findUserByTokenHash(tokenHash: string): Promise<User | null> {
-    const row = this.db
-      .select()
-      .from(users)
-      .where(eq(users.tokenHash, tokenHash))
-      .get();
-    return row ? { id: row.id, name: row.name } : null;
-  }
-
   async getUser(id: string): Promise<User | null> {
-    const row = this.db.select().from(users).where(eq(users.id, id)).get();
-    return row ? { id: row.id, name: row.name } : null;
+    // better-auth owns the `user` table, so this reads it with raw SQL rather
+    // than a Drizzle model (keeping the auth tables out of store/schema.ts —
+    // see ADR 0003). Quoted identifier because `user` is a SQL keyword.
+    const row = this.raw
+      .prepare(`SELECT id, name, role FROM "user" WHERE id = ?`)
+      .get(id) as { id: string; name: string; role: string | null } | undefined;
+    return row ? { id: row.id, name: row.name, role: row.role } : null;
   }
 }
 
