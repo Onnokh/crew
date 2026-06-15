@@ -1,18 +1,27 @@
 // Dev convenience launcher: `pnpm start` from the repo root.
 // Sets sane local defaults (only if you haven't set them yourself), then runs
-// the server. Port 8087 + token match the agent-plugin config in
-// packages/agent-plugin (.mcp.json / the user-scope settings.json env), so the
-// installed plugin connects with no extra wiring. Override any of these by
-// exporting the env var before running.
+// the server. Port 8087 matches the agent-plugin config in
+// packages/agent-plugin (.mcp.json / the user-scope settings.json env). Override
+// any of these by exporting the env var before running.
+//
+// Auth is better-auth now (ADR 0003): there is no static token. These dev
+// defaults seed a first admin so you can sign into the console at /admin and
+// mint an agent API key there — paste that key into the agent-plugin config to
+// connect. The secret/password below are INSECURE dev placeholders; never reuse
+// them anywhere real.
 import { spawn } from "node:child_process";
 
-process.env.SOA_TOKENS ||= "reviewer-secret-123:Reviewer"; // token:UserName
+process.env.SOA_AUTH_SECRET ||= "dev-only-insecure-auth-secret-change-me-please"; // ≥32 chars
+process.env.SOA_ADMIN_EMAIL ||= "admin@example.com";
+process.env.SOA_ADMIN_PASSWORD ||= "dev-admin-password"; // ≥8 chars
+process.env.SOA_ADMIN_NAME ||= "Dev Admin";
 process.env.PORT ||= "8087";
 process.env.SOA_DB_PATH ||= "soa-dev.db"; // gitignored (*.db)
 
 console.log(
   `Starting Stack Overflow for Agents on http://localhost:${process.env.PORT}` +
-    ` (review UI: /review, MCP: /mcp)`,
+    ` (console: /admin & /review, MCP: /mcp). Sign in as` +
+    ` ${process.env.SOA_ADMIN_EMAIL} to mint an agent API key.`,
 );
 
 const child = spawn("pnpm", ["--filter", "@soa/server", "start"], {
