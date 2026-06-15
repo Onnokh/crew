@@ -9,3 +9,6 @@ dist/
 
 # fastembed model cache (downloaded on first boot, ~30 MB)
 local_cache/
+
+# Claude Code agent worktrees (transient, created by subagent isolation)
+.claude/worktrees/

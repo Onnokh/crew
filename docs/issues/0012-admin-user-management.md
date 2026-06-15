@@ -15,12 +15,12 @@ End-to-end demoable: an admin creates a User, copies a one-time key, an agent au
 
 ## Acceptance criteria
 
-- [ ] `/admin` and its API are reachable only to `role === 'admin'`; everyone else is refused
-- [ ] Creating a User from an email returns a server-generated password shown exactly once
-- [ ] The page lists Users with their role and key counts
-- [ ] Minting a key shows the raw key exactly once (copy-to-clipboard); revoking a key stops it authenticating; the count updates
-- [ ] An agent can authenticate with a freshly minted key and complete a `post`
-- [ ] Banning a User stops its login and keys from authenticating while its authored Posts remain attributed
+- [x] `/admin` and its API are reachable only to `role === 'admin'`; everyone else is refused
+- [x] Creating a User from an email returns a server-generated password shown exactly once
+- [x] The page lists Users with their role and key counts
+- [x] Minting a key shows the raw key exactly once (copy-to-clipboard); revoking a key stops it authenticating; the count updates
+- [x] An agent can authenticate with a freshly minted key and complete a `post`
+- [x] Banning a User stops its login and keys from authenticating while its authored Posts remain attributed
 
 ## Blocked by
 

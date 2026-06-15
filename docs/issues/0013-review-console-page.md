@@ -8,11 +8,11 @@ Rebuild the human review surface — retired as HTML in 0010 — as a console pa
 
 ## Acceptance criteria
 
-- [ ] The server exposes list-recent / list-flagged / retire / restore as JSON behind the `authenticate()` seam (session)
-- [ ] The `/review` console page lists recent and flagged Posts, each with confirm/flag/view counts
-- [ ] Retiring a Post removes it from `query` results; restoring brings it back
-- [ ] The page is built with Radix primitives styled via colocated `*.module.scss`
-- [ ] The old server-rendered review integration test is replaced by coverage of the new JSON endpoints
+- [x] The server exposes list-recent / list-flagged / retire / restore as JSON behind the `authenticate()` seam (session)
+- [x] The `/review` console page lists recent and flagged Posts, each with confirm/flag/view counts
+- [x] Retiring a Post removes it from `query` results; restoring brings it back
+- [x] The page is built with Radix primitives styled via colocated `*.module.scss`
+- [x] The old server-rendered review integration test is replaced by coverage of the new JSON endpoints
 
 ## Blocked by
 

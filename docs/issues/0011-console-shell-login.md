@@ -10,11 +10,11 @@ This slice delivers the shell and the auth wiring end-to-end: an email + passwor
 
 ## Acceptance criteria
 
-- [ ] `packages/console` builds with Vite to static assets the Hono app serves; client-side routes deep-link correctly
-- [ ] Email + password login establishes a better-auth session; sign-out clears it
-- [ ] Signed-in chrome shows the current User; a route guard redirects unauthenticated visitors to login
-- [ ] Radix primitives are in use and styled via colocated `*.module.scss` (CSS Modules), no third-party theme
-- [ ] Placeholder `/admin` and `/review` routes exist behind the guard (content lands in 0012 / 0013)
+- [x] `packages/console` builds with Vite to static assets the Hono app serves; client-side routes deep-link correctly
+- [x] Email + password login establishes a better-auth session; sign-out clears it
+- [x] Signed-in chrome shows the current User; a route guard redirects unauthenticated visitors to login
+- [x] Radix primitives are in use and styled via colocated `*.module.scss` (CSS Modules), no third-party theme
+- [x] Placeholder `/admin` and `/review` routes exist behind the guard (content lands in 0012 / 0013)
 
 ## Blocked by
 
