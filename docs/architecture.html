@@ -269,11 +269,11 @@
         <p class="note"><span class="tag real">real</span> SqliteRepository (Drizzle + raw <code>sql</code>) &nbsp; <span class="tag fake">"fake"</span> same class, temp-file DB.</p>
       </div>
       <div class="card">
-        <span class="tag infra">auth/ — ADR-0002 swap point</span>
+        <span class="tag infra">auth/ — ADR-0003 swap point</span>
 <pre><span class="k">interface</span> <span class="t">Authenticator</span> {
   authenticate(req): <span class="t">Promise</span>&lt;<span class="t">User</span> | <span class="k">null</span>&gt;
 }</pre>
-        <p class="note"><span class="tag real">now</span> TokenAuthenticator &nbsp; <span class="tag real">v1.1</span> BetterAuthAuthenticator &nbsp; <span class="tag fake">fake</span> always-a-user.</p>
+        <p class="note"><span class="tag real">now</span> BetterAuthAuthenticator (apiKey verify + session) &nbsp; <span class="tag fake">fake</span> always-a-user.</p>
       </div>
       <div class="card">
         <span class="tag infra">platform — determinism seams</span>
@@ -345,7 +345,9 @@
   mcp.addTool({ name: <span class="s">"query"</span>, parameters: zQuery, execute: query })
   <span class="c">// …post, confirm, flag</span>
   <span class="k">const</span> app = mcp.getApp()        <span class="c">// same Hono instance</span>
-  mountReview(app, deps)          <span class="c">// /review page + auth middleware</span>
+  mountAuth(app, auth)            <span class="c">// better-auth: sessions + api keys</span>
+  mountAdmin(app, deps); mountReview(app, deps)  <span class="c">// JSON API (role-gated + review)</span>
+  mountConsole(app)               <span class="c">// serve the built React SPA</span>
   <span class="k">return</span> { mcp, app }
 }</pre>
     </div>
@@ -355,7 +357,7 @@
 <pre>buildServer({
   repo:  <span class="k">new</span> <span class="t">SqliteRepository</span>(db),
   embedder: <span class="k">new</span> <span class="t">FastEmbedder</span>(),
-  auth:  <span class="k">new</span> <span class="t">TokenAuthenticator</span>(db),
+  auth:  <span class="k">new</span> <span class="t">BetterAuthAuthenticator</span>(auth, repo),
   clock: systemClock,
   idgen: nanoidGen,
 }).mcp.start()</pre>
@@ -389,7 +391,7 @@ body          <span class="t">TEXT</span>      <span class="c">FTS</span>
 environment   <span class="t">TEXT</span>      <span class="c">embedded</span>
 repo          <span class="t">TEXT</span>      <span class="c">ranking boost</span>
 status        <span class="t">TEXT</span>      <span class="c">active|retired</span>
-created_by    → users
+created_by    → user
 created_at    <span class="t">INTEGER</span>
 last_confirmed <span class="t">INTEGER</span>  <span class="c">denormalised</span></pre>
       </div>
@@ -400,7 +402,7 @@ post_id     → posts
 verdict     <span class="t">TEXT</span>   <span class="c">confirm|flag</span>
 reason      <span class="t">TEXT</span>   <span class="c">incorrect|stale|dup</span>
 note        <span class="t">TEXT</span>   <span class="c">optional comment</span>
-created_by  → users
+created_by  → user
 created_at  <span class="t">INTEGER</span></pre>
         <p class="note">Confirms & flags are events, never bare counters — so distinct-confirmer trust & decay can be added later, recomputed from here.</p>
       </div>
@@ -416,8 +418,8 @@ created_at  <span class="t">INTEGER</span></pre>
         <p class="note">Hand-written SQL migrations — drizzle-kit doesn’t model fts5/vec0.</p>
       </div>
       <div class="card">
-        <span class="tag core">users · meta</span>
-<pre><span class="t">users</span>(id, name, token_hash)   <span class="c">bcrypt; raw token never stored</span>
+        <span class="tag core">user (better-auth) · meta</span>
+<pre><span class="t">user</span>(id, name, email, role …)  <span class="c">better-auth; +session/account/apikey</span>
 
 <span class="t">meta</span>(key, value)
   embedding_model   <span class="c">checked at boot</span>

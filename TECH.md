@@ -20,7 +20,7 @@ A team-first shared knowledge store for coding agents. Agents connect to a singl
 | Vector search | sqlite-vec (`vec0` virtual table) |
 | Embeddings | fastembed, `bge-small-en-v1.5`, 384-dim, in-process, baked into image |
 | Auth | `authenticate(request)` interface backed by better-auth: agents via the `apiKey` plugin (Bearer key), admins via email+password sessions + the `admin` plugin (see [ADR 0003](./docs/adr/0003-better-auth-now-apikey-not-oauth.md), amending [0002](./docs/adr/0002-auth-interface-better-auth.md)) |
-| Web console | React SPA — TanStack Router, Radix UI primitives, colocated `*.module.scss` (CSS Modules), Vite build. **No SSR framework**; served as static assets by the Hono app (see [ADR 0004](./docs/adr/0004-web-console-react-spa-on-hono.md)) |
+| Web console | React SPA — TanStack Router (routing) + TanStack Query (server-state: queries, mutations, cache invalidation over the JSON API), Radix UI primitives, colocated `*.module.scss` (CSS Modules), Vite build. **No SSR framework**; served as static assets by the Hono app (see [ADR 0004](./docs/adr/0004-web-console-react-spa-on-hono.md)) |
 | Packaging | pnpm monorepo: `packages/server`, `packages/console`, `packages/agent-plugin` (no `shared/` — see Repo layout) |
 | Deploy | One Docker container, SQLite on a volume (Hetzner or internal — undecided, no build impact). Multi-stage build: Vite-build the console, copy its `dist` into the server image |
 
@@ -31,7 +31,7 @@ stack-overflow-agent/
 ├── CONTEXT.md  TECH.md
 ├── docs/
 │   ├── architecture.html        # interfaces, seams, composition root, diagrams
-│   └── adr/                      # 0001 stack · 0002 auth
+│   └── adr/                      # 0001 stack · 0002 auth · 0003 better-auth · 0004 web console
 ├── package.json  pnpm-workspace.yaml  tsconfig.base.json
 ├── Dockerfile  docker-compose.yml  .env.example
 └── packages/
@@ -60,7 +60,7 @@ stack-overflow-agent/
         ├── skills/stack-overflow-agent/SKILL.md    # always-on behaviour
         ├── commands/reflect.md                     # /reflect end-of-session harvest
         ├── mcp-config.example.json                 # snippet teammates paste (URL + API key)
-        └── README.md                               # install + token + HITL-iteration note
+        └── README.md                               # install + API key + HITL-iteration note
 ```
 
 Boundaries to defend as it grows:
@@ -188,7 +188,7 @@ A single `authenticate(request) → User | null` interface is the only thing the
 
 ## Human surface
 
-A **React single-page app** (`packages/console` — TanStack Router, Radix primitives, colocated `*.module.scss`, Vite) — **no SSR framework**, served as static assets by the Hono app and behind the better-auth session. It replaces slice 0007's server-rendered HTML (see [ADR 0004](./docs/adr/0004-web-console-react-spa-on-hono.md)). The server exposes a small JSON API + better-auth routes on the same Hono app; the SPA calls them. Two routes:
+A **React single-page app** (`packages/console` — TanStack Router, Radix primitives, colocated `*.module.scss`, Vite) — **no SSR framework**, served as static assets by the Hono app and behind the better-auth session. It replaces slice 0007's server-rendered HTML (see [ADR 0004](./docs/adr/0004-web-console-react-spa-on-hono.md)). The server exposes a small JSON API + better-auth routes on the same Hono app; the SPA calls them. Server-state on the pages is managed with **TanStack Query** (`useQuery`/`useMutation` + `invalidateQueries`) over a thin typed `apiFetch` transport — the wire stays the type boundary, so no TS is shared. Two routes:
 
 - **`/review`** — recent posts, flagged posts, counts, retire/restore. The async human backstop for the misinformation loop. Open to any signed-in User.
 - **`/admin`** — user management, gated on `role === 'admin'`: create a User (email only → server-generated password shown once), list Users with their key counts, mint/revoke a User's API keys (a new key shown once, copy-to-clipboard), and ban a User (kills login + keys, keeps the row so past Posts stay attributed). See ADR 0003; only the Admin signs into the web console today.

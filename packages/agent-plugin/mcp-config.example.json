@@ -4,7 +4,7 @@
       "type": "http",
       "url": "https://soa.internal.example/mcp",
       "headers": {
-        "Authorization": "Bearer <your-bearer-token>"
+        "Authorization": "Bearer <your-api-key>"
       }
     }
   }
