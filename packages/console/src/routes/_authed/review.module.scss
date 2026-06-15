@@ -115,6 +115,62 @@
   color: $color-danger;
 }
 
+// The search box: a hairline-bordered row with a leading magnifier and a quiet
+// "Clear" affordance, sitting above the tabs. Matches the editorial treatment —
+// no fill at rest, an accent ring on focus-within.
+.search {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  margin-bottom: $space-md;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-bg;
+  transition: border-color 0.15s ease;
+
+  &:focus-within {
+    border-color: $color-accent;
+  }
+}
+
+.searchIcon {
+  flex-shrink: 0;
+  color: $color-text-muted;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: $color-text;
+  font: inherit;
+  font-size: 0.9375rem;
+
+  &::placeholder {
+    color: $color-text-subtle;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.searchClear {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: $color-text-muted;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+
+  &:hover {
+    color: $color-text;
+  }
+}
+
 .tabs {
   display: flex;
   flex-direction: column;
@@ -189,30 +245,35 @@
   opacity: 0.55;
 }
 
-// Left metrics rail: a mono gutter in the margin to the left of the content (like
-// a Stack Overflow stat column), right-aligned against the title edge and
-// vertically centred on the heading so it reads as part of the entry rather than
-// floating at the top. Kudos sits over the view counter.
+// Left metrics rail: a mono stat column in the margin to the left of the content
+// (a Stack Overflow stat gutter), right-aligned against the title edge. Views
+// sit on top, then the confirm/flag kudos. The column begins at the situation
+// line (below the title), so it pairs with the body copy, not the heading.
 .rail {
   position: absolute;
-  top: 0.66rem; // ~centre of the title's first line
+  top: 1.95rem; // ~top of the situation line (title line + .main gap)
   right: calc(100% + $space-xl);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: $space-sm;
+  gap: $space-xs;
   font-family: $font-mono;
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  transform: translateY(-50%);
 }
 
-// Confirms / flags as a minimal +N / −N kudos pair — green up, red down.
-.kudos {
-  display: flex;
-  justify-content: flex-end;
-  gap: $space-sm;
+// One metric: a small icon snug against its number.
+.stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+
+  svg {
+    width: 13px;
+    height: 13px;
+    stroke-width: 2;
+  }
 }
 
 .up {
@@ -228,18 +289,9 @@
   color: $color-text-subtle;
 }
 
-.views {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
+// Views are always neutral — the count, never a signal to act on.
+.viewsStat {
   color: $color-text-muted;
-
-  svg {
-    width: 13px;
-    height: 13px;
-    stroke-width: 2;
-  }
 }
 
 // The content column holds the heading, situation, actions and revealed

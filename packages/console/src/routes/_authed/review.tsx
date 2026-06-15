@@ -2,7 +2,16 @@ import * as Tabs from "@radix-ui/react-tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { formatDistanceToNow } from "date-fns";
-import { BookOpen, ChevronDown, Eye, GitBranch, Plug, Search } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  BookOpen,
+  ChevronDown,
+  Eye,
+  GitBranch,
+  Plug,
+  Search,
+} from "lucide-react";
 import { useState } from "react";
 import { apiFetch } from "../../api/client";
 import crewProfile from "../../assets/crew-profile.png";
@@ -50,6 +59,39 @@ type ReviewRow = {
   flags: number;
   views: number;
 };
+
+/**
+ * The per-Post metrics rail: confirms, flags and views as an icon+number stat
+ * column in the left gutter — green "up" for confirms, red "down" for flags,
+ * muted views. A zero count drops to subtle gray so only real signal stands out.
+ */
+function PostMetrics({ row }: { row: ReviewRow }) {
+  return (
+    <div className={styles.rail}>
+      <span
+        className={`${styles.stat} ${styles.viewsStat}`}
+        title={`${row.views} views`}
+      >
+        <Eye aria-hidden="true" />
+        {row.views}
+      </span>
+      <span
+        className={`${styles.stat} ${row.confirms ? styles.up : styles.zero}`}
+        title={`${row.confirms} confirmed`}
+      >
+        <ArrowUp aria-hidden="true" />
+        {row.confirms}
+      </span>
+      <span
+        className={`${styles.stat} ${row.flags ? styles.down : styles.zero}`}
+        title={`${row.flags} flagged`}
+      >
+        <ArrowDown aria-hidden="true" />
+        {row.flags}
+      </span>
+    </div>
+  );
+}
 
 function ReviewPage() {
   const queryClient = useQueryClient();
@@ -114,6 +156,18 @@ function ReviewPage() {
   const onSetRetired = (row: ReviewRow, retired: boolean) =>
     setRetired.mutate({ row, retired });
 
+  // Submit the live input as the active search. Trim so a whitespace-only box
+  // reads as "clear" (empty query → tabs return).
+  const onSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setQuery(term.trim());
+  };
+  const onClearSearch = () => {
+    setTerm("");
+    setQuery("");
+  };
+  const searching = query !== "";
+
   return (
     <section className={styles.page}>
       <header className={styles.hero}>
@@ -158,7 +212,38 @@ function ReviewPage() {
 
       {error && <p className={styles.error}>{error}</p>}
 
-      <Tabs.Root defaultValue="recent" className={styles.tabs}>
+      <form className={styles.search} role="search" onSubmit={onSearch}>
+        <Search size={16} aria-hidden="true" className={styles.searchIcon} />
+        <input
+          type="search"
+          className={styles.searchInput}
+          placeholder="Search Posts…"
+          aria-label="Search Posts"
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+        />
+        {searching && (
+          <button
+            type="button"
+            className={styles.searchClear}
+            onClick={onClearSearch}
+          >
+            Clear
+          </button>
+        )}
+      </form>
+
+      {searching ? (
+        <div className={styles.panel}>
+          <PostList
+            rows={search.data}
+            empty={`No Posts match “${query}”.`}
+            busyId={busyId}
+            onSetRetired={onSetRetired}
+          />
+        </div>
+      ) : (
+        <Tabs.Root defaultValue="recent" className={styles.tabs}>
         <Tabs.List className={styles.tabList} aria-label="Review lists">
           <Tabs.Trigger className={styles.tab} value="recent">
             Recent
@@ -190,7 +275,8 @@ function ReviewPage() {
             onSetRetired={onSetRetired}
           />
         </Tabs.Content>
-      </Tabs.Root>
+        </Tabs.Root>
+      )}
     </section>
   );
 }
@@ -243,26 +329,7 @@ function PostCard({
   const [expanded, setExpanded] = useState(false);
   return (
     <li className={`${styles.card} ${retired ? styles.retired : ""}`}>
-      <div className={styles.rail}>
-        <div className={styles.kudos}>
-          <span
-            className={`${styles.up} ${row.confirms ? "" : styles.zero}`}
-            title={`${row.confirms} confirmed`}
-          >
-            +{row.confirms}
-          </span>
-          <span
-            className={`${styles.down} ${row.flags ? "" : styles.zero}`}
-            title={`${row.flags} flagged`}
-          >
-            −{row.flags}
-          </span>
-        </div>
-        <span className={styles.views} title={`${row.views} views`}>
-          <Eye aria-hidden="true" />
-          {row.views}
-        </span>
-      </div>
+      <PostMetrics row={row} />
       <div className={styles.main}>
         <h3 className={styles.title}>
           <span className={styles.titleText}>{row.title}</span>
