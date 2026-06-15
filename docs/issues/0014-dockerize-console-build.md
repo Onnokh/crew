@@ -8,10 +8,10 @@ Extend the single-container deploy (slice 0009) to include the web console. A mu
 
 ## Acceptance criteria
 
-- [ ] The image builds via a multi-stage Dockerfile that produces the console `dist` and bundles it into the server image
-- [ ] One running container serves the console (login, `/admin`, `/review`) and `/mcp` on a single port
-- [ ] An agent completes the loop and an admin signs in and manages users against the same running container
-- [ ] Data still persists across restarts via the mounted SQLite volume; no outbound network needed at first start
+- [x] The image builds via a multi-stage Dockerfile that produces the console `dist` and bundles it into the server image
+- [x] One running container serves the console (login, `/admin`, `/review`) and `/mcp` on a single port
+- [x] An agent completes the loop and an admin signs in and manages users against the same running container
+- [x] Data still persists across restarts via the mounted SQLite volume; no outbound network needed at first start
 
 ## Blocked by
 
