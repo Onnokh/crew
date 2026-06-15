@@ -4,7 +4,11 @@
 // hatched gutters (the diagonal-stripe margins from the reference design).
 @use "../styles/tokens" as *;
 
-$column: 44rem;
+// Two nested widths, mirroring the reference: the panel is the outer main area;
+// the text column (measure) is narrower and centered within it, so content sits
+// in a comfortable measure with extra horizontal air before the rails.
+$panel: 47.5rem; // 760px
+$measure: 41.25rem; // 660px
 
 .shell {
   display: flex;
@@ -18,14 +22,22 @@ $column: 44rem;
   background: $color-bg;
 }
 
-// Inner bar, aligned to the same width as the content column below it.
+// The header mirrors the body's two-width layout so the nav lines up with the
+// content: `.bar` matches the panel (outer width + inline padding), and
+// `.barInner` matches the measure (the centered text column) — so the brand sits
+// exactly above the page content, not inset by the panel padding.
 .bar {
+  max-width: $panel;
+  margin: 0 auto;
+  padding: $space-md $space-lg;
+}
+
+.barInner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  max-width: $column;
+  max-width: $measure;
   margin: 0 auto;
-  padding: $space-md $space-lg;
 }
 
 .nav {
@@ -150,7 +162,12 @@ $column: 44rem;
   flex: 1;
   display: flex;
   justify-content: center;
+  gap: $space-lg;
   background: $color-bg;
+
+  @media (min-width: 1280px) {
+    gap: $space-xl;
+  }
 }
 
 .rail {
@@ -178,8 +195,15 @@ $column: 44rem;
 
 .content {
   flex: 1;
-  max-width: $column;
+  max-width: $panel;
   min-height: 100%;
-  padding: $space-xl $space-lg calc($space-xl * 2);
+  padding: calc($space-xl * 2.5) $space-lg calc($space-xl * 2);
   background: $color-bg;
+}
+
+// The text column: narrower than the panel and centered, so there is extra
+// horizontal breathing room inside the panel (the reference's 660-in-760).
+.measure {
+  max-width: $measure;
+  margin: 0 auto;
 }

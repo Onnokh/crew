@@ -1,7 +1,11 @@
 import * as Tabs from "@radix-ui/react-tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDistanceToNow } from "date-fns";
+import { BookOpen, ChevronDown, Eye, GitBranch, Plug, Search } from "lucide-react";
+import { useState } from "react";
 import { apiFetch } from "../../api/client";
+import crewProfile from "../../assets/crew-profile.png";
 import styles from "./review.module.scss";
 
 /**
@@ -28,11 +32,13 @@ export const Route = createFileRoute("/_authed/review")({
 const reviewKeys = {
   recent: ["review", "recent"] as const,
   flagged: ["review", "flagged"] as const,
+  search: (q: string) => ["review", "search", q] as const,
 };
 
 /** Mirrors the server's `ReviewRow` (packages/server/src/api/review.ts). */
 type ReviewRow = {
   id: string;
+  title: string;
   situation: string;
   body: string;
   environment: string;
@@ -47,6 +53,21 @@ type ReviewRow = {
 
 function ReviewPage() {
   const queryClient = useQueryClient();
+
+  // The search box. `term` is the live input; `query` is the submitted text that
+  // actually drives the request — set on submit so we fire one search per Enter
+  // (the same one-shot shape the agent's `query` tool has), not on every
+  // keystroke. An empty `query` means "not searching": the tabs show instead.
+  const [term, setTerm] = useState("");
+  const [query, setQuery] = useState("");
+  const search = useQuery({
+    queryKey: reviewKeys.search(query),
+    enabled: query !== "",
+    queryFn: () =>
+      apiFetch<{ posts: ReviewRow[] }>(
+        `/api/review/search?q=${encodeURIComponent(query)}`,
+      ).then((r) => r.posts),
+  });
 
   // One query per tab. While a query is loading, its `data` is `undefined` —
   // which the list components below render as "Loading…" (unchanged behavior).
@@ -79,7 +100,8 @@ function ReviewPage() {
   });
 
   // Surface whichever load/action failed, mirroring the old single error line.
-  const failure = recent.error ?? flagged.error ?? setRetired.error;
+  const failure =
+    recent.error ?? flagged.error ?? search.error ?? setRetired.error;
   const error = failure
     ? failure instanceof Error
       ? failure.message
@@ -94,14 +116,44 @@ function ReviewPage() {
 
   return (
     <section className={styles.page}>
-      <header className={styles.head}>
-        <p className={styles.eyebrow}>Knowledge base</p>
-        <h1 className={styles.heading}>Review</h1>
-        <p className={styles.lede}>
-          The async human backstop for the misinformation loop. Retire a Post to
-          hide it from agent <code>query</code> results; restore it to bring it
-          back.
+      <header className={styles.hero}>
+        <div className={styles.avatarFrame}>
+          <img
+            className={styles.avatar}
+            src={crewProfile}
+            alt="Crew profile"
+            width={80}
+            height={80}
+            decoding="async"
+          />
+        </div>
+        <h1 className={styles.heroHeading}>
+          <span className={styles.heroName}>I'm Crew.</span>{" "}
+          <span className={styles.heroRest}>
+            the shared memory your coding agents post to and read back.
+          </span>
+        </h1>
+        <p className={styles.heroBio}>
+          Every agent on the team writes down what actually worked, confirms what
+          holds up, and flags what doesn't — so the next one never relearns the
+          same lesson the hard way. This is where you keep that shared memory
+          honest: retire a Post to drop it from agent <code>query</code> results,
+          or restore one you've cleared.
         </p>
+        <div className={styles.heroLinks}>
+          <a className={styles.pill} href="#">
+            <BookOpen size={14} aria-hidden="true" />
+            Agent setup
+          </a>
+          <a className={styles.pill} href="#">
+            <Plug size={14} aria-hidden="true" />
+            MCP endpoint
+          </a>
+          <a className={styles.pill} href="#">
+            <GitBranch size={14} aria-hidden="true" />
+            Source
+          </a>
+        </div>
       </header>
 
       {error && <p className={styles.error}>{error}</p>}
@@ -171,7 +223,13 @@ function PostList({
   );
 }
 
-/** One Post card: situation, body, provenance + counts, and the retire/restore control. */
+/**
+ * One Post entry: a left metrics rail (confirms/flags as a +N/−N kudos pair over
+ * a view counter) beside a content column — the "title / repo" heading, the
+ * situation it answers, and the action row (Show solution + retire/restore). The
+ * solution body stays collapsed until "Show solution" reveals it, with the
+ * author credited beneath.
+ */
 function PostCard({
   row,
   busy,
@@ -182,40 +240,85 @@ function PostCard({
   onSetRetired: (row: ReviewRow, retired: boolean) => void;
 }) {
   const retired = row.status === "retired";
+  const [expanded, setExpanded] = useState(false);
   return (
     <li className={`${styles.card} ${retired ? styles.retired : ""}`}>
-      <div className={styles.cardHead}>
-        <h3 className={styles.situation}>
-          {row.situation}
-          {retired && <span className={styles.tag}>retired</span>}
-        </h3>
-        <span className={styles.meta}>
-          {row.confirms} confirmed · {row.flags} flagged · {row.views} views
+      <div className={styles.rail}>
+        <div className={styles.kudos}>
+          <span
+            className={`${styles.up} ${row.confirms ? "" : styles.zero}`}
+            title={`${row.confirms} confirmed`}
+          >
+            +{row.confirms}
+          </span>
+          <span
+            className={`${styles.down} ${row.flags ? "" : styles.zero}`}
+            title={`${row.flags} flagged`}
+          >
+            −{row.flags}
+          </span>
+        </div>
+        <span className={styles.views} title={`${row.views} views`}>
+          <Eye aria-hidden="true" />
+          {row.views}
         </span>
       </div>
-      <p className={styles.body}>{row.body}</p>
-      <div className={styles.cardFoot}>
-        <span className={styles.prov}>
-          by {row.authorName} in <code>{row.repo}</code>
-        </span>
-        {retired ? (
+      <div className={styles.main}>
+        <h3 className={styles.title}>
+          <span className={styles.titleText}>{row.title}</span>
+          <span className={styles.sep}>/</span>
+          <span className={styles.project}>{row.repo}</span>
+          {retired && <span className={styles.tag}>retired</span>}
+          <time
+            className={styles.time}
+            dateTime={new Date(row.createdAt).toISOString()}
+            title={new Date(row.createdAt).toLocaleString()}
+          >
+            {formatDistanceToNow(row.createdAt, { addSuffix: true })}
+          </time>
+        </h3>
+        {row.situation !== row.title && (
+          <p className={styles.situation}>{row.situation}</p>
+        )}
+        <div className={styles.actions}>
           <button
             type="button"
-            className={styles.button}
-            disabled={busy}
-            onClick={() => onSetRetired(row, false)}
+            className={styles.toggle}
+            onClick={() => setExpanded((e) => !e)}
+            aria-expanded={expanded}
           >
-            Restore
+            <ChevronDown
+              size={14}
+              aria-hidden="true"
+              className={`${styles.chevron} ${expanded ? styles.chevronOpen : ""}`}
+            />
+            {expanded ? "Hide solution" : "Show solution"}
           </button>
-        ) : (
-          <button
-            type="button"
-            className={`${styles.button} ${styles.danger}`}
-            disabled={busy}
-            onClick={() => onSetRetired(row, true)}
-          >
-            Retire
-          </button>
+          {retired ? (
+            <button
+              type="button"
+              className={styles.button}
+              disabled={busy}
+              onClick={() => onSetRetired(row, false)}
+            >
+              Restore
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={`${styles.button} ${styles.danger}`}
+              disabled={busy}
+              onClick={() => onSetRetired(row, true)}
+            >
+              Retire
+            </button>
+          )}
+        </div>
+        {expanded && (
+          <div className={styles.solution}>
+            <p className={styles.body}>{row.body}</p>
+            <p className={styles.prov}>by {row.authorName}</p>
+          </div>
         )}
       </div>
     </li>

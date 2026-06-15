@@ -1,6 +1,7 @@
 import type { Context, Hono, MiddlewareHandler } from "hono";
 import type { Post } from "../core/post.js";
 import type { Deps } from "../deps.js";
+import { MAX_LIMIT, retrieve } from "../search/retrieve.js";
 import { aggregateEvents } from "../trust/aggregate.js";
 
 /**
@@ -18,6 +19,7 @@ import { aggregateEvents } from "../trust/aggregate.js";
  * Routes:
  *   GET  /api/review/recent   → { posts: ReviewRow[] }  most recent Posts
  *   GET  /api/review/flagged  → { posts: ReviewRow[] }  Posts carrying ≥1 Flag
+ *   GET  /api/review/search   → { posts: ReviewRow[] }  ranked exactly as `query`
  *   POST /api/review/:id/retire  → 204  drop from agent `query` results
  *   POST /api/review/:id/restore → 204  bring it back
  *
@@ -72,6 +74,37 @@ export function mountReview(app: Hono, deps: Deps): void {
   app.get("/api/review/flagged", async (c) =>
     c.json({ posts: await toRows(deps, await deps.repo.listFlaggedPosts(LIST_LIMIT)) }),
   );
+
+  // Search the corpus exactly the way an agent's `query` tool does: the same
+  // `retrieve` pipeline (keyword + vector legs → RRF → trust/recency/repo
+  // scoring), so the page surfaces and ranks Posts identically to MCP. An empty
+  // `q` yields an empty list rather than the whole corpus — search is opt-in,
+  // the Recent/Flagged tabs already cover "show me everything". `retrieve`
+  // already returns hydrated, ranked results carrying every count a ReviewRow
+  // needs, so this maps them straight across without a second events read.
+  app.get("/api/review/search", async (c) => {
+    const q = (c.req.query("q") ?? "").trim();
+    if (q === "") return c.json({ posts: [] });
+    const results = await retrieve(deps.repo, deps.clock, {
+      situation: q,
+      limit: MAX_LIMIT,
+    });
+    const posts: ReviewRow[] = results.map((r) => ({
+      id: r.post.id,
+      title: r.post.title,
+      situation: r.post.situation,
+      body: r.post.body,
+      environment: r.post.environment,
+      repo: r.post.repo,
+      status: r.post.status,
+      createdAt: r.post.createdAt,
+      authorName: r.authorName,
+      confirms: r.confirms,
+      flags: r.flags,
+      views: r.views,
+    }));
+    return c.json({ posts });
+  });
 
   // The human backstop. Both are idempotent no-ops for an unknown id (the
   // repository swallows it), so a stale page that retires a vanished Post just

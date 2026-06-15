@@ -9,33 +9,102 @@
   display: block;
 }
 
-.head {
-  margin-bottom: $space-xl;
+// The hero intro block (heading + bio + pill links), modelled on the reference
+// design: an ink name followed by a muted tagline on the same line, a muted bio
+// at a comfortable measure, then a row of quiet pill links with small icons.
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  margin-bottom: calc($space-xl * 1.5);
 }
 
-// The small, uppercase, letter-spaced label that anchors each section.
-.eyebrow {
-  margin: 0 0 $space-md;
-  color: $color-text-subtle;
-  font-size: 0.6875rem;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+// Profile avatar above the heading, modelled on the reference: a slightly
+// rotated hairline-bordered frame holding a rounded image, straightening on
+// hover. The frame is the 1px padded border; the image rounds just inside it.
+.avatarFrame {
+  width: fit-content;
+  padding: 1px;
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+  background: $color-surface-hover;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  transform: rotate(-2deg);
+  transition: transform 0.5s ease;
+
+  &:hover {
+    transform: rotate(0deg);
+  }
 }
 
-.heading {
-  margin: 0 0 $space-sm;
-  font-size: 1.75rem;
+.avatar {
+  display: block;
+  width: 80px;
+  height: 80px;
+  border-radius: calc($radius-lg - 1px);
+  object-fit: cover;
+}
+
+.heroHeading {
+  margin: 0;
+  font-size: 1.375rem;
   font-weight: 600;
   letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-wrap: balance;
+
+  @media (min-width: 640px) {
+    font-size: 1.625rem;
+  }
 }
 
-.lede {
-  margin: 0;
-  max-width: 52ch;
+.heroName {
+  color: $color-text;
+  font-weight: 600;
+}
+
+.heroRest {
   color: $color-text-muted;
-  font-size: 0.9375rem;
-  line-height: 1.6;
+  font-weight: 500;
+}
+
+.heroBio {
+  margin: 0;
+  max-width: 55ch;
+  color: $color-text-muted;
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.heroLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-sm;
+  padding-top: $space-xs;
+}
+
+// Quiet pill: muted fill, gains ink text on hover. The icon inherits color.
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: $space-xs $space-md;
+  border-radius: 999px;
+  background: $color-surface-hover;
+  color: $color-text-muted;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: $color-text;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
 }
 
 .error {
@@ -97,39 +166,135 @@
   padding: $space-lg 0;
 }
 
-// Entries are separated by hairlines, not gaps + borders.
+// Entries are separated by whitespace, not divider lines (matching the
+// reference design — gaps do the work, no per-row borders).
 .cards {
   display: flex;
   flex-direction: column;
-  padding: 0;
+  gap: $space-lg;
+  padding: $space-sm 0 0;
   margin: 0;
   list-style: none;
 }
 
+// Each entry's content runs flush to the column's left edge (lined up with the
+// hero and tabs); the metrics hang in the left margin as an out-of-flow rail, so
+// they never push the title inward.
 .card {
-  padding: $space-lg 0;
-  border-bottom: 1px solid $color-border;
-
-  &:last-child {
-    border-bottom: none;
-  }
+  position: relative;
+  padding: 0;
 }
 
 .retired {
   opacity: 0.55;
 }
 
-.cardHead {
+// Left metrics rail: a mono gutter in the margin to the left of the content (like
+// a Stack Overflow stat column), right-aligned against the title edge and
+// vertically centred on the heading so it reads as part of the entry rather than
+// floating at the top. Kudos sits over the view counter.
+.rail {
+  position: absolute;
+  top: 0.66rem; // ~centre of the title's first line
+  right: calc(100% + $space-xl);
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: $space-md;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: $space-sm;
+  font-family: $font-mono;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transform: translateY(-50%);
 }
 
+// Confirms / flags as a minimal +N / −N kudos pair — green up, red down.
+.kudos {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-sm;
+}
+
+.up {
+  color: $color-positive-text;
+}
+
+.down {
+  color: $color-danger;
+}
+
+// A zero count is just noise, so it drops back to a subtle gray.
+.zero {
+  color: $color-text-subtle;
+}
+
+.views {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  color: $color-text-muted;
+
+  svg {
+    width: 13px;
+    height: 13px;
+    stroke-width: 2;
+  }
+}
+
+// The content column holds the heading, situation, actions and revealed
+// solution in a tight, even rhythm — gaps do the spacing, no margins.
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+// The heading row: bold Post title, a muted slash, then the repo it came from —
+// "Title / project", mirroring the reference's name / role line.
+.title {
+  display: flex;
+  align-items: baseline;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.titleText {
+  color: $color-text;
+  font-weight: 600;
+}
+
+.sep {
+  margin: 0 0.375rem;
+  color: $color-text-muted;
+}
+
+.project {
+  color: $color-text-muted;
+}
+
+// Relative post age, pushed to the right end of the title row — a quiet mono
+// timestamp ("3 days ago") that mirrors the reference's right-aligned dates.
+.time {
+  margin-left: auto;
+  padding-left: $space-md;
+  flex-shrink: 0;
+  color: $color-text-subtle;
+  font-family: $font-mono;
+  font-size: 0.6875rem;
+  white-space: nowrap;
+}
+
+// The situation (the question the Post answers) — the muted description line
+// shown under the heading, at a comfortable measure.
 .situation {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
+  max-width: 65ch;
+  color: $color-text-muted;
+  font-size: 0.875rem;
+  line-height: 1.7;
 }
 
 .tag {
@@ -145,29 +310,62 @@
   vertical-align: 1px;
 }
 
-// Right-aligned counts read as quiet machine metadata.
-.meta {
-  flex-shrink: 0;
-  color: $color-text-muted;
-  font-family: $font-mono;
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+// The revealed solution: the actual answer body, surfaced only when "Show more"
+// is clicked, with the author credited beneath it.
+.solution {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  padding-top: $space-xs;
 }
 
 .body {
-  margin: $space-sm 0 $space-md;
-  color: $color-text;
-  font-size: 0.9375rem;
-  line-height: 1.6;
+  margin: 0;
+  max-width: 65ch;
+  color: $color-text-muted;
+  font-size: 0.9rem;
+  line-height: 1.7;
   white-space: pre-wrap;
 }
 
-.cardFoot {
+// The two actions read at different weights: a quiet disclosure toggle on the
+// left (content navigation) and the moderation button on the right.
+.actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: $space-md;
+}
+
+// "Show / hide solution" disclosure — borderless and muted, with a chevron that
+// rotates when open. Hidden at rest with the moderation button; both surface on
+// card hover (see the reveal rule below) so the list reads as quiet prose.
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: $space-xs 0;
+  border: none;
+  background: transparent;
+  color: $color-text-muted;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    color: $color-text;
+  }
+}
+
+.chevron {
+  transition: transform 0.15s ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
 }
 
 .prov {
@@ -176,27 +374,54 @@
   font-size: 0.8125rem;
 }
 
-// Text-style action, in keeping with the editorial look — no fill, no border.
+// Retire / restore: the moderation action, a real bordered button pushed to the
+// right end of the row. Hidden at rest, revealed with the toggle on card hover.
 .button {
   flex-shrink: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
+  margin-left: auto;
+  padding: $space-xs $space-md;
+  border: 1px solid $color-border-strong;
+  border-radius: $radius-sm;
+  background: $color-bg;
   color: $color-text;
   font: inherit;
   font-size: 0.8125rem;
   cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 
   &:hover:not(:disabled) {
-    text-decoration: underline;
+    background: $color-surface-hover;
+    border-color: $color-text-muted;
   }
 
   &:disabled {
-    opacity: 0.5;
+    color: $color-text-muted;
     cursor: default;
   }
 }
 
+// Destructive variant: muted at rest so it doesn't shout, then fills red on
+// hover to confirm intent.
 .danger {
-  color: $color-danger;
+  color: $color-text-muted;
+
+  &:hover:not(:disabled) {
+    background: $color-danger;
+    border-color: $color-danger;
+    color: $color-accent-contrast;
+  }
+}
+
+// Both actions surface together on card hover / keyboard focus; otherwise they
+// sit hidden so the resting list stays clean.
+.card:hover .toggle,
+.card:hover .button,
+.toggle:focus-visible,
+.button:focus-visible {
+  opacity: 1;
 }

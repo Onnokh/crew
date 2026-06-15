@@ -7,7 +7,7 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: $space-lg;
+  gap: $space-xl;
 }
 
 .head {
@@ -36,7 +36,7 @@
   max-width: 52ch;
   color: $color-text-muted;
   font-size: 0.9375rem;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .error {
@@ -86,9 +86,13 @@
   }
 }
 
-// The small uppercase label that heads the list, matching the review eyebrow.
+// Section label: small uppercase mono-ish label with a dashed full-width rule
+// beneath it (the reference design's section-header treatment).
 .listLabel {
-  margin: 0 0 calc(-1 * $space-xs);
+  width: 100%;
+  margin: 0;
+  padding-bottom: $space-sm;
+  border-bottom: 1px dashed $color-border-strong;
   color: $color-text-subtle;
   font-size: 0.6875rem;
   font-weight: 500;
@@ -96,10 +100,12 @@
   text-transform: uppercase;
 }
 
+// Rows separated by whitespace, not divider lines.
 .list {
   display: flex;
   flex-direction: column;
-  padding: 0;
+  gap: $space-lg;
+  padding: $space-sm 0 0;
   margin: 0;
   list-style: none;
 }
@@ -108,12 +114,6 @@
   display: flex;
   align-items: center;
   gap: $space-md;
-  padding: $space-md 0;
-  border-bottom: 1px solid $color-border;
-
-  &:last-child {
-    border-bottom: none;
-  }
 }
 
 .identity {
