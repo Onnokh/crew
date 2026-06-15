@@ -1,6 +1,6 @@
 import * as Tabs from "@radix-ui/react-tabs";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../../api/client";
 import styles from "./review.module.scss";
 
@@ -12,15 +12,23 @@ import styles from "./review.module.scss";
  * parent already guards the route, so there's no extra gate here (post-hoc
  * review, not a pre-publish gate).
  *
- * The two lists are a Radix Tabs split (recent vs flagged). Data comes from the
- * server's `/api/review/*` JSON over `apiFetch` (the wire is the type boundary —
- * ADR 0004 — so {@link ReviewRow} mirrors the server's shape, no shared package).
- * Retire/restore POST then re-fetch BOTH lists so a Post that gains/loses a flag
- * moves between tabs correctly.
+ * The two lists are a Radix Tabs split (recent vs flagged), each its own
+ * `useQuery` over the server's `/api/review/*` JSON (the wire is the type
+ * boundary — ADR 0004 — so {@link ReviewRow} mirrors the server's shape, no
+ * shared package; `apiFetch` is the queryFn transport). Retire/restore is a
+ * `useMutation` that, on success, invalidates BOTH list queries so a Post that
+ * gains/loses a flag moves between tabs correctly — replacing the old explicit
+ * "POST then await refetch of both lists" dance.
  */
 export const Route = createFileRoute("/_authed/review")({
   component: ReviewPage,
 });
+
+/** Centralized query keys, so the mutation can invalidate exactly these lists. */
+const reviewKeys = {
+  recent: ["review", "recent"] as const,
+  flagged: ["review", "flagged"] as const,
+};
 
 /** Mirrors the server's `ReviewRow` (packages/server/src/api/review.ts). */
 type ReviewRow = {
@@ -37,48 +45,52 @@ type ReviewRow = {
   views: number;
 };
 
-type Lists = { recent: ReviewRow[]; flagged: ReviewRow[] };
-
 function ReviewPage() {
-  const [lists, setLists] = useState<Lists | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const load = useCallback(async () => {
-    try {
-      const [recent, flagged] = await Promise.all([
-        apiFetch<{ posts: ReviewRow[] }>("/api/review/recent"),
-        apiFetch<{ posts: ReviewRow[] }>("/api/review/flagged"),
+  // One query per tab. While a query is loading, its `data` is `undefined` —
+  // which the list components below render as "Loading…" (unchanged behavior).
+  const recent = useQuery({
+    queryKey: reviewKeys.recent,
+    queryFn: () =>
+      apiFetch<{ posts: ReviewRow[] }>("/api/review/recent").then((r) => r.posts),
+  });
+  const flagged = useQuery({
+    queryKey: reviewKeys.flagged,
+    queryFn: () =>
+      apiFetch<{ posts: ReviewRow[] }>("/api/review/flagged").then((r) => r.posts),
+  });
+
+  // Retire/restore. On success, invalidate BOTH lists so counts and tab
+  // membership stay in sync with the server (the source of truth for status and
+  // flags) — a Post that gains/loses a flag moves between tabs. `variables.row.id`
+  // is what drives the per-row busy disabling below.
+  const setRetired = useMutation({
+    mutationFn: ({ row, retired }: { row: ReviewRow; retired: boolean }) =>
+      apiFetch(`/api/review/${row.id}/${retired ? "retire" : "restore"}`, {
+        method: "POST",
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: reviewKeys.recent }),
+        queryClient.invalidateQueries({ queryKey: reviewKeys.flagged }),
       ]);
-      setLists({ recent: recent.posts, flagged: flagged.posts });
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load Posts.");
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  // Retire/restore, then refresh both lists so counts and tab membership stay
-  // in sync with the server (the source of truth for status and flags).
-  const setRetired = useCallback(
-    async (row: ReviewRow, retired: boolean) => {
-      setBusyId(row.id);
-      try {
-        await apiFetch(`/api/review/${row.id}/${retired ? "retire" : "restore"}`, {
-          method: "POST",
-        });
-        await load();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Action failed.");
-      } finally {
-        setBusyId(null);
-      }
     },
-    [load],
-  );
+  });
+
+  // Surface whichever load/action failed, mirroring the old single error line.
+  const failure = recent.error ?? flagged.error ?? setRetired.error;
+  const error = failure
+    ? failure instanceof Error
+      ? failure.message
+      : "Something went wrong."
+    : null;
+
+  // Which row (if any) has an in-flight retire/restore, for per-row disabling.
+  const busyId = setRetired.isPending ? setRetired.variables.row.id : null;
+
+  const onSetRetired = (row: ReviewRow, retired: boolean) =>
+    setRetired.mutate({ row, retired });
 
   return (
     <section className={styles.page}>
@@ -97,28 +109,32 @@ function ReviewPage() {
         <Tabs.List className={styles.tabList} aria-label="Review lists">
           <Tabs.Trigger className={styles.tab} value="recent">
             Recent
-            {lists && <span className={styles.count}>{lists.recent.length}</span>}
+            {recent.data && (
+              <span className={styles.count}>{recent.data.length}</span>
+            )}
           </Tabs.Trigger>
           <Tabs.Trigger className={styles.tab} value="flagged">
             Flagged
-            {lists && <span className={styles.count}>{lists.flagged.length}</span>}
+            {flagged.data && (
+              <span className={styles.count}>{flagged.data.length}</span>
+            )}
           </Tabs.Trigger>
         </Tabs.List>
 
         <Tabs.Content value="recent" className={styles.panel}>
           <PostList
-            rows={lists?.recent}
+            rows={recent.data}
             empty="No Posts yet."
             busyId={busyId}
-            onSetRetired={setRetired}
+            onSetRetired={onSetRetired}
           />
         </Tabs.Content>
         <Tabs.Content value="flagged" className={styles.panel}>
           <PostList
-            rows={lists?.flagged}
+            rows={flagged.data}
             empty="No flagged Posts."
             busyId={busyId}
-            onSetRetired={setRetired}
+            onSetRetired={onSetRetired}
           />
         </Tabs.Content>
       </Tabs.Root>

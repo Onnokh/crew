@@ -1,5 +1,6 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { ApiError, apiFetch } from "../../api/client";
 import { authClient } from "../../auth/client";
 import { ConfirmBan } from "../../components/ConfirmBan";
@@ -16,9 +17,14 @@ import styles from "./admin.module.scss";
  *
  * Capabilities: create a User from an email (server returns a one-time
  * password, shown in a {@link CopyBox}); list Users with role + api-key count;
- * mint a key for a User (raw key shown once) and revoke an individual key; ban a
- * User behind a {@link ConfirmBan} dialog. Show-once secrets live only in this
- * component's state — they are never refetched.
+ * mint a key for a User (raw key shown once) and ban a User behind a
+ * {@link ConfirmBan} dialog. There is no per-key revoke UI today.
+ *
+ * The user list is a `useQuery`; create/mint/ban are `useMutation`s that each
+ * invalidate the list query on success (`apiFetch` stays the transport). The
+ * show-once secrets (`newPassword`, `mintedKey`) deliberately stay in local
+ * component state — set from each mutation's RESULT, never put in the query
+ * cache and never refetchable (you only get them back from the server once).
  */
 export const Route = createFileRoute("/_authed/admin")({
   beforeLoad: async () => {
@@ -45,12 +51,25 @@ type UserRow = {
   keyCount: number;
 };
 
-function AdminPage() {
-  const [users, setUsers] = useState<UserRow[]>([]);
-  const [error, setError] = useState<string | null>(null);
+/** Centralized query key for the user list, reused by every mutation's invalidate. */
+const adminKeys = {
+  users: ["admin", "users"] as const,
+};
 
-  // Show-once secrets, keyed by what they belong to. Cleared by the admin once
-  // captured; never refetchable.
+function AdminPage() {
+  const queryClient = useQueryClient();
+
+  // The user list. Mutations invalidate this key on success to re-pull it.
+  const usersQuery = useQuery({
+    queryKey: adminKeys.users,
+    queryFn: () =>
+      apiFetch<{ users: UserRow[] }>("/api/admin/users").then((r) => r.users),
+  });
+  const users = usersQuery.data ?? [];
+
+  // Show-once secrets, keyed by what they belong to. Set from a mutation's
+  // RESULT (never the query cache); cleared by the admin once captured; never
+  // refetchable — the server only ever hands these back once.
   const [newPassword, setNewPassword] = useState<{
     email: string;
     password: string;
@@ -61,67 +80,59 @@ function AdminPage() {
   } | null>(null);
 
   const [email, setEmail] = useState("");
-  const [busy, setBusy] = useState(false);
 
-  const refresh = useCallback(async () => {
-    try {
-      const { users } = await apiFetch<{ users: UserRow[] }>("/api/admin/users");
-      setUsers(users);
-    } catch (err) {
-      setError(describe(err));
-    }
-  }, []);
+  const invalidateUsers = () =>
+    queryClient.invalidateQueries({ queryKey: adminKeys.users });
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  async function onCreate(event: FormEvent) {
-    event.preventDefault();
-    setError(null);
-    setBusy(true);
-    try {
-      const created = await apiFetch<{
-        user: { id: string; email: string };
-        password: string;
-      }>("/api/admin/users", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      });
+  // Create a User. The server returns a one-time password; capture it into local
+  // state from the mutation result, then refresh the list.
+  const createUser = useMutation({
+    mutationFn: (newEmail: string) =>
+      apiFetch<{ user: { id: string; email: string }; password: string }>(
+        "/api/admin/users",
+        { method: "POST", body: JSON.stringify({ email: newEmail }) },
+      ),
+    onSuccess: async (created) => {
       setNewPassword({ email: created.user.email, password: created.password });
       setMintedKey(null);
       setEmail("");
-      await refresh();
-    } catch (err) {
-      setError(describe(err));
-    } finally {
-      setBusy(false);
-    }
-  }
+      await invalidateUsers();
+    },
+  });
 
-  async function onMintKey(user: UserRow) {
-    setError(null);
-    try {
-      const { key } = await apiFetch<{ id: string; key: string }>(
-        `/api/admin/users/${user.id}/keys`,
-        { method: "POST" },
-      );
+  // Mint a key for a User. The raw key comes back once — capture it locally.
+  const mintKey = useMutation({
+    mutationFn: (user: UserRow) =>
+      apiFetch<{ id: string; key: string }>(`/api/admin/users/${user.id}/keys`, {
+        method: "POST",
+      }),
+    onSuccess: async ({ key }, user) => {
       setMintedKey({ email: user.email, key });
       setNewPassword(null);
-      await refresh();
-    } catch (err) {
-      setError(describe(err));
-    }
-  }
+      await invalidateUsers();
+    },
+  });
 
-  async function onBan(user: UserRow) {
-    setError(null);
-    try {
-      await apiFetch(`/api/admin/users/${user.id}/ban`, { method: "POST" });
-      await refresh();
-    } catch (err) {
-      setError(describe(err));
-    }
+  const banUser = useMutation({
+    mutationFn: (user: UserRow) =>
+      apiFetch(`/api/admin/users/${user.id}/ban`, { method: "POST" }),
+    onSuccess: () => invalidateUsers(),
+  });
+
+  // First failing operation, run through the same one-line describe() as before.
+  const failure =
+    usersQuery.error ??
+    createUser.error ??
+    mintKey.error ??
+    banUser.error ??
+    null;
+  const error = failure ? describe(failure) : null;
+
+  const busy = createUser.isPending;
+
+  function onCreate(event: FormEvent) {
+    event.preventDefault();
+    createUser.mutate(email);
   }
 
   return (
@@ -184,13 +195,16 @@ function AdminPage() {
                 <button
                   type="button"
                   className={styles.secondary}
-                  onClick={() => onMintKey(user)}
+                  onClick={() => mintKey.mutate(user)}
                   disabled={user.banned}
                 >
                   Mint key
                 </button>
                 {!user.banned && (
-                  <ConfirmBan email={user.email} onConfirm={() => onBan(user)}>
+                  <ConfirmBan
+                    email={user.email}
+                    onConfirm={() => banUser.mutate(user)}
+                  >
                     <button type="button" className={styles.danger}>
                       Ban
                     </button>
