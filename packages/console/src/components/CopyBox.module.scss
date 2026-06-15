@@ -5,16 +5,19 @@
 .box {
   display: flex;
   flex-direction: column;
-  gap: $space-xs;
+  gap: $space-sm;
   padding: $space-md;
-  border: 1px solid $color-accent;
+  border: 1px solid $color-positive-border;
   border-radius: $radius-md;
-  background: $color-surface;
+  background: $color-positive-bg;
 }
 
 .label {
-  color: $color-text-muted;
-  font-size: 0.8125rem;
+  color: $color-positive-text;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .row {

@@ -137,10 +137,13 @@ function AdminPage() {
 
   return (
     <section className={styles.page}>
-      <h1 className={styles.heading}>Admin</h1>
-      <p className={styles.subtitle}>
-        Manage Users and the API keys their agents authenticate with.
-      </p>
+      <header className={styles.head}>
+        <p className={styles.eyebrow}>User management</p>
+        <h1 className={styles.heading}>Admin</h1>
+        <p className={styles.subtitle}>
+          Manage Users and the API keys their agents authenticate with.
+        </p>
+      </header>
 
       {error && (
         <p className={styles.error} role="alert">
@@ -173,48 +176,41 @@ function AdminPage() {
         <CopyBox label={`API key for ${mintedKey.email}`} secret={mintedKey.key} />
       )}
 
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Email</th>
-            <th>Role</th>
-            <th className={styles.numeric}>API keys</th>
-            <th className={styles.actionsCol}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((user) => (
-            <tr key={user.id}>
-              <td>
-                {user.email}
-                {user.banned && <span className={styles.banned}>banned</span>}
-              </td>
-              <td>{user.role ?? "user"}</td>
-              <td className={styles.numeric}>{user.keyCount}</td>
-              <td className={styles.actionsCol}>
-                <button
-                  type="button"
-                  className={styles.secondary}
-                  onClick={() => mintKey.mutate(user)}
-                  disabled={user.banned}
+      <p className={styles.listLabel}>Users</p>
+      <ul className={styles.list}>
+        {users.map((user) => (
+          <li key={user.id} className={styles.row}>
+            <div className={styles.identity}>
+              <span className={styles.email}>{user.email}</span>
+              <span className={styles.role}>/ {user.role ?? "user"}</span>
+              {user.banned && <span className={styles.banned}>banned</span>}
+            </div>
+            <span className={styles.keys}>
+              {user.keyCount} {user.keyCount === 1 ? "key" : "keys"}
+            </span>
+            <div className={styles.rowActions}>
+              <button
+                type="button"
+                className={styles.action}
+                onClick={() => mintKey.mutate(user)}
+                disabled={user.banned}
+              >
+                Mint key
+              </button>
+              {!user.banned && (
+                <ConfirmBan
+                  email={user.email}
+                  onConfirm={() => banUser.mutate(user)}
                 >
-                  Mint key
-                </button>
-                {!user.banned && (
-                  <ConfirmBan
-                    email={user.email}
-                    onConfirm={() => banUser.mutate(user)}
-                  >
-                    <button type="button" className={styles.danger}>
-                      Ban
-                    </button>
-                  </ConfirmBan>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                  <button type="button" className={styles.actionDanger}>
+                    Ban
+                  </button>
+                </ConfirmBan>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

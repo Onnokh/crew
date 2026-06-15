@@ -1,19 +1,41 @@
 // Colocated styles for the review page (CSS Modules — ADR 0004). Tokens are
-// shared; the page layout is local. Two levels up to the styles dir from
-// src/routes/_authed/.
+// shared; the page layout is local. Light editorial treatment: an uppercase
+// eyebrow label over the heading, ink underline tabs, and Posts rendered as
+// hairline-separated entries (no card fills, no shadows) — situation + counts on
+// top, body, then provenance and the retire/restore text action on a baseline.
 @use "../../styles/tokens" as *;
 
 .page {
-  max-width: 48rem;
+  display: block;
 }
 
 .head {
-  margin-bottom: $space-lg;
+  margin-bottom: $space-xl;
+}
+
+// The small, uppercase, letter-spaced label that anchors each section.
+.eyebrow {
+  margin: 0 0 $space-md;
+  color: $color-text-subtle;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.heading {
+  margin: 0 0 $space-sm;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .lede {
-  margin-top: $space-xs;
+  margin: 0;
+  max-width: 52ch;
   color: $color-text-muted;
+  font-size: 0.9375rem;
+  line-height: 1.6;
 }
 
 .error {
@@ -31,22 +53,23 @@
 
 .tabList {
   display: flex;
-  gap: $space-sm;
+  gap: $space-lg;
   border-bottom: 1px solid $color-border;
-  margin-bottom: $space-lg;
+  margin-bottom: $space-md;
 }
 
 .tab {
   display: inline-flex;
   align-items: center;
-  gap: $space-xs;
-  padding: $space-sm $space-md;
+  gap: $space-sm;
+  padding: $space-sm 0;
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   background: transparent;
   color: $color-text-muted;
   font: inherit;
+  font-size: 0.9375rem;
   cursor: pointer;
 
   &:hover {
@@ -60,10 +83,8 @@
 }
 
 .count {
-  padding: 0 $space-xs;
-  border-radius: $radius-sm;
-  background: $color-surface-hover;
   color: $color-text-muted;
+  font-family: $font-mono;
   font-size: 0.75rem;
 }
 
@@ -73,75 +94,101 @@
 
 .muted {
   color: $color-text-muted;
+  padding: $space-lg 0;
 }
 
+// Entries are separated by hairlines, not gaps + borders.
 .cards {
   display: flex;
   flex-direction: column;
-  gap: $space-md;
   padding: 0;
   margin: 0;
   list-style: none;
 }
 
 .card {
-  padding: $space-md $space-lg;
-  border: 1px solid $color-border;
-  border-radius: $radius-lg;
-  background: $color-surface;
+  padding: $space-lg 0;
+  border-bottom: 1px solid $color-border;
+
+  &:last-child {
+    border-bottom: none;
+  }
 }
 
 .retired {
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 .cardHead {
   display: flex;
   align-items: baseline;
-  gap: $space-sm;
+  justify-content: space-between;
+  gap: $space-md;
 }
 
 .situation {
   margin: 0;
   font-size: 1rem;
+  font-weight: 600;
 }
 
 .tag {
-  padding: 0 $space-xs;
-  border: 1px solid $color-border;
+  margin-left: $space-sm;
+  padding: 1px $space-xs;
+  border: 1px solid $color-border-strong;
   border-radius: $radius-sm;
   color: $color-text-muted;
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  vertical-align: 1px;
+}
+
+// Right-aligned counts read as quiet machine metadata.
+.meta {
+  flex-shrink: 0;
+  color: $color-text-muted;
+  font-family: $font-mono;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .body {
-  margin: $space-sm 0;
+  margin: $space-sm 0 $space-md;
+  color: $color-text;
+  font-size: 0.9375rem;
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 
+.cardFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+}
+
 .prov {
-  margin: 0 0 $space-md;
+  margin: 0;
   color: $color-text-muted;
   font-size: 0.8125rem;
 }
 
-.actions {
-  display: flex;
-  gap: $space-sm;
-}
-
+// Text-style action, in keeping with the editorial look — no fill, no border.
 .button {
-  padding: $space-xs $space-md;
-  border: 1px solid $color-border;
-  border-radius: $radius-md;
-  background: $color-bg;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
   color: $color-text;
   font: inherit;
+  font-size: 0.8125rem;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    background: $color-surface-hover;
+    text-decoration: underline;
   }
 
   &:disabled {
@@ -151,6 +198,5 @@
 }
 
 .danger {
-  border-color: $color-danger;
   color: $color-danger;
 }

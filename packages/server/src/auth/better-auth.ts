@@ -41,6 +41,12 @@ function makeAuth(db: Database, config: AuthConfig) {
     database: db,
     secret: config.secret,
     baseURL: config.baseURL,
+    // better-auth trusts `baseURL`'s origin by default and rejects sign-in POSTs
+    // whose `Origin` header doesn't match (CSRF defence). In production the SPA is
+    // served same-origin so that's enough; in dev the console runs on the Vite
+    // port and proxies `/api` here, so its origin must be trusted explicitly.
+    // Passed through from boot (env-driven) rather than hard-coded.
+    ...(config.trustedOrigins ? { trustedOrigins: config.trustedOrigins } : {}),
     // Bearer API keys and probes against `/mcp` produce a steady trickle of
     // "Invalid API key" rejections; that is the seam doing its job, not a fault,
     // so we drop those lines rather than let them spam the log on every bad
@@ -69,6 +75,12 @@ export type AuthConfig = {
   secret: string;
   /** Public base URL better-auth builds its routes and cookies against. */
   baseURL: string;
+  /**
+   * Extra origins allowed to make authenticated requests, beyond `baseURL`'s own
+   * origin (always trusted). Needed in dev, where the console is served from the
+   * Vite origin and proxies to this server. Omit in same-origin production.
+   */
+  trustedOrigins?: string[];
 };
 
 /**

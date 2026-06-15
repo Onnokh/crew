@@ -41,6 +41,11 @@ async function buildRealDeps(port: number): Promise<Deps> {
   const authInstance = createAuth(raw, {
     secret: requireSecret(),
     baseURL: process.env.SOA_BASE_URL ?? `http://localhost:${port}`,
+    // Comma-separated extra origins (e.g. the Vite dev console). Unset in
+    // same-origin production, where `baseURL`'s origin is already trusted.
+    trustedOrigins: process.env.SOA_TRUSTED_ORIGINS?.split(",")
+      .map((o) => o.trim())
+      .filter(Boolean),
   });
   await seedFirstAdmin(authInstance, raw);
 

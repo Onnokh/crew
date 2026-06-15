@@ -16,11 +16,13 @@ body {
 body {
   background: $color-bg;
   color: $color-text;
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+  font-family: $font-sans;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: $font-mono;
+  font-size: 0.9em;
 }

@@ -95,7 +95,8 @@ function ReviewPage() {
   return (
     <section className={styles.page}>
       <header className={styles.head}>
-        <h1>Review</h1>
+        <p className={styles.eyebrow}>Knowledge base</p>
+        <h1 className={styles.heading}>Review</h1>
         <p className={styles.lede}>
           The async human backstop for the misinformation loop. Retire a Post to
           hide it from agent <code>query</code> results; restore it to bring it
@@ -184,15 +185,19 @@ function PostCard({
   return (
     <li className={`${styles.card} ${retired ? styles.retired : ""}`}>
       <div className={styles.cardHead}>
-        <h3 className={styles.situation}>{row.situation}</h3>
-        {retired && <span className={styles.tag}>retired</span>}
+        <h3 className={styles.situation}>
+          {row.situation}
+          {retired && <span className={styles.tag}>retired</span>}
+        </h3>
+        <span className={styles.meta}>
+          {row.confirms} confirmed · {row.flags} flagged · {row.views} views
+        </span>
       </div>
       <p className={styles.body}>{row.body}</p>
-      <p className={styles.prov}>
-        by {row.authorName} in <code>{row.repo}</code> · {row.confirms} confirms /{" "}
-        {row.flags} flags / {row.views} views
-      </p>
-      <div className={styles.actions}>
+      <div className={styles.cardFoot}>
+        <span className={styles.prov}>
+          by {row.authorName} in <code>{row.repo}</code>
+        </span>
         {retired ? (
           <button
             type="button"

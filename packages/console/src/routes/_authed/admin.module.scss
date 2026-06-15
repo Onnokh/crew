@@ -1,24 +1,42 @@
-// Colocated styles for the admin page (CSS Modules — ADR 0004). This route sits
-// a level deeper than `routes/login.tsx`, so the shared tokens are two up.
+// Colocated styles for the admin page (CSS Modules — ADR 0004). Light editorial
+// treatment matching the review page: an uppercase eyebrow over the heading, an
+// inline create form, and the User list as hairline-separated rows (identity on
+// the left, key count and text actions on the right) instead of a bordered table.
 @use "../../styles/tokens" as *;
 
 .page {
   display: flex;
   flex-direction: column;
   gap: $space-lg;
-  max-width: 56rem;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+}
+
+.eyebrow {
+  margin: 0 0 $space-md;
+  color: $color-text-subtle;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .heading {
-  margin: 0;
-  font-size: 1.375rem;
+  margin: 0 0 $space-sm;
+  font-size: 1.75rem;
   font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .subtitle {
   margin: 0;
+  max-width: 52ch;
   color: $color-text-muted;
   font-size: 0.9375rem;
+  line-height: 1.6;
 }
 
 .error {
@@ -35,8 +53,8 @@
 .input {
   flex: 1;
   max-width: 22rem;
-  padding: $space-sm;
-  border: 1px solid $color-border;
+  padding: $space-sm $space-md;
+  border: 1px solid $color-border-strong;
   border-radius: $radius-md;
   background: $color-bg;
   color: $color-text;
@@ -55,7 +73,7 @@
   background: $color-accent;
   color: $color-accent-contrast;
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
 
   &:hover:not(:disabled) {
@@ -68,74 +86,99 @@
   }
 }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9375rem;
-
-  th,
-  td {
-    padding: $space-sm $space-md;
-    border-bottom: 1px solid $color-border;
-    text-align: left;
-    vertical-align: middle;
-  }
-
-  th {
-    color: $color-text-muted;
-    font-size: 0.8125rem;
-    font-weight: 500;
-  }
+// The small uppercase label that heads the list, matching the review eyebrow.
+.listLabel {
+  margin: 0 0 calc(-1 * $space-xs);
+  color: $color-text-subtle;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
-.numeric {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.actionsCol {
+.list {
   display: flex;
-  gap: $space-sm;
-  justify-content: flex-end;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-md 0;
+  border-bottom: 1px solid $color-border;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.identity {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9375rem;
+}
+
+.email {
+  font-weight: 600;
+}
+
+.role {
+  margin-left: $space-xs;
+  color: $color-text-muted;
 }
 
 .banned {
   margin-left: $space-sm;
-  padding: 0 $space-xs;
+  padding: 1px $space-xs;
+  border: 1px solid $color-danger;
   border-radius: $radius-sm;
-  background: $color-surface-hover;
   color: $color-danger;
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  vertical-align: 1px;
 }
 
-.secondary,
-.danger {
-  padding: $space-xs $space-md;
-  border: 1px solid $color-border;
-  border-radius: $radius-sm;
-  background: $color-surface-hover;
+.keys {
+  flex-shrink: 0;
+  color: $color-text-muted;
+  font-family: $font-mono;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rowActions {
+  display: flex;
+  flex-shrink: 0;
+  gap: $space-lg;
+}
+
+// Text-style actions, in keeping with the editorial look.
+.action,
+.actionDanger {
+  padding: 0;
+  border: none;
+  background: transparent;
   color: $color-text;
+  font: inherit;
   font-size: 0.8125rem;
-  font-weight: 600;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    background: $color-border;
+    text-decoration: underline;
   }
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
   }
 }
 
-.danger {
-  border-color: $color-danger;
+.actionDanger {
   color: $color-danger;
-
-  &:hover:not(:disabled) {
-    background: rgba(248, 113, 113, 0.12);
-  }
 }

@@ -17,6 +17,10 @@ process.env.SOA_ADMIN_PASSWORD ||= "dev-admin-password"; // ≥8 chars
 process.env.SOA_ADMIN_NAME ||= "Dev Admin";
 process.env.PORT ||= "8087";
 process.env.SOA_DB_PATH ||= "soa-dev.db"; // gitignored (*.db)
+// The Vite dev console (pnpm --filter @soa/console dev) runs on :5173 and proxies
+// /api here, so its origin must be trusted or better-auth rejects sign-in with
+// "Invalid origin". Same-origin production doesn't need this.
+process.env.SOA_TRUSTED_ORIGINS ||= "http://localhost:5173";
 
 console.log(
   `Starting Stack Overflow for Agents on http://localhost:${process.env.PORT}` +

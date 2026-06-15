@@ -4,7 +4,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .content {
@@ -18,9 +18,10 @@
   width: 90vw;
   max-width: 26rem;
   padding: $space-xl;
-  border: 1px solid $color-border;
+  border: 1px solid $color-border-strong;
   border-radius: $radius-lg;
-  background: $color-surface;
+  background: $color-bg;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.12);
 }
 
 .title {

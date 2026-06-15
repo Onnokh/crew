@@ -1,46 +1,62 @@
 // Colocated styles for the signed-in chrome (CSS Modules — ADR 0004). Tokens are
-// shared; component layout is local.
+// shared; component layout is local. Light editorial theme: white header on a
+// hairline rule, pill nav, and a narrow centered content column flanked by faint
+// hatched gutters (the diagonal-stripe margins from the reference design).
 @use "../styles/tokens" as *;
+
+$column: 44rem;
 
 .shell {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background: $color-bg;
 }
 
 .header {
+  border-bottom: 1px solid $color-border;
+  background: $color-bg;
+}
+
+// Inner bar, aligned to the same width as the content column below it.
+.bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: $space-sm $space-lg;
-  border-bottom: 1px solid $color-border;
-  background: $color-surface;
+  max-width: $column;
+  margin: 0 auto;
+  padding: $space-md $space-lg;
 }
 
 .nav {
   display: flex;
   align-items: center;
-  gap: $space-md;
+  gap: $space-xs;
 }
 
 .brand {
-  margin-right: $space-sm;
-  font-weight: 700;
+  margin-right: $space-md;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
+// Nav links read as quiet pills; the active one gets a faint fill.
 .link {
+  padding: $space-xs $space-md;
+  border-radius: $radius-md;
   color: $color-text-muted;
   text-decoration: none;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
 
   &:hover {
     color: $color-text;
+    background: $color-surface-hover;
   }
 }
 
 .linkActive {
   color: $color-text;
-  font-weight: 600;
+  background: $color-surface-hover;
 }
 
 .userButton {
@@ -48,7 +64,7 @@
   align-items: center;
   gap: $space-sm;
   padding: $space-xs $space-sm;
-  border: 1px solid $color-border;
+  border: 1px solid $color-border-strong;
   border-radius: $radius-md;
   background: $color-bg;
   color: $color-text;
@@ -73,7 +89,7 @@
 .avatarFallback {
   color: $color-accent-contrast;
   font-size: 0.6875rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .userName {
@@ -85,10 +101,10 @@
   flex-direction: column;
   min-width: 12rem;
   padding: $space-xs;
-  border: 1px solid $color-border;
+  border: 1px solid $color-border-strong;
   border-radius: $radius-md;
-  background: $color-surface;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  background: $color-bg;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.08);
 }
 
 .menuHeader {
@@ -100,7 +116,7 @@
 
 .menuName {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .menuEmail {
@@ -127,7 +143,43 @@
   }
 }
 
+// A centered frame: the content column flanked by two narrow rails of diagonal
+// stripes with dashed inner/outer edges (the reference design's side margins).
+// The rails are decorative and only appear on wide viewports.
 .main {
   flex: 1;
-  padding: $space-xl $space-lg;
+  display: flex;
+  justify-content: center;
+  background: $color-bg;
+}
+
+.rail {
+  display: none;
+  width: 20px;
+  flex-shrink: 0;
+  border-left: 1px dashed $color-border-strong;
+  border-right: 1px dashed $color-border-strong;
+  background-image: repeating-linear-gradient(
+    45deg,
+    $color-border-strong 0,
+    $color-border-strong 1px,
+    transparent 1px,
+    transparent 8px
+  );
+
+  @media (min-width: 1280px) {
+    width: 32px;
+  }
+
+  @media (min-width: 1024px) {
+    display: block;
+  }
+}
+
+.content {
+  flex: 1;
+  max-width: $column;
+  min-height: 100%;
+  padding: $space-xl $space-lg calc($space-xl * 2);
+  background: $color-bg;
 }

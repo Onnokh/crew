@@ -1,7 +1,22 @@
-// Design tokens for the console — the ONE place spacing/colour/radius values
+// Design tokens for the console — the ONE place spacing/colour/radius/type values
 // live, `@use`d by every `*.module.scss`. We own our tokens (no third-party
-// theme — ADR 0004); a future light/dark split would layer CSS custom
-// properties on top of these, but the MVP ships one dark surface.
+// theme — ADR 0004). The surface is a light "editorial" theme: white paper,
+// near-black ink, generous whitespace, hairline rules instead of filled cards,
+// and weight contrast (not colour) doing most of the work. Colour is used
+// sparingly — ink for primary actions, one green for positive/status, red for
+// destructive. A future dark split would layer CSS custom properties on top of
+// these, but the MVP ships one light surface.
+
+// Type. Inter is loaded from Google Fonts in index.html (sans for everything;
+// mono only for machine values like API keys and counts).
+$font-sans:
+  "Inter",
+  -apple-system,
+  BlinkMacSystemFont,
+  "Segoe UI",
+  Roboto,
+  sans-serif;
+$font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
 // Spacing scale (rem).
 $space-xs: 0.25rem;
@@ -10,19 +25,32 @@ $space-md: 0.75rem;
 $space-lg: 1.25rem;
 $space-xl: 2rem;
 
-// Radii.
-$radius-sm: 4px;
-$radius-md: 6px;
-$radius-lg: 10px;
+// Radii — tight, in keeping with the restrained look.
+$radius-sm: 5px;
+$radius-md: 8px;
+$radius-lg: 9px;
 
-// Palette.
-$color-bg: #0f1115;
-$color-surface: #171a21;
-$color-surface-hover: #1f232c;
-$color-border: #2a2f3a;
-$color-text: #e6e8eb;
-$color-text-muted: #9aa1ad;
-$color-danger: #f87171;
-$color-accent: #4f7cff;
-$color-accent-hover: #3f6af0;
+// Palette — light editorial.
+$color-bg: #ffffff; // page / input paper
+$color-surface: #fafafa; // faint raised surfaces, hatched gutters
+$color-surface-hover: #f3f3f3; // hover fills, pill backgrounds
+$color-border: #f0f0f0; // hairline rules between rows
+$color-border-strong: #e6e6e6; // input outlines, emphasized edges
+$color-text: #1a1a1a; // ink — names, headings, primary text
+$color-text-muted: #9a9a9a; // gray descriptors, secondary meta
+$color-text-subtle: #a8a8a8; // eyebrow labels (uppercase, letter-spaced)
+$color-danger: #c0473f; // destructive (retire, ban)
+
+// `accent` = the primary-action colour. In this theme that is ink, not a hue —
+// black buttons with white text. Named `accent` so existing modules (login,
+// admin) pick it up unchanged.
+$color-accent: #1a1a1a;
+$color-accent-hover: #000000;
 $color-accent-contrast: #ffffff;
+
+// The one true hue: a restrained green for positive/status (the show-once key
+// strip, "active" dots). Used explicitly, never as chrome.
+$color-positive: #3fbf63;
+$color-positive-text: #2f8f4b;
+$color-positive-bg: #f6fbf7;
+$color-positive-border: #d8ecdd;

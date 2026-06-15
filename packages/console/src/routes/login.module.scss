@@ -1,6 +1,8 @@
 // Colocated styles for the login page (CSS Modules — class names are hashed and
 // scoped to this component, see ADR 0004). Shared design tokens live in
-// `src/styles/_tokens.scss`; import them where a value is reused across pages.
+// `src/styles/_tokens.scss`. Light editorial treatment: a quiet centered form
+// (no heavy card), an uppercase eyebrow over the wordmark, hairline inputs and
+// the ink primary button.
 @use "../styles/tokens" as *;
 
 .page {
@@ -16,17 +18,23 @@
   flex-direction: column;
   gap: $space-md;
   width: 100%;
-  max-width: 22rem;
-  padding: $space-xl;
-  border: 1px solid $color-border;
-  border-radius: $radius-lg;
-  background: $color-surface;
+  max-width: 21rem;
+}
+
+.eyebrow {
+  margin: 0;
+  color: $color-text-subtle;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.375rem;
   font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .subtitle {
@@ -47,8 +55,8 @@
 }
 
 .input {
-  padding: $space-sm;
-  border: 1px solid $color-border;
+  padding: $space-sm $space-md;
+  border: 1px solid $color-border-strong;
   border-radius: $radius-md;
   background: $color-bg;
   color: $color-text;
@@ -74,7 +82,7 @@
   background: $color-accent;
   color: $color-accent-contrast;
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
 
   &:hover:not(:disabled) {

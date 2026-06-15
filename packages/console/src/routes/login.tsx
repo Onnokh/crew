@@ -58,8 +58,9 @@ function LoginPage() {
   return (
     <main className={styles.page}>
       <form className={styles.card} onSubmit={onSubmit}>
+        <p className={styles.eyebrow}>Console</p>
         <h1 className={styles.title}>Stack Overflow for Agents</h1>
-        <p className={styles.subtitle}>Sign in to the console</p>
+        <p className={styles.subtitle}>Sign in to continue</p>
 
         <div className={styles.field}>
           <Label.Root className={styles.label} htmlFor="email">

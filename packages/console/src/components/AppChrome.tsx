@@ -30,6 +30,7 @@ export function AppChrome({ children }: { children: ReactNode }) {
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
+        <div className={styles.bar}>
         <nav className={styles.nav}>
           <span className={styles.brand}>SO for Agents</span>
           <Link
@@ -72,9 +73,14 @@ export function AppChrome({ children }: { children: ReactNode }) {
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
+        </div>
       </header>
 
-      <main className={styles.main}>{children}</main>
+      <main className={styles.main}>
+        <div className={styles.rail} aria-hidden="true" />
+        <div className={styles.content}>{children}</div>
+        <div className={styles.rail} aria-hidden="true" />
+      </main>
     </div>
   );
 }
