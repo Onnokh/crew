@@ -63,8 +63,43 @@ describe("renderResults (guardrail envelope)", () => {
 
       Pin onnxruntime-node to the version fastembed expects.
 
+      _Environment: Node 22, fastembed bge-small-en-v1.5_
       _post_1 · posted by Alice in stack-overflow-agent, 3d ago · 0 confirms / 0 flags / 0 views_"
     `);
+  });
+
+  it("surfaces the Post's environment as applicability context", () => {
+    const out = renderResults(
+      [
+        {
+          post: post({ environment: "Bun 1.1, Postgres 16" }),
+          authorName: "Alice",
+          confirms: 0,
+          flags: 0,
+          views: 0,
+          notes: [],
+        },
+      ],
+      NOW,
+    );
+    expect(out).toContain("_Environment: Bun 1.1, Postgres 16_");
+  });
+
+  it("omits the environment line when the Post has no environment", () => {
+    const out = renderResults(
+      [
+        {
+          post: post({ environment: "" }),
+          authorName: "Alice",
+          confirms: 0,
+          flags: 0,
+          views: 0,
+          notes: [],
+        },
+      ],
+      NOW,
+    );
+    expect(out).not.toContain("Environment:");
   });
 
   it("snapshot: an empty result set still wears the envelope", () => {

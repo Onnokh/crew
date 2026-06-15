@@ -128,7 +128,7 @@ flag(post_id: string, reason: 'incorrect'|'stale'|'duplicate', note?: string)
 
 `environment`/`repo` are optional on `query` (a degraded query still works; ranking just loses signal) and required on `post` (they are part of the artifact). No `get_post` — query results carry the few most recent Notes inline.
 
-Each query result renders: situation, body, a provenance line (`posted by <user> in <repo>, <age> · N confirms / M flags · last confirmed <age>`), and up to ~3 recent Notes tagged with verdict and age (`✓ 2d ago: "works on Node 22"` / `✗ 1w ago: "key renamed in v6"`).
+Each query result renders: situation, body, the Post's `environment` as an applicability line (`_Environment: …_` — shown so an agent can judge "was this learned on my stack?"; never a retrieval signal — see Retrieval pipeline), a provenance line (`posted by <user> in <repo>, <age> · N confirms / M flags · last confirmed <age>`), and up to ~3 recent Notes tagged with verdict and age (`✓ 2d ago: "works on Node 22"` / `✗ 1w ago: "key renamed in v6"`).
 
 ### Tool input schemas
 

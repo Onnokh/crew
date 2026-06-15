@@ -78,13 +78,15 @@ export function renderResults(results: RenderResult[], now: number): string {
 
 function renderOne(result: RenderResult, now: number): string[] {
   const { post, notes } = result;
-  const lines = [
-    `### ${post.situation}`,
-    "",
-    post.body,
-    "",
-    provenanceLine(result, now),
-  ];
+  const lines = [`### ${post.situation}`, "", post.body, ""];
+  // The Post's environment is never a retrieval signal, but a querying agent
+  // needs it to judge applicability — "was this learned on my stack?" — so it
+  // leads the metadata block. Italicized, like the rest, so it reads as context
+  // about the Post, not as body or instructions. Omitted only if somehow empty.
+  if (post.environment) {
+    lines.push(`_Environment: ${post.environment}_`);
+  }
+  lines.push(provenanceLine(result, now));
   // The few most recent Notes inline, each tagged with its verdict and age, so
   // the querying agent sees the latest field signal without a second lookup.
   for (const note of notes.slice(0, MAX_NOTES)) {

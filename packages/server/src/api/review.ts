@@ -1,10 +1,10 @@
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { Context, Hono } from "hono";
-import type { Post } from "../core/post.js";
 import type { User } from "../core/user.js";
 import type { Deps } from "../deps.js";
 import { age } from "../guardrails/render.js";
-import { aggregateEvents } from "../trust/aggregate.js";
+import { hydratePosts } from "../read/hydrate.js";
+import type { HydratedPost } from "../read/hydrate.js";
 
 /**
  * The human review surface (slice 0007): one server-rendered `/review` page —
@@ -116,44 +116,13 @@ async function authenticateToken(
   return deps.auth.authenticate(incoming);
 }
 
-/** A Post plus the confirm/flag/view counts the review page shows beside it. */
-type ReviewRow = {
-  post: Post;
-  authorName: string;
-  confirms: number;
-  flags: number;
-  views: number;
-};
-
 /**
- * Hydrate a list of Posts into {@link ReviewRow}s: resolve each author's name and
- * collapse its event log into confirm/flag counts via `trust/aggregate` (the same
- * pure aggregation the `query` tool uses — counts are never a stored counter).
+ * A hydrated Post as the review page renders it. The page shows the author name
+ * and confirm/flag/view counts but not the inline Notes a `query` result carries,
+ * so it consumes {@link HydratedPost} and simply ignores the events that ride
+ * along (see read/hydrate). One assembly, shared with the `query` pipeline.
  */
-async function toRows(deps: Deps, posts: Post[]): Promise<ReviewRow[]> {
-  if (posts.length === 0) return [];
-  const events = await deps.repo.getEventsForPosts(posts.map((p) => p.id));
-  const byPost = new Map<string, typeof events>();
-  for (const event of events) {
-    const list = byPost.get(event.postId);
-    if (list) list.push(event);
-    else byPost.set(event.postId, [event]);
-  }
-  const rows: ReviewRow[] = [];
-  for (const post of posts) {
-    const agg = aggregateEvents(byPost.get(post.id) ?? []);
-    const author = await deps.repo.getUser(post.createdBy);
-    rows.push({
-      post,
-      authorName: author?.name ?? "unknown",
-      confirms: agg.confirms,
-      flags: agg.flags,
-      // A bare counter on the Post, not derived from the event log like the counts above.
-      views: post.views,
-    });
-  }
-  return rows;
-}
+type ReviewRow = HydratedPost;
 
 /** Render the full review page for an authenticated User. */
 async function reviewPage(deps: Deps, user: User): Promise<string> {
@@ -163,8 +132,8 @@ async function reviewPage(deps: Deps, user: User): Promise<string> {
     deps.repo.listFlaggedPosts(LIST_LIMIT),
   ]);
   const [recentRows, flaggedRows] = await Promise.all([
-    toRows(deps, recent),
-    toRows(deps, flagged),
+    hydratePosts(deps.repo, recent),
+    hydratePosts(deps.repo, flagged),
   ]);
 
   return layout(
