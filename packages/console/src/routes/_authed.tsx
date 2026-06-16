@@ -1,6 +1,6 @@
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { authClient } from "../auth/client";
-import { AppChrome } from "../components/AppChrome";
+import { AppChrome } from "../components/app-chrome/app-chrome";
 
 /**
  * The route guard + signed-in shell. Every protected page nests under this

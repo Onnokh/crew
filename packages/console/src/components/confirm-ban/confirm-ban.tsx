@@ -1,5 +1,5 @@
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
-import styles from "./ConfirmBan.module.scss";
+import styles from "./confirm-ban.module.scss";
 
 /**
  * The destructive-action guard for banning a User (issue 0012). A ban kills the

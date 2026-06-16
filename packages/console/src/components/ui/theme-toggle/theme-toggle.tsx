@@ -1,6 +1,6 @@
 import { Moon, Sun } from "lucide-react";
-import { useTheme } from "../theme/useTheme";
-import styles from "./ThemeToggle.module.scss";
+import { useTheme } from "../../../theme/useTheme";
+import styles from "./theme-toggle.module.scss";
 
 /**
  * Fixed top-right theme switch. Clicking flips light/dark with a circular

@@ -1,5 +1,5 @@
 // Colocated styles for the ban confirm dialog (Radix AlertDialog — ADR 0004).
-@use "../styles/tokens" as *;
+@use "../../styles/tokens" as *;
 
 .overlay {
   position: fixed;

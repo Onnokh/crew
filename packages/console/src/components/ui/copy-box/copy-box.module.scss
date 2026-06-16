@@ -5,7 +5,7 @@
 // (no heavy filled panel) that tucks under the row that minted it — a muted
 // uppercase label, the secret in a monospace field that scrolls rather than
 // wraps, and a text-style copy affordance like the row's other actions.
-@use "../styles/tokens" as *;
+@use "../../../styles/tokens" as *;
 
 .box {
   display: flex;

@@ -2,12 +2,12 @@ import * as Tabs from "@radix-ui/react-tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Archive, Check, ChevronDown, Copy, RotateCcw, Search } from "lucide-react";
-import { ClaudeLogo, CursorLogo, OpenCodeLogo } from "../components/BrandLogos";
+import { ClaudeLogo, CursorLogo, OpenCodeLogo } from "../components/ui/brand-logos/brand-logos";
 import { useState } from "react";
 import { apiFetch } from "../api/client";
 import { useSession } from "../auth/client";
 import crewProfile from "../assets/crew-profile.png";
-import { AppChrome } from "../components/AppChrome";
+import { AppChrome } from "../components/app-chrome/app-chrome";
 import styles from "./index.module.scss";
 
 /**

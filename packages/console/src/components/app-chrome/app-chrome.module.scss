@@ -3,7 +3,7 @@
 // content column flanked by faint hatched gutters (the diagonal-stripe margins
 // from the reference design), with the only chrome a small actions cluster
 // pinned to the top-right of the content, between the rails.
-@use "../styles/tokens" as *;
+@use "../../styles/tokens" as *;
 
 // Two nested widths, mirroring the reference: the panel is the outer main area;
 // the text column (measure) is narrower and centered within it, so content sits

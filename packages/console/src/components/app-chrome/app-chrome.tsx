@@ -2,9 +2,9 @@ import * as Avatar from "@radix-ui/react-avatar";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { authClient, useSession } from "../auth/client";
-import { ThemeToggle } from "./ThemeToggle";
-import styles from "./AppChrome.module.scss";
+import { authClient, useSession } from "../../auth/client";
+import { ThemeToggle } from "../ui/theme-toggle/theme-toggle";
+import styles from "./app-chrome.module.scss";
 
 /**
  * The app chrome: a narrow centered content column flanked by faint hatched

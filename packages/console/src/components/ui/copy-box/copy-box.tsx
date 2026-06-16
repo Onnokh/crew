@@ -1,5 +1,5 @@
 import { useState } from "react";
-import styles from "./CopyBox.module.scss";
+import styles from "./copy-box.module.scss";
 
 /**
  * A show-once secret box (generated password, freshly minted api key). The

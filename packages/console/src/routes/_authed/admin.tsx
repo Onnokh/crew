@@ -3,8 +3,8 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { ApiError, apiFetch } from "../../api/client";
 import { authClient } from "../../auth/client";
-import { ConfirmBan } from "../../components/ConfirmBan";
-import { CopyBox } from "../../components/CopyBox";
+import { ConfirmBan } from "../../components/confirm-ban/confirm-ban";
+import { CopyBox } from "../../components/ui/copy-box/copy-box";
 import styles from "./admin.module.scss";
 
 /**
