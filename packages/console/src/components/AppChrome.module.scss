@@ -7,8 +7,8 @@
 // Two nested widths, mirroring the reference: the panel is the outer main area;
 // the text column (measure) is narrower and centered within it, so content sits
 // in a comfortable measure with extra horizontal air before the rails.
-$panel: 47.5rem; // 760px
-$measure: 41.25rem; // 660px
+$panel: 63.75rem; // 1020px
+$measure: 57.5rem; // 920px
 
 .shell {
   display: flex;
@@ -69,6 +69,20 @@ $measure: 41.25rem; // 660px
 .linkActive {
   color: $color-text;
   background: $color-surface-hover;
+}
+
+.signIn {
+  padding: $space-xs $space-md;
+  border: 1px solid $color-border-strong;
+  border-radius: $radius-md;
+  background: $color-bg;
+  color: $color-text;
+  text-decoration: none;
+  font-size: 0.875rem;
+
+  &:hover {
+    background: $color-surface-hover;
+  }
 }
 
 .userButton {

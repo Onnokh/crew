@@ -3,7 +3,7 @@
 // eyebrow label over the heading, ink underline tabs, and Posts rendered as
 // hairline-separated entries (no card fills, no shadows) — situation + counts on
 // top, body, then provenance and the retire/restore text action on a baseline.
-@use "../../styles/tokens" as *;
+@use "../styles/tokens" as *;
 
 .page {
   display: block;
@@ -76,15 +76,27 @@
   line-height: 1.75;
 }
 
-.heroLinks {
+// Agent-setup disclosure: a pill-styled summary that expands to the MCP config
+// snippet. Sits on its own line below the hero bio.
+// Setup options sit in a wrapping row below the hero bio: the Claude/OpenCode
+// disclosures and the "Add to Cursor" deeplink, each its own pill.
+.setupRow {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: $space-sm;
-  padding-top: $space-xs;
+  padding-top: $space-sm;
 }
 
-// Quiet pill: muted fill, gains ink text on hover. The icon inherits color.
-.pill {
+.setup {
+  // Each disclosure takes the full row width when open so its snippet isn't
+  // boxed into a narrow column beside its siblings.
+  &[open] {
+    flex-basis: 100%;
+  }
+}
+
+.setupSummary {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -94,8 +106,14 @@
   color: $color-text-muted;
   font-size: 0.8125rem;
   font-weight: 500;
-  text-decoration: none;
+  cursor: pointer;
+  text-decoration: none; // the "Add to Cursor" anchor reuses this pill
+  list-style: none; // hide the default disclosure triangle (also ::-webkit below)
   transition: color 0.15s ease;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
 
   &:hover {
     color: $color-text;
@@ -105,6 +123,37 @@
     width: 14px;
     height: 14px;
   }
+}
+
+.setupBody {
+  margin-top: $space-sm;
+  max-width: 640px;
+}
+
+.setupNote {
+  margin: 0 0 $space-xs;
+  color: $color-text-muted;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+
+  code {
+    font-family: $font-mono;
+    font-size: 0.75rem;
+  }
+}
+
+.setupCode {
+  margin: 0 0 $space-sm;
+  padding: $space-sm $space-md;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-surface;
+  overflow-x: auto;
+  font-family: $font-mono;
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: $color-text;
+  white-space: pre;
 }
 
 .error {
@@ -316,6 +365,14 @@
 .titleText {
   color: $color-text;
   font-weight: 600;
+  // Keep the title on one line and at its content width (no flex-grow) so the
+  // repo sits right after it instead of being pushed to the far right. It can
+  // still shrink/ellipsize if the row gets tight, but the repo (flex-shrink: 3)
+  // gives up space first. `min-width: 0` lets it shrink inside the flex row.
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .sep {
@@ -325,6 +382,20 @@
 
 .project {
   color: $color-text-muted;
+  // Single line, no wrap; when the repo path is too long it truncates with a
+  // leading ellipsis so the meaningful tail (e.g. ".../sigi-frontend") stays
+  // visible. `direction: rtl` moves the ellipsis to the start; `text-align:
+  // left` keeps the text left-aligned, and `min-width: 0` lets the flex item
+  // shrink below its content width so the ellipsis can kick in.
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+  // When the row is tight, give up width before the title does so the post
+  // title stays as readable as possible.
+  flex-shrink: 3;
 }
 
 // Relative post age, pushed to the right end of the title row — a quiet mono

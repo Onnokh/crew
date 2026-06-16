@@ -18,7 +18,7 @@ export const Route = createFileRoute("/login")({
   beforeLoad: async ({ search }) => {
     const { data } = await authClient.getSession();
     if (data) {
-      throw redirect({ to: search.redirect ?? "/review" });
+      throw redirect({ to: search.redirect ?? "/" });
     }
   },
   component: LoginPage,
@@ -52,7 +52,7 @@ function LoginPage() {
     // Land where the guard wanted to send us, or the default page. `invalidate`
     // forces the now-protected routes to re-run their session-aware loaders.
     await router.invalidate();
-    await router.navigate({ to: redirectTo ?? "/review" });
+    await router.navigate({ to: redirectTo ?? "/" });
   }
 
   return (

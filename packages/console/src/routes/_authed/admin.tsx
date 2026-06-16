@@ -36,7 +36,7 @@ export const Route = createFileRoute("/_authed/admin")({
     // the API regardless — this bounce is only so a non-admin never sees the page.
     const role = (data?.user as { role?: string | null } | undefined)?.role;
     if (role !== "admin") {
-      throw redirect({ to: "/review" });
+      throw redirect({ to: "/" });
     }
   },
   component: AdminPage,

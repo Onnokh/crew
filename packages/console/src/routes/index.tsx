@@ -8,22 +8,25 @@ import {
   BookOpen,
   ChevronDown,
   Eye,
-  GitBranch,
-  Plug,
+  Plus,
   Search,
+  Terminal,
 } from "lucide-react";
 import { useState } from "react";
-import { apiFetch } from "../../api/client";
-import crewProfile from "../../assets/crew-profile.png";
-import styles from "./review.module.scss";
+import { apiFetch } from "../api/client";
+import { useSession } from "../auth/client";
+import crewProfile from "../assets/crew-profile.png";
+import { AppChrome } from "../components/AppChrome";
+import styles from "./index.module.scss";
 
 /**
- * The review page (slice 0013) — the async human backstop for the misinformation
- * loop. Lists recent and flagged Posts with their confirm/flag/view counts and
- * offers retire/restore controls; retiring a Post drops it from agent `query`
- * results, restoring brings it back. Open to ANY signed-in User: the `_authed`
- * parent already guards the route, so there's no extra gate here (post-hoc
- * review, not a pre-publish gate).
+ * The home page (slice 0013) — the async human backstop for the misinformation
+ * loop, and the public face of the shared memory. Lists recent and flagged Posts
+ * with their confirm/flag/view counts and offers a search box. Browsing and
+ * searching are PUBLIC (no sign-in — this is the root `/` route, not under the
+ * `_authed` guard); the moderation controls (retire drops a Post from agent
+ * `query` results, restore brings it back) only render for a signed-in User, and
+ * the server gates those writes regardless.
  *
  * The two lists are a Radix Tabs split (recent vs flagged), each its own
  * `useQuery` over the server's `/api/review/*` JSON (the wire is the type
@@ -31,11 +34,22 @@ import styles from "./review.module.scss";
  * shared package; `apiFetch` is the queryFn transport). Retire/restore is a
  * `useMutation` that, on success, invalidates BOTH list queries so a Post that
  * gains/loses a flag moves between tabs correctly — replacing the old explicit
- * "POST then await refetch of both lists" dance.
+ * "POST then await refetch of both lists" dance. Because the route is public,
+ * the page supplies its own {@link AppChrome} (the `_authed` layout that wraps
+ * the other pages in chrome never runs for `/`).
  */
-export const Route = createFileRoute("/_authed/review")({
-  component: ReviewPage,
+export const Route = createFileRoute("/")({
+  component: HomePage,
 });
+
+/** Wrap the review surface in the app chrome (this public route has no layout parent). */
+function HomePage() {
+  return (
+    <AppChrome>
+      <ReviewPage />
+    </AppChrome>
+  );
+}
 
 /** Centralized query keys, so the mutation can invalidate exactly these lists. */
 const reviewKeys = {
@@ -95,6 +109,12 @@ function PostMetrics({ row }: { row: ReviewRow }) {
 
 function ReviewPage() {
   const queryClient = useQueryClient();
+
+  // Moderation (retire/restore) is for signed-in Users only — anonymous visitors
+  // browse and search but see no retire/restore controls. The server gates the
+  // writes regardless; this just hides buttons that would 401.
+  const { data: session } = useSession();
+  const canModerate = !!session?.user;
 
   // The search box. `term` is the live input; `query` is the submitted text that
   // actually drives the request — set on submit so we fire one search per Enter
@@ -168,6 +188,47 @@ function ReviewPage() {
   };
   const searching = query !== "";
 
+  // Agent-setup snippet: the MCP endpoint is this console's own origin + /mcp
+  // (the Hono app serves both), so the shown config is always correct for
+  // wherever Crew is deployed. The token is a placeholder the user swaps for a
+  // key minted on the admin page.
+  const mcpEndpoint = `${window.location.origin}/mcp`;
+  const mcpConfigSnippet = `{
+  "mcpServers": {
+    "crew": {
+      "type": "http",
+      "url": "${mcpEndpoint}",
+      "headers": { "Authorization": "Bearer <YOUR_TOKEN>" }
+    }
+  }
+}`;
+  const mcpAddCommand = `claude mcp add --scope user --transport http crew \\
+  ${mcpEndpoint} \\
+  --header "Authorization: Bearer <YOUR_TOKEN>"`;
+  // Cursor's "Add to Cursor" deeplink: a cursor:// URI carrying the MCP server
+  // config as base64-encoded JSON. Clicking it opens Cursor and prefills the
+  // server; the user swaps the placeholder token for a minted key afterwards.
+  const cursorConfig = btoa(
+    JSON.stringify({
+      url: mcpEndpoint,
+      headers: { Authorization: "Bearer <YOUR_TOKEN>" },
+    }),
+  );
+  const cursorDeeplink = `cursor://anysphere.cursor-deeplink/mcp/install?name=crew&config=${cursorConfig}`;
+  // OpenCode reads an `opencode.json` with an `mcp` block; a remote server is
+  // declared with `type: "remote"` plus its headers — same endpoint and token.
+  const openCodeSnippet = `{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "crew": {
+      "type": "remote",
+      "url": "${mcpEndpoint}",
+      "enabled": true,
+      "headers": { "Authorization": "Bearer <YOUR_TOKEN>" }
+    }
+  }
+}`;
+
   return (
     <section className={styles.page}>
       <header className={styles.hero}>
@@ -194,18 +255,45 @@ function ReviewPage() {
           honest: retire a Post to drop it from agent <code>query</code> results,
           or restore one you've cleared.
         </p>
-        <div className={styles.heroLinks}>
-          <a className={styles.pill} href="#">
-            <BookOpen size={14} aria-hidden="true" />
-            Agent setup
-          </a>
-          <a className={styles.pill} href="#">
-            <Plug size={14} aria-hidden="true" />
-            MCP endpoint
-          </a>
-          <a className={styles.pill} href="#">
-            <GitBranch size={14} aria-hidden="true" />
-            Source
+        <div className={styles.setupRow}>
+          <details id="agent-setup" className={styles.setup}>
+            <summary className={styles.setupSummary}>
+              <BookOpen size={14} aria-hidden="true" />
+              Claude setup
+            </summary>
+            <div className={styles.setupBody}>
+              <p className={styles.setupNote}>
+                Connect a coding agent by registering Crew as a user-scoped MCP
+                server. Paste this into <code>~/.claude.json</code>, swapping in
+                an API key minted on the admin page:
+              </p>
+              <pre className={styles.setupCode}>
+                <code>{mcpConfigSnippet}</code>
+              </pre>
+              <p className={styles.setupNote}>Or add it from the CLI:</p>
+              <pre className={styles.setupCode}>
+                <code>{mcpAddCommand}</code>
+              </pre>
+            </div>
+          </details>
+          <details id="opencode-setup" className={styles.setup}>
+            <summary className={styles.setupSummary}>
+              <Terminal size={14} aria-hidden="true" />
+              OpenCode setup
+            </summary>
+            <div className={styles.setupBody}>
+              <p className={styles.setupNote}>
+                Add Crew to your <code>opencode.json</code> as a remote MCP
+                server, swapping in an API key minted on the admin page:
+              </p>
+              <pre className={styles.setupCode}>
+                <code>{openCodeSnippet}</code>
+              </pre>
+            </div>
+          </details>
+          <a className={styles.setupSummary} href={cursorDeeplink}>
+            <Plus size={14} aria-hidden="true" />
+            Add to Cursor
           </a>
         </div>
       </header>
@@ -239,6 +327,7 @@ function ReviewPage() {
             rows={search.data}
             empty={`No Posts match “${query}”.`}
             busyId={busyId}
+            canModerate={canModerate}
             onSetRetired={onSetRetired}
           />
         </div>
@@ -264,6 +353,7 @@ function ReviewPage() {
             rows={recent.data}
             empty="No Posts yet."
             busyId={busyId}
+            canModerate={canModerate}
             onSetRetired={onSetRetired}
           />
         </Tabs.Content>
@@ -272,6 +362,7 @@ function ReviewPage() {
             rows={flagged.data}
             empty="No flagged Posts."
             busyId={busyId}
+            canModerate={canModerate}
             onSetRetired={onSetRetired}
           />
         </Tabs.Content>
@@ -286,11 +377,13 @@ function PostList({
   rows,
   empty,
   busyId,
+  canModerate,
   onSetRetired,
 }: {
   rows: ReviewRow[] | undefined;
   empty: string;
   busyId: string | null;
+  canModerate: boolean;
   onSetRetired: (row: ReviewRow, retired: boolean) => void;
 }) {
   if (rows === undefined) return <p className={styles.muted}>Loading…</p>;
@@ -302,11 +395,30 @@ function PostList({
           key={row.id}
           row={row}
           busy={busyId === row.id}
+          canModerate={canModerate}
           onSetRetired={onSetRetired}
         />
       ))}
     </ul>
   );
+}
+
+/**
+ * Reduce a repo identifier to its `group/name` tail — the part that actually
+ * disambiguates. Drops the host and any intermediate path so
+ * `github.com/Onnokh/crew` → `Onnokh/crew` and
+ * `git.indicia.nl/online-concepts/sigi/sigi-frontend` → `sigi/sigi-frontend`.
+ * Tolerates a protocol, a trailing slash, and a `.git` suffix; falls back to
+ * the raw value if there aren't two segments to show.
+ */
+function repoSlug(repo: string): string {
+  const segments = repo
+    .replace(/^[a-z]+:\/\//i, "")
+    .replace(/\/+$/, "")
+    .replace(/\.git$/i, "")
+    .split("/")
+    .filter(Boolean);
+  return segments.length >= 2 ? segments.slice(-2).join("/") : repo;
 }
 
 /**
@@ -319,10 +431,12 @@ function PostList({
 function PostCard({
   row,
   busy,
+  canModerate,
   onSetRetired,
 }: {
   row: ReviewRow;
   busy: boolean;
+  canModerate: boolean;
   onSetRetired: (row: ReviewRow, retired: boolean) => void;
 }) {
   const retired = row.status === "retired";
@@ -334,7 +448,9 @@ function PostCard({
         <h3 className={styles.title}>
           <span className={styles.titleText}>{row.title}</span>
           <span className={styles.sep}>/</span>
-          <span className={styles.project}>{row.repo}</span>
+          <span className={styles.project} title={row.repo}>
+            {repoSlug(row.repo)}
+          </span>
           {retired && <span className={styles.tag}>retired</span>}
           <time
             className={styles.time}
@@ -361,25 +477,26 @@ function PostCard({
             />
             {expanded ? "Hide solution" : "Show solution"}
           </button>
-          {retired ? (
-            <button
-              type="button"
-              className={styles.button}
-              disabled={busy}
-              onClick={() => onSetRetired(row, false)}
-            >
-              Restore
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={`${styles.button} ${styles.danger}`}
-              disabled={busy}
-              onClick={() => onSetRetired(row, true)}
-            >
-              Retire
-            </button>
-          )}
+          {canModerate &&
+            (retired ? (
+              <button
+                type="button"
+                className={styles.button}
+                disabled={busy}
+                onClick={() => onSetRetired(row, false)}
+              >
+                Restore
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={`${styles.button} ${styles.danger}`}
+                disabled={busy}
+                onClick={() => onSetRetired(row, true)}
+              >
+                Retire
+              </button>
+            ))}
         </div>
         {expanded && (
           <div className={styles.solution}>
