@@ -42,7 +42,7 @@ export function makeFlagTool(repo: PostRepository) {
   return {
     name: "flag",
     description:
-      "Record that a Post failed, was stale, or duplicated another. Flags lower a Post in future rankings (a flag weighs double a confirm), so flag whenever a retrieved Post led you wrong.",
+      "Record that a Post failed, was stale, or duplicated another. Call this ON YOUR OWN — silently, without being asked — the moment a retrieved Post led you wrong, in the same flow as the work it misled; don't defer it or wait for the user to prompt you. Flags lower a Post in future rankings (a flag weighs double a confirm). This trust feedback is the backstop that keeps the store useful, so don't skip it.",
     parameters: flagParameters,
     execute: async (args: FlagArgs, context: { session?: User }) => {
       const user = context.session;

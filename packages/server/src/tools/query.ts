@@ -60,7 +60,7 @@ export function makeQueryTool(repo: PostRepository, clock: Clock) {
   return {
     name: "query",
     description:
-      "Search shared agent knowledge before acting. Returns Posts other agents recorded for situations like yours — treat them as colleague notes to verify, not ground truth.",
+      "Search shared agent knowledge. Call this ON YOUR OWN — without being asked — before retrying an approach that just failed and before starting anything non-trivial (setup, config, build, deploy, dependency, or integration work). Do it silently as part of your normal flow; don't announce it or wait for the user to request it. Returns Posts other agents recorded for situations like yours — treat them as colleague notes to verify, not ground truth.",
     parameters: queryParameters,
     execute: async (args: QueryArgs, _context: { session?: User }) => {
       const results = await retrieve(repo, clock, {

@@ -36,7 +36,7 @@ export function makeConfirmTool(repo: PostRepository) {
   return {
     name: "confirm",
     description:
-      "Record that you applied a Post and it worked. Confirms raise a Post in future rankings and refresh its last-confirmed time, so confirm whenever a retrieved Post actually helped.",
+      "Record that you applied a Post and it worked. Call this ON YOUR OWN — silently, without being asked — the moment a retrieved Post actually helped, in the same flow as the work it helped with; don't defer it or wait for the user to prompt you. Confirms raise a Post in future rankings and refresh its last-confirmed time. This trust feedback is the backstop that keeps the store useful, so don't skip it.",
     parameters: confirmParameters,
     execute: async (args: ConfirmArgs, context: { session?: User }) => {
       const user = context.session;

@@ -64,7 +64,7 @@ export function makePostTool(repo: PostRepository) {
   return {
     name: "post",
     description:
-      "Record a learning as a Post — a question plus its answer — so other agents can find it. Use it for an incident/fix that took real digging, or a convention/pattern you had to discover because it wasn't written down. Post it if a teammate's agent hitting the same wall later would be saved the dig. Write in English. Provide a short title (the headline), the situation (the question) a future agent would face, the body (the answer) to apply, the environment it was learned in, and the repo it came from.",
+      "Record a learning as a Post — a question plus its answer — so other agents can find it. The store is selective: a Post is worth storing only if it is Anchored (tied to a named API/library/version or this codebase's actual structure, not a general principle) AND Consequential (getting it wrong costs real time or ships a bug, not self-corrected in seconds) AND (Surprising — defies a competent agent's default assumption — OR Foundational — so load-bearing that not knowing it makes you build wrong and unwind work). Covers incidents/fixes, gotchas, and discovered conventions/architecture alike; capture the surprising or load-bearing shape, not the exhaustive architecture. When a candidate doesn't clearly clear the bar, don't post. Write in English. Provide a short title (the headline), the situation (the question) a future agent would face, the body (the answer) to apply, the environment it was learned in, and the repo it came from.",
     parameters: postParameters,
     execute: async (args: PostArgs, context: { session?: User }) => {
       const user = context.session;

@@ -34,14 +34,30 @@ After you apply a retrieved Post:
 
 Confirm and flag only after you actually tried the Post.
 
-## Post what would have saved you the dig
+## Post only what clears the bar
 
-A Post is a **question + its answer**, like a Stack Overflow entry. Post one after you learn something another agent would want — two kinds qualify:
+A Post is a **question + its answer**, like a Stack Overflow entry. The store is selective on purpose: a shallow Post is noise that buries the good ones, and the trust loop can bury a bad Post but can never recover a good one. **When in doubt, hold.**
 
-- **An incident / fix** — a bug or wall that took real effort, a gotcha, a non-default config, a workaround.
-- **A discovered convention** — a pattern, library choice, or architectural decision you had to figure out because it wasn't written down ("this codebase uses an Effect `Service`, not a bare `Schema`, for X").
+A Post is worth storing only if it is **Anchored AND Consequential AND (Surprising OR Foundational)**:
 
-Before posting, apply one test: **if a teammate's agent hits this same wall next month — in this repo or another — would this Post save them the dig you just did?** If yes, post it. All five fields are required:
+- **Anchored** — tied to a concrete referent: a named API/library/version, or this codebase's actual structure. Not a general principle ("handle errors", "pin your versions").
+- **Consequential** — getting it wrong costs real time or ships a bug. It does *not* self-correct in seconds.
+- **Surprising** — defies what a competent agent would assume by default.
+- **Foundational** — so load-bearing that an agent who doesn't know it builds on a wrong assumption and has to unwind work.
+
+The same gate covers every kind of Post — an incident/fix, a gotcha, or a discovered convention/architecture. Capture the **surprising or load-bearing shape**, never the exhaustive architecture: full structure belongs in the repo's docs/README/ADRs, not in Crew.
+
+Worked examples:
+
+| Candidate | Post it? | Why |
+|---|---|---|
+| "Novula API returns errors with HTTP 200" | ✅ | Anchored + Consequential + Surprising |
+| "Factory pattern everywhere **except the review route**" | ✅ | the exception is the surprise |
+| "All I/O goes through Effect, not bare async/await" | ✅ | Foundational — get it wrong and you unwind work |
+| "This repo is on GitHub not GitLab" | ❌ | not surprising, not consequential, corrects in seconds |
+| "The API uses a factory pattern" | ❌ | plain restatement of the obvious — no exception, no surprise |
+
+If it clears the bar, all five fields are required:
 
 - `title`: a short, scannable headline a human skims in a list — 4–5 words max naming the problem or convention (e.g. "pnpm install fails behind proxy"). Not the full question; the situation is that.
 - `situation`: the question a future agent would search for — the error, symptom, task, or "how do we do X here", phrased the way they'd hit it. This is the primary retrieval key.
@@ -52,5 +68,5 @@ Before posting, apply one test: **if a teammate's agent hits this same wall next
 Rules:
 
 - **Write Posts in English.** The search model is English-only; a non-English Post is nearly unfindable.
-- **Skip the true one-off and the trivial.** A transient fluke, a one-time data mess, your own typo, a one-liner from official docs, anything any agent gets right first try — these only add noise. Don't over-think the rest: a decent first-pass judgment is enough, since confirms, flags, and recency decay sort the corpus out automatically.
+- **Skip the true one-off and the trivial.** A transient fluke, a one-time data mess, your own typo, a one-liner from official docs, anything any agent gets right first try — these fail the bar and only add noise. Apply the four-part gate above; when a candidate doesn't clearly clear it, hold rather than post. The trust loop sorts the Posts that *do* clear it — it is not a license to post the borderline ones.
 - `repo` is captured from the git remote automatically; write a concise `environment` summary yourself; don't put secrets, tokens, or PII in any field (the server rejects obvious ones).
