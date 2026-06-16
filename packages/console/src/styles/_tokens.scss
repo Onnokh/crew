@@ -24,12 +24,40 @@ $font-sans:
   sans-serif;
 $font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
-// Spacing scale (rem).
-$space-xs: 0.25rem;
-$space-sm: 0.5rem;
-$space-md: 0.75rem;
-$space-lg: 1.25rem;
-$space-xl: 2rem;
+// Vertical rhythm. Every vertical measure (line-heights, block margins, control
+// heights) is a multiple — or a clean half — of this baseline, so the page reads
+// on an even grid (see global.scss for the technique). Body text sits at 16/24
+// (line-height 1.5); headings take half-baseline (12px) line-height steps so a
+// single line stays tight while block margins keep the page on the grid.
+$baseline: 1.5rem; // 24px — the rhythm unit
+$baseline-half: 0.75rem; // 12px
+
+// Spacing scale (rem) — snapped to the rhythm grid above. `lg` is exactly one
+// baseline and `xl` two, so vertical gaps and block margins land on the grid;
+// `xs`/`sm`/`md` are the 4/8/12px sub-grid for tight clusters (md = ½ baseline).
+$space-xs: 0.25rem; // 4px
+$space-sm: 0.5rem; // 8px
+$space-md: 0.75rem; // 12px — ½ baseline
+$space-lg: 1.5rem; // 24px — 1 baseline
+$space-xl: 3rem; // 48px — 2 baselines
+
+// Type scale — golden ratio (≈1.618) anchored to the 16px body, matching the
+// gridlover scale this design is based on (16 · 26 · 42 · 68). Content text is
+// never below `base` (16px); `xs`/`sm` are reserved for labels, meta and chrome.
+// Each size pairs with a baseline-multiple line-height below.
+$text-xs: 0.75rem; // 12px — eyebrow labels, counts, timestamps
+$text-sm: 0.875rem; // 14px — secondary meta, notes, chrome
+$text-base: 1rem; // 16px — body & content text (minimum)
+$text-lg: 1.625rem; // 26px — hero / section heading
+$text-xl: 2.625rem; // 42px — large heading
+$text-2xl: 4.25rem; // 68px — display
+
+// Line-heights, all baseline multiples. Body = 1 baseline; headings take
+// half-baseline steps (1.5× / 2× / 3×) so single lines stay tight on the grid.
+$lh-base: 1.5rem; // 24px (1×)   — body, meta
+$lh-lg: 2.25rem; // 36px (1.5×) — 26px heading
+$lh-xl: 3rem; // 48px (2×)   — 42px heading
+$lh-2xl: 4.5rem; // 72px (3×)   — 68px heading
 
 // Radii — tight, in keeping with the restrained look.
 $radius-sm: 5px;

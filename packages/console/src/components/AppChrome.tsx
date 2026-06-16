@@ -1,6 +1,6 @@
 import * as Avatar from "@radix-ui/react-avatar";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { authClient, useSession } from "../auth/client";
 import { ThemeToggle } from "./ThemeToggle";
@@ -21,8 +21,18 @@ import styles from "./AppChrome.module.scss";
  */
 export function AppChrome({ children }: { children: ReactNode }) {
   const router = useRouter();
+  // The brand is a way back to the home page; it would be redundant on home
+  // itself, so we only show it elsewhere (read the live pathname off the router).
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isHome = pathname === "/";
   const { data } = useSession();
   const user = data?.user;
+  // `role` is the admin plugin's field on the User (see ADR 0003). The shared
+  // `authClient` is built without the admin *client* plugin, so the inferred
+  // session type omits it; we read it through a narrow local shape rather than
+  // widening the shared client. Mirrors the `beforeLoad` gate on `/admin`, so a
+  // non-admin never sees the entry (the server gates the API regardless).
+  const isAdmin = (user as { role?: string | null } | undefined)?.role === "admin";
 
   async function onSignOut() {
     await authClient.signOut();
@@ -36,6 +46,11 @@ export function AppChrome({ children }: { children: ReactNode }) {
         <div className={styles.rail} aria-hidden="true" />
         <div className={styles.content}>
           <div className={styles.actions}>
+            {!isHome ? (
+              <Link to="/" className={styles.brand}>
+                Crew
+              </Link>
+            ) : null}
             <ThemeToggle />
             {user ? (
               <DropdownMenu.Root>
@@ -56,6 +71,11 @@ export function AppChrome({ children }: { children: ReactNode }) {
                       <span className={styles.menuEmail}>{user.email}</span>
                     </div>
                     <DropdownMenu.Separator className={styles.menuSeparator} />
+                    {isAdmin ? (
+                      <DropdownMenu.Item className={styles.menuItem} asChild>
+                        <Link to="/admin">User management</Link>
+                      </DropdownMenu.Item>
+                    ) : null}
                     <DropdownMenu.Item className={styles.menuItem} onSelect={onSignOut}>
                       Sign out
                     </DropdownMenu.Item>

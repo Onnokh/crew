@@ -30,6 +30,21 @@ $measure: 57.5rem; // 920px
   margin: 0 auto $space-xl;
 }
 
+// The brand sits at the left of the actions row; `margin-right: auto` pushes
+// the rest of the cluster (theme toggle + account) to the right edge.
+.brand {
+  margin-right: auto;
+  color: $color-text;
+  font-size: $text-base;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+
+  &:hover {
+    color: $color-text-muted;
+  }
+}
+
 .signIn {
   padding: $space-xs $space-md;
   border: 1px solid $color-border-strong;
@@ -37,7 +52,7 @@ $measure: 57.5rem; // 920px
   background: $color-bg;
   color: $color-text;
   text-decoration: none;
-  font-size: 0.875rem;
+  font-size: $text-sm;
 
   &:hover {
     background: $color-surface-hover;
@@ -78,7 +93,7 @@ $measure: 57.5rem; // 920px
 }
 
 .userName {
-  font-size: 0.875rem;
+  font-size: $text-sm;
 }
 
 .menu {
@@ -100,13 +115,13 @@ $measure: 57.5rem; // 920px
 }
 
 .menuName {
-  font-size: 0.875rem;
+  font-size: $text-sm;
   font-weight: 500;
 }
 
 .menuEmail {
   color: $color-text-muted;
-  font-size: 0.75rem;
+  font-size: $text-xs;
 }
 
 .menuSeparator {
@@ -116,9 +131,12 @@ $measure: 57.5rem; // 920px
 }
 
 .menuItem {
+  display: block;
   padding: $space-sm;
   border-radius: $radius-sm;
-  font-size: 0.875rem;
+  font-size: $text-sm;
+  color: $color-text;
+  text-decoration: none;
   cursor: pointer;
   outline: none;
 

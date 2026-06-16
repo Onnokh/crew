@@ -110,7 +110,16 @@
   list-style: none;
 }
 
+// A row stacks its identity line above any show-once secret (password / api
+// key) that belongs to this User, so the secret appears right where it was
+// triggered instead of in a detached box at the top of the page.
 .row {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.rowMain {
   display: flex;
   align-items: center;
   gap: $space-md;
@@ -156,6 +165,53 @@
   display: flex;
   flex-shrink: 0;
   gap: $space-lg;
+}
+
+// A User's active api keys, listed under their row: a hairline-separated stack
+// of compact lines (label · last-used · delete) so an admin sees what already
+// exists before adding more.
+.keyList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px dashed $color-border;
+}
+
+.keyRow {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-xs 0;
+
+  & + & {
+    border-top: 1px solid $color-border;
+  }
+}
+
+.keyName {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: $space-sm;
+  overflow: hidden;
+  color: $color-text;
+  font-family: $font-mono;
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.keyStart {
+  color: $color-text-subtle;
+}
+
+.keyUsage {
+  flex-shrink: 0;
+  color: $color-text-muted;
+  font-size: 0.75rem;
 }
 
 // Text-style actions, in keeping with the editorial look.

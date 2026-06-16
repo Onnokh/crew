@@ -72,13 +72,62 @@ body {
   padding: 0;
 }
 
+// Anchor the vertical rhythm: 16px body on a 24px (1.5) baseline. Every vertical
+// measure in the modules derives from `$baseline` (= this line-height), so text
+// blocks, gaps and control heights all land on the same grid. Technique:
+// 24ways.org/2006/compose-to-a-vertical-rhythm and ALA "more meaningful
+// typography" — size the type on a modular scale, line everything to the
+// baseline.
 body {
   background: $color-bg;
   color: $color-text;
   font-family: $font-sans;
-  line-height: 1.5;
+  font-size: $text-base; // 16px
+  line-height: $lh-base; // 24px — the baseline
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+// Sensible rhythm defaults for raw markup. Modules override per-element where a
+// role needs tuning (these are element selectors, so any module class wins), but
+// stray headings/paragraphs/lists still fall on the grid: a one-baseline bottom
+// margin and a baseline-multiple line-height.
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0 0 $baseline;
+  font-weight: 600;
+}
+h1 {
+  font-size: $text-2xl;
+  line-height: $lh-2xl;
+}
+h2 {
+  font-size: $text-xl;
+  line-height: $lh-xl;
+}
+h3 {
+  font-size: $text-lg;
+  line-height: $lh-lg;
+}
+h4,
+h5,
+h6 {
+  font-size: $text-base;
+  line-height: $lh-base;
+}
+
+p,
+ul,
+ol,
+blockquote,
+pre,
+figure,
+table {
+  margin: 0 0 $baseline;
 }
 
 code {

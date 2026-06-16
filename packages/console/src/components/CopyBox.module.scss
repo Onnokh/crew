@@ -1,55 +1,61 @@
 // Colocated styles for the show-once secret box (CSS Modules — ADR 0004).
 // Shared design tokens live in `src/styles/_tokens.scss`.
+//
+// Editorial treatment to match the admin list: a single compact hairline bar
+// (no heavy filled panel) that tucks under the row that minted it — a muted
+// uppercase label, the secret in a monospace field that scrolls rather than
+// wraps, and a text-style copy affordance like the row's other actions.
 @use "../styles/tokens" as *;
 
 .box {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: $space-sm;
-  padding: $space-md;
-  border: 1px solid $color-positive-border;
-  border-radius: $radius-md;
-  background: $color-positive-bg;
+  padding: $space-xs $space-sm;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-surface;
 }
 
 .label {
-  color: $color-positive-text;
-  font-size: 0.6875rem;
+  flex-shrink: 0;
+  color: $color-text-subtle;
+  font-size: 0.625rem;
   font-weight: 500;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .row {
   display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
   gap: $space-sm;
-  align-items: stretch;
 }
 
 .secret {
   flex: 1;
-  padding: $space-sm;
-  border: 1px solid $color-border;
-  border-radius: $radius-sm;
-  background: $color-bg;
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
   color: $color-text;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.875rem;
-  word-break: break-all;
+  font-family: $font-mono;
+  font-size: 0.8125rem;
 }
 
 .copy {
-  padding: 0 $space-md;
+  flex-shrink: 0;
+  padding: 0;
   border: none;
-  border-radius: $radius-sm;
-  background: $color-accent;
-  color: $color-accent-contrast;
-  font-size: 0.875rem;
-  font-weight: 600;
+  background: transparent;
+  color: $color-accent;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
   cursor: pointer;
-  white-space: nowrap;
 
   &:hover {
-    background: $color-accent-hover;
+    text-decoration: underline;
   }
 }

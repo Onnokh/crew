@@ -42,9 +42,11 @@ export function mountAdmin(app: Hono, deps: Deps): void {
     await next();
   });
 
-  // List Users with their role and live api-key count. The count comes from the
-  // adapter (keyed by `referenceId`), not the session-scoped `listApiKeys`, so it
-  // is correct for every User and not just the caller.
+  // List Users with their role and their live api keys (id, label, last-used and
+  // created timestamps — never the secret). The keys come from the adapter (keyed
+  // by `referenceId`), not the session-scoped `listApiKeys`, so they are correct
+  // for every User and not just the caller. The console renders them per row so an
+  // admin manages a User's existing keys instead of endlessly minting new ones.
   admin.get("/users", async (c) => {
     const { users } = await auth.api.listUsers({
       query: { limit: 200, sortBy: "createdAt", sortDirection: "desc" },
@@ -57,7 +59,7 @@ export function mountAdmin(app: Hono, deps: Deps): void {
         email: u.email,
         role: u.role ?? null,
         banned: u.banned ?? false,
-        keyCount: await adapter.count(u.id),
+        keys: await adapter.list(u.id),
       })),
     );
     return c.json({ users: rows });
@@ -145,11 +147,26 @@ export function mountAdmin(app: Hono, deps: Deps): void {
 async function keyAdapter(auth: Auth) {
   const { adapter } = await auth.$context;
   return {
-    count: (referenceId: string) =>
-      adapter.count({
+    // The User's keys as safe metadata — id, the `console-…` name, the `start`
+    // prefix the plugin stores, when it was created and when it last verified a
+    // request (null = never used). The hashed `key` itself is never selected.
+    list: async (referenceId: string): Promise<ApiKeyRow[]> => {
+      const rows = await adapter.findMany<RawApiKey>({
         model: "apikey",
         where: [{ field: "referenceId", value: referenceId }],
-      }),
+      });
+      return rows
+        .map((k) => ({
+          id: k.id,
+          name: k.name ?? null,
+          start: k.start ?? null,
+          enabled: k.enabled ?? true,
+          createdAt: toIso(k.createdAt),
+          lastRequest: toIso(k.lastRequest),
+        }))
+        // Newest first; a never-used key (no createdAt) sorts last.
+        .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
+    },
     deleteById: (id: string) =>
       adapter.delete({ model: "apikey", where: [{ field: "id", value: id }] }),
     deleteAllFor: (referenceId: string) =>
@@ -158,6 +175,33 @@ async function keyAdapter(auth: Auth) {
         where: [{ field: "referenceId", value: referenceId }],
       }),
   };
+}
+
+/** The api-key columns we read; the rest of the row (incl. the hash) is ignored. */
+type RawApiKey = {
+  id: string;
+  name?: string | null;
+  start?: string | null;
+  enabled?: boolean | null;
+  createdAt?: Date | string | number | null;
+  lastRequest?: Date | string | number | null;
+};
+
+/** Safe key metadata as the listing returns it (the wire is the type boundary). */
+type ApiKeyRow = {
+  id: string;
+  name: string | null;
+  start: string | null;
+  enabled: boolean;
+  createdAt: string | null;
+  lastRequest: string | null;
+};
+
+/** Normalize a better-auth date column (Date | epoch | ISO string) to an ISO string. */
+function toIso(value: Date | string | number | null | undefined): string | null {
+  if (value == null) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
 /** A URL-safe one-time password — long enough that it need never be memorised. */

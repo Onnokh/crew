@@ -47,15 +47,11 @@
 
 .heroHeading {
   margin: 0;
-  font-size: 1.375rem;
+  font-size: $text-lg; // 26px — golden-scale step
   font-weight: 600;
   letter-spacing: -0.02em;
-  line-height: 1.15;
+  line-height: $lh-lg; // 36px (1.5 baseline)
   text-wrap: balance;
-
-  @media (min-width: 640px) {
-    font-size: 1.625rem;
-  }
 }
 
 .heroName {
@@ -72,8 +68,8 @@
   margin: 0;
   max-width: 55ch;
   color: $color-text-muted;
-  font-size: 1rem;
-  line-height: 1.75;
+  font-size: $text-base; // 16px
+  line-height: $lh-base; // 24px (1 baseline)
 }
 
 // Agent setup is a tab group below the hero bio: a horizontal row of three pill
@@ -242,7 +238,10 @@
   display: flex;
   align-items: center;
   gap: $space-sm;
-  padding: $space-sm $space-md;
+  // 2-baseline row (48px): 16px input on a 24px line + ~11px padding each side,
+  // the 1px stolen back from the padding so the border doesn't break the grid
+  // (the border-compensation trick from 24ways).
+  padding: calc(#{$baseline-half} - 1px) $space-md;
   margin-bottom: $space-md;
   border: 1px solid $color-border;
   border-radius: $radius-md;
@@ -266,7 +265,7 @@
   background: transparent;
   color: $color-text;
   font: inherit;
-  font-size: 0.9375rem;
+  font-size: $text-base; // 16px
 
   &::placeholder {
     color: $color-text-subtle;
@@ -307,14 +306,16 @@
   display: inline-flex;
   align-items: center;
   gap: $space-sm;
-  padding: $space-sm 0;
+  // 2-baseline tab row (48px): 16px label on a 24px line + 12px above/below.
+  padding: $space-md 0;
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   background: transparent;
   color: $color-text-muted;
   font: inherit;
-  font-size: 0.9375rem;
+  font-size: $text-base; // 16px
+  line-height: $lh-base;
   cursor: pointer;
 
   &:hover {
@@ -330,7 +331,7 @@
 .count {
   color: $color-text-muted;
   font-family: $font-mono;
-  font-size: 0.75rem;
+  font-size: $text-xs; // 12px meta
 }
 
 .panel {
@@ -395,9 +396,9 @@
   display: flex;
   align-items: center;
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: $text-base; // 16px content text
   font-weight: 400;
-  line-height: 1.4;
+  line-height: $lh-base; // 24px (1 baseline)
 }
 
 .titleText {
@@ -446,7 +447,7 @@
   margin-left: auto;
   padding-left: $space-md;
   flex-shrink: 0;
-  font-size: 0.75rem;
+  font-size: $text-xs; // 12px meta
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -480,8 +481,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  // One baseline tall (24px) so the icons don't lift the title row off the grid.
+  width: 24px;
+  height: 24px;
   border: 1px solid transparent;
   border-radius: $radius-sm;
   background: transparent;
@@ -509,8 +511,8 @@
 .situation {
   margin: 0;
   color: $color-text-muted;
-  font-size: 0.875rem;
-  line-height: 1.7;
+  font-size: $text-base; // 16px content text
+  line-height: $lh-base; // 24px (1 baseline)
 }
 
 .tag {
@@ -539,8 +541,8 @@
   margin: 0;
   max-width: 100ch;
   color: $color-text-muted;
-  font-size: 0.9rem;
-  line-height: 1.7;
+  font-size: $text-base; // 16px content text
+  line-height: $lh-base; // 24px (1 baseline)
   white-space: pre-wrap;
 }
 
