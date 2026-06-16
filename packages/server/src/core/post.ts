@@ -51,6 +51,35 @@ export type Post = {
 export type PostStatus = "active" | "retired";
 
 /**
+ * Canonicalise a repo identifier to its `group/name` tail — the part that
+ * actually disambiguates one repository from another. Drops the host and any
+ * intermediate path, so every common remote form reduces to the same value:
+ *
+ *   git@github.com:Onnokh/crew.git              → Onnokh/crew
+ *   https://github.com/Onnokh/crew.git          → Onnokh/crew
+ *   github.com/Onnokh/crew                       → Onnokh/crew
+ *   git.indicia.nl/online-concepts/sigi/sigi-frontend → sigi/sigi-frontend
+ *
+ * Tolerates a `scheme://` prefix, an SSH `user@host:` prefix, a port, a
+ * trailing slash, and a `.git` suffix. Applied on write so the stored value is
+ * canonical regardless of what a client sends, and on `query` so the same-repo
+ * boost still matches. Falls back to the trimmed input when there aren't two
+ * segments to reduce to.
+ */
+export function normalizeRepo(repo: string): string {
+  const cleaned = repo
+    .trim()
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//i, "") // strip scheme://
+    .replace(/^[^@/]*@/, "") // strip ssh user@ / URL userinfo
+    .replace(/:/g, "/") // scp colon and any port become path separators
+    .replace(/\/+$/, "") // trailing slashes
+    .replace(/\.git$/i, ""); // .git suffix
+  const segments = cleaned.split("/").filter(Boolean);
+  if (segments.length >= 2) return segments.slice(-2).join("/");
+  return segments[0] ?? repo.trim();
+}
+
+/**
  * The fields a caller supplies when creating a Post. The repository derives the
  * id, timestamp, and default status; the tool supplies attribution. Keeping this
  * distinct from {@link Post} keeps "what the agent provides" separate from "what

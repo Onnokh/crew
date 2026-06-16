@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeRepo } from "../core/post.js";
 import type { User } from "../core/user.js";
 import { renderResults } from "../guardrails/render.js";
 import type { Clock } from "../platform/clock.js";
@@ -64,7 +65,9 @@ export function makeQueryTool(repo: PostRepository, clock: Clock) {
     execute: async (args: QueryArgs, _context: { session?: User }) => {
       const results = await retrieve(repo, clock, {
         situation: args.situation,
-        repo: args.repo,
+        // Canonicalise to `group/name` so the same-repo boost matches stored
+        // values, which are normalized the same way on write (see normalizeRepo).
+        repo: args.repo ? normalizeRepo(args.repo) : undefined,
         limit: args.limit,
       });
 

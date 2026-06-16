@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeRepo } from "../core/post.js";
 import type { User } from "../core/user.js";
 import { scanPost } from "../guardrails/scan.js";
 import type { PostRepository } from "../store/repository.js";
@@ -40,7 +41,7 @@ export const postParameters = z.object({
     .string()
     .min(1)
     .describe(
-      "The git repository this originated from (e.g. the remote slug). Used to boost same-repo results and label cross-repo ones; never filters. Required — capture it from the current git remote.",
+      "The git repository this originated from. The plugin captures this automatically from the current git remote (a PreToolUse hook overwrites it), so you normally don't fill it in by hand; if you must, pass the `group/name` slug (e.g. `Onnokh/crew`). Stored canonically as `group/name`. Used to boost same-repo results and label cross-repo ones; never filters.",
     ),
 });
 
@@ -73,6 +74,12 @@ export function makePostTool(repo: PostRepository) {
         throw new Error("Unauthorized: no authenticated user on the session");
       }
 
+      // Canonicalise the repo to its `group/name` tail before storing, so the
+      // corpus is consistent no matter what form a client sends (full URL, ssh
+      // remote, bare slug — see normalizeRepo). The plugin's PreToolUse hook
+      // feeds the raw git remote; this is what makes it uniform.
+      const normalizedRepo = normalizeRepo(args.repo);
+
       // Ingestion guardrail: reject obvious secrets/PII and prompt-injection
       // before anything is stored, so the corpus other agents read stays clean.
       const scan = scanPost({
@@ -80,7 +87,7 @@ export function makePostTool(repo: PostRepository) {
         situation: args.situation,
         body: args.body,
         environment: args.environment,
-        repo: args.repo,
+        repo: normalizedRepo,
       });
       if (!scan.ok) {
         throw new Error(`Post rejected by ingestion guardrail: ${scan.reason}`);
@@ -91,7 +98,7 @@ export function makePostTool(repo: PostRepository) {
         situation: args.situation,
         body: args.body,
         environment: args.environment,
-        repo: args.repo,
+        repo: normalizedRepo,
         createdBy: user.id,
       });
       return `Posted. id: ${post.id}`;

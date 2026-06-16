@@ -7,25 +7,27 @@ import { aggregateEvents } from "../trust/aggregate.js";
 /**
  * The human review JSON API (slice 0013) — the async backstop for the
  * misinformation loop, rebuilt as JSON after 0010 retired the server-rendered
- * HTML. Mounts under `/api/review/*` on the same Hono app FastMCP exposes, open
- * to any signed-in User (not admin-gated): list recent Posts, list flagged Posts
- * with their confirm/flag/view counts, retire (drops a Post from agent `query`)
- * and restore. The repository already exposes every read/write this needs
+ * HTML. Mounts under `/api/review/*` on the same Hono app FastMCP exposes. The
+ * READS are public — anyone can list recent Posts, list flagged Posts with their
+ * confirm/flag/view counts, and search the corpus (the shared memory is open to
+ * browse; you don't sign in to read it). The moderation WRITES — retire (drops a
+ * Post from agent `query`) and restore — stay behind a session. The repository
+ * already exposes every read/write this needs
  * (`listRecentPosts`, `listFlaggedPosts`, `getEventsForPosts`, `retirePost`,
- * `restorePost`); this layer adds session auth + the JSON shape the `/review`
- * console page consumes. Mounted before `mountConsole` so the SPA catch-all
- * never shadows it (see `server.ts`).
+ * `restorePost`); this layer adds the JSON shape the home page consumes, plus a
+ * session gate on the two writes. Mounted before `mountConsole` so the SPA
+ * catch-all never shadows it (see `server.ts`).
  *
  * Routes:
- *   GET  /api/review/recent   → { posts: ReviewRow[] }  most recent Posts
- *   GET  /api/review/flagged  → { posts: ReviewRow[] }  Posts carrying ≥1 Flag
- *   GET  /api/review/search   → { posts: ReviewRow[] }  ranked exactly as `query`
- *   POST /api/review/:id/retire  → 204  drop from agent `query` results
- *   POST /api/review/:id/restore → 204  bring it back
+ *   GET  /api/review/recent   → { posts: ReviewRow[] }  most recent Posts (public)
+ *   GET  /api/review/flagged  → { posts: ReviewRow[] }  Posts carrying ≥1 Flag (public)
+ *   GET  /api/review/search   → { posts: ReviewRow[] }  ranked exactly as `query` (public)
+ *   POST /api/review/:id/retire  → 204  drop from agent `query` results (session)
+ *   POST /api/review/:id/restore → 204  bring it back (session)
  *
- * Every route sits behind one session-auth middleware: ANY signed-in User
+ * The two writes sit behind one session-auth middleware: ANY signed-in User
  * passes (no role check — this is post-hoc review, not a pre-publish gate);
- * a caller with no session gets 401.
+ * a caller with no session gets 401. The reads carry no gate.
  */
 
 /** How many Posts each section lists; a review page wants recency, not the corpus. */
@@ -54,9 +56,10 @@ export type ReviewRow = {
 };
 
 export function mountReview(app: Hono, deps: Deps): void {
-  // One gate for the whole surface: resolve the caller's session through the
-  // better-auth instance and refuse anyone without one. No role check — any
-  // signed-in User reaches review (the async human backstop, open to the team).
+  // The gate for the two moderation writes: resolve the caller's session through
+  // the better-auth instance and refuse anyone without one. No role check — any
+  // signed-in User can moderate (the async human backstop, open to the team).
+  // The reads below sit OUTSIDE this gate: browsing the shared memory is public.
   const requireSession: MiddlewareHandler = async (c, next) => {
     const session = await deps.authInstance.api.getSession({
       headers: c.req.raw.headers,
@@ -64,7 +67,6 @@ export function mountReview(app: Hono, deps: Deps): void {
     if (!session?.user) return c.json({ error: "unauthenticated" }, 401);
     await next();
   };
-  app.use("/api/review/*", requireSession);
 
   // The two lists. Each hydrates its Posts into ReviewRows so the page gets the
   // counts inline (one batched events read per list, never k reads).
@@ -109,8 +111,12 @@ export function mountReview(app: Hono, deps: Deps): void {
   // The human backstop. Both are idempotent no-ops for an unknown id (the
   // repository swallows it), so a stale page that retires a vanished Post just
   // gets a clean 204.
-  app.post("/api/review/:id/retire", async (c) => retire(c, deps, true));
-  app.post("/api/review/:id/restore", async (c) => retire(c, deps, false));
+  app.post("/api/review/:id/retire", requireSession, async (c) =>
+    retire(c, deps, true),
+  );
+  app.post("/api/review/:id/restore", requireSession, async (c) =>
+    retire(c, deps, false),
+  );
 }
 
 /** Retire (`retired = true`) or restore a Post by route param, returning 204. */

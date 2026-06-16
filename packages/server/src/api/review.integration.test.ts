@@ -12,9 +12,10 @@ import {
  * the server-rendered `/review` integration test 0010 deleted. Drives the REAL
  * Hono app FastMCP exposes (real store over `:memory:`, real better-auth, fake
  * embedder — no model download), exercising what can only be observed through the
- * HTTP boundary: that the endpoints sit behind the session seam (401 without a
- * cookie), that the lists carry correct confirm/flag/view counts, and that
- * retire/restore actually move a Post in and out of agent `query` results.
+ * HTTP boundary: that the reads are public while the writes sit behind the
+ * session seam (401 without a cookie), that the lists carry correct
+ * confirm/flag/view counts, and that retire/restore actually move a Post in and
+ * out of agent `query` results.
  *
  * Posts are seeded and the retire/restore effect is confirmed back through the
  * MCP `query` tool, proving the review surface and the agent surface share one
@@ -22,7 +23,7 @@ import {
  * (the harness seeds Alice with a known password), the same path the console's
  * login flow drives in production.
  */
-describe("review JSON API: session-gated lists + retire/restore", () => {
+describe("review JSON API: public lists + session-gated retire/restore", () => {
   let srv: RunningServer;
   let base: string;
   let cookie: string;
@@ -106,14 +107,22 @@ describe("review JSON API: session-gated lists + retire/restore", () => {
     }
   }
 
-  it("refuses every endpoint without a session (401)", async () => {
-    for (const [method, path] of [
-      ["GET", "/api/review/recent"],
-      ["GET", "/api/review/flagged"],
-      ["POST", "/api/review/post_x/retire"],
-      ["POST", "/api/review/post_x/restore"],
-    ] as const) {
-      const res = await fetch(`${base}${path}`, { method });
+  it("serves the reads publicly but gates the writes behind a session (401)", async () => {
+    // Browsing the shared memory needs no session — the lists and search are open.
+    for (const path of [
+      "/api/review/recent",
+      "/api/review/flagged",
+      "/api/review/search?q=anything",
+    ]) {
+      const res = await fetch(`${base}${path}`);
+      expect(res.status).toBe(200);
+    }
+    // The moderation writes still refuse an anonymous caller.
+    for (const path of [
+      "/api/review/post_x/retire",
+      "/api/review/post_x/restore",
+    ]) {
+      const res = await fetch(`${base}${path}`, { method: "POST" });
       expect(res.status).toBe(401);
     }
   });
