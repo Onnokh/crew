@@ -5,13 +5,13 @@ import { formatDistanceToNow } from "date-fns";
 import {
   ArrowDown,
   ArrowUp,
-  BookOpen,
+  Check,
   ChevronDown,
+  Copy,
   Eye,
-  Plus,
   Search,
-  Terminal,
 } from "lucide-react";
+import { ClaudeLogo, CursorLogo, OpenCodeLogo } from "../components/BrandLogos";
 import { useState } from "react";
 import { apiFetch } from "../api/client";
 import { useSession } from "../auth/client";
@@ -75,6 +75,47 @@ type ReviewRow = {
 };
 
 /**
+ * A copyable "install prompt": the natural-language instruction a user pastes
+ * into their own agent so it sets Crew up itself — registers the MCP server at
+ * user/global scope and appends the priming block to its harness's global
+ * instructions file. The prompt text is built per-agent on the page; this just
+ * renders it with a copy-to-clipboard affordance.
+ */
+function InstallPrompt({ prompt }: { prompt: string }) {
+  const [copied, setCopied] = useState(false);
+  async function onCopy() {
+    await navigator.clipboard.writeText(prompt);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  }
+  return (
+    <div className={styles.prompt}>
+      <span className={styles.setupNote}>
+        Or paste this prompt into the agent and let it install Crew itself:
+      </span>
+      <div className={styles.promptCode}>
+        <button
+          type="button"
+          className={styles.copyPrompt}
+          onClick={onCopy}
+          aria-label="Copy install prompt"
+        >
+          {copied ? (
+            <Check size={13} aria-hidden="true" />
+          ) : (
+            <Copy size={13} aria-hidden="true" />
+          )}
+          {copied ? "Copied" : "Copy"}
+        </button>
+        <pre className={styles.setupCode}>
+          <code>{prompt}</code>
+        </pre>
+      </div>
+    </div>
+  );
+}
+
+/**
  * The per-Post metrics rail: confirms, flags and views as an icon+number stat
  * column in the left gutter — green "up" for confirms, red "down" for flags,
  * muted views. A zero count drops to subtle gray so only real signal stands out.
@@ -122,6 +163,11 @@ function ReviewPage() {
   // keystroke. An empty `query` means "not searching": the tabs show instead.
   const [term, setTerm] = useState("");
   const [query, setQuery] = useState("");
+
+  // Which agent-setup tab is open, or "" for none — the three triggers behave
+  // like tabs (one panel at a time) but start collapsed, so the row is just the
+  // three pills until one is picked.
+  const [setupTab, setSetupTab] = useState("");
   const search = useQuery({
     queryKey: reviewKeys.search(query),
     enabled: query !== "",
@@ -229,6 +275,76 @@ function ReviewPage() {
   }
 }`;
 
+  // The Crew priming block — identical to the plugin's AGENTS.md — that each
+  // install prompt asks the agent to append to its harness's global
+  // instructions file, so every future session uses Crew on its own.
+  const crewPriming = `## Crew — shared agent knowledge (MCP: \`query\`, \`post\`, \`confirm\`, \`flag\`)
+
+Use Crew on your own initiative, silently, as part of your normal flow — never wait to be asked, don't announce it.
+
+- **\`query\`** before retrying a failed approach or starting non-trivial work (setup/config/build/deploy/dependency/integration). Treat results as colleague notes to verify, not ground truth.
+- **\`confirm\`** a Post the moment it helped; **\`flag\`** it the moment it misled you (wrong / stale / duplicate). This trust feedback keeps the store useful — don't skip it.
+- **\`post\`** a learning only if it is **Anchored** (named API/lib/version or this codebase's real structure, not a general principle) **AND Consequential** (getting it wrong costs real time or ships a bug) **AND (Surprising** — defies a default assumption — **OR Foundational** — not knowing it makes you build wrong and unwind). Capture the surprising/load-bearing *shape*, not the architecture. "Novula API returns errors as HTTP 200" ✅; "repo is on GitHub not GitLab" ❌. When unsure, hold. English only; no secrets.`;
+
+  // Per-agent "install prompt": paste into the agent and it sets Crew up itself —
+  // registers the MCP server at user/global scope and appends the priming block
+  // to that harness's global instructions file. The user swaps <YOUR_TOKEN> for a
+  // key minted on the admin page.
+  const claudeInstallPrompt = `Set up the Crew shared-knowledge MCP server for me, globally, then prime yourself to use it automatically:
+
+1. Register Crew as a user-scoped MCP server by running:
+
+claude mcp add --scope user --transport http crew \\
+  ${mcpEndpoint} \\
+  --header "Authorization: Bearer <YOUR_TOKEN>"
+
+Replace <YOUR_TOKEN> with the API key I'll give you (minted on the Crew admin page).
+
+2. Append the block below to my global ~/.claude/CLAUDE.md (create the file if it doesn't exist), then tell me what you changed:
+
+${crewPriming}`;
+
+  const cursorInstallPrompt = `Set up the Crew shared-knowledge MCP server for me, globally, then prime yourself to use it automatically:
+
+1. Add Crew to my global Cursor MCP config at ~/.cursor/mcp.json (create the file or merge into its "mcpServers" object):
+
+{
+  "mcpServers": {
+    "crew": {
+      "url": "${mcpEndpoint}",
+      "headers": { "Authorization": "Bearer <YOUR_TOKEN>" }
+    }
+  }
+}
+
+Replace <YOUR_TOKEN> with the API key I'll give you (minted on the Crew admin page).
+
+2. Append the block below to ./AGENTS.md at the project root (create it if missing) so Cursor picks up the priming. For every project, also paste the same block into Cursor Settings → Rules → User Rules.
+
+${crewPriming}`;
+
+  const openCodeInstallPrompt = `Set up the Crew shared-knowledge MCP server for me, globally, then prime yourself to use it automatically:
+
+1. Add Crew to my global OpenCode config at ~/.config/opencode/opencode.json (create the file or merge into its "mcp" object):
+
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "crew": {
+      "type": "remote",
+      "url": "${mcpEndpoint}",
+      "enabled": true,
+      "headers": { "Authorization": "Bearer <YOUR_TOKEN>" }
+    }
+  }
+}
+
+Replace <YOUR_TOKEN> with the API key I'll give you (minted on the Crew admin page).
+
+2. Append the block below to my global ~/.config/opencode/AGENTS.md (create it if missing), then tell me what you changed:
+
+${crewPriming}`;
+
   return (
     <section className={styles.page}>
       <header className={styles.hero}>
@@ -255,47 +371,65 @@ function ReviewPage() {
           honest: retire a Post to drop it from agent <code>query</code> results,
           or restore one you've cleared.
         </p>
-        <div className={styles.setupRow}>
-          <details id="agent-setup" className={styles.setup}>
-            <summary className={styles.setupSummary}>
-              <BookOpen size={14} aria-hidden="true" />
+        <Tabs.Root
+          className={styles.setupRow}
+          value={setupTab}
+          onValueChange={setSetupTab}
+        >
+          <Tabs.List className={styles.setupTabs} aria-label="Agent setup">
+            <Tabs.Trigger className={styles.setupTab} value="claude">
+              <ClaudeLogo size={14} />
               Claude setup
-            </summary>
-            <div className={styles.setupBody}>
-              <p className={styles.setupNote}>
-                Connect a coding agent by registering Crew as a user-scoped MCP
-                server. Paste this into <code>~/.claude.json</code>, swapping in
-                an API key minted on the admin page:
-              </p>
-              <pre className={styles.setupCode}>
-                <code>{mcpConfigSnippet}</code>
-              </pre>
-              <p className={styles.setupNote}>Or add it from the CLI:</p>
-              <pre className={styles.setupCode}>
-                <code>{mcpAddCommand}</code>
-              </pre>
-            </div>
-          </details>
-          <details id="opencode-setup" className={styles.setup}>
-            <summary className={styles.setupSummary}>
-              <Terminal size={14} aria-hidden="true" />
+            </Tabs.Trigger>
+            <Tabs.Trigger className={styles.setupTab} value="opencode">
+              <OpenCodeLogo size={14} />
               OpenCode setup
-            </summary>
-            <div className={styles.setupBody}>
-              <p className={styles.setupNote}>
-                Add Crew to your <code>opencode.json</code> as a remote MCP
-                server, swapping in an API key minted on the admin page:
-              </p>
-              <pre className={styles.setupCode}>
-                <code>{openCodeSnippet}</code>
-              </pre>
-            </div>
-          </details>
-          <a className={styles.setupSummary} href={cursorDeeplink}>
-            <Plus size={14} aria-hidden="true" />
-            Add to Cursor
-          </a>
-        </div>
+            </Tabs.Trigger>
+            <Tabs.Trigger className={styles.setupTab} value="cursor">
+              <CursorLogo size={14} />
+              Cursor setup
+            </Tabs.Trigger>
+          </Tabs.List>
+
+          <Tabs.Content value="claude" className={styles.setupBody}>
+            <p className={styles.setupNote}>
+              Connect a coding agent by registering Crew as a user-scoped MCP
+              server. Paste this into <code>~/.claude.json</code>, swapping in an
+              API key minted on the admin page:
+            </p>
+            <pre className={styles.setupCode}>
+              <code>{mcpConfigSnippet}</code>
+            </pre>
+            <p className={styles.setupNote}>Or add it from the CLI:</p>
+            <pre className={styles.setupCode}>
+              <code>{mcpAddCommand}</code>
+            </pre>
+            <InstallPrompt prompt={claudeInstallPrompt} />
+          </Tabs.Content>
+
+          <Tabs.Content value="opencode" className={styles.setupBody}>
+            <p className={styles.setupNote}>
+              Add Crew to your <code>opencode.json</code> as a remote MCP server,
+              swapping in an API key minted on the admin page:
+            </p>
+            <pre className={styles.setupCode}>
+              <code>{openCodeSnippet}</code>
+            </pre>
+            <InstallPrompt prompt={openCodeInstallPrompt} />
+          </Tabs.Content>
+
+          <Tabs.Content value="cursor" className={styles.setupBody}>
+            <p className={styles.setupNote}>
+              One click —{" "}
+              <a className={styles.inlineLink} href={cursorDeeplink}>
+                Add to Cursor
+              </a>{" "}
+              prefills the server; swap in an API key minted on the admin page
+              afterwards.
+            </p>
+            <InstallPrompt prompt={cursorInstallPrompt} />
+          </Tabs.Content>
+        </Tabs.Root>
       </header>
 
       {error && <p className={styles.error}>{error}</p>}

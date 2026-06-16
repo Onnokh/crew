@@ -76,47 +76,50 @@
   line-height: 1.75;
 }
 
-// Agent-setup disclosure: a pill-styled summary that expands to the MCP config
-// snippet. Sits on its own line below the hero bio.
-// Setup options sit in a wrapping row below the hero bio: the Claude/OpenCode
-// disclosures and the "Add to Cursor" deeplink, each its own pill.
+// Agent setup is a tab group below the hero bio: a horizontal row of three pill
+// triggers (Claude / OpenCode / Cursor) that stays put, opening one panel at a
+// time. Starts with no panel selected, so the row is just the pills until one
+// is picked.
 .setupRow {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: flex-start;
-  gap: $space-sm;
   padding-top: $space-sm;
 }
 
-.setup {
-  // Each disclosure takes the full row width when open so its snippet isn't
-  // boxed into a narrow column beside its siblings.
-  &[open] {
-    flex-basis: 100%;
-  }
+.setupTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-sm;
 }
 
-.setupSummary {
+.setupTab {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: $space-xs $space-md;
+  border: 1px solid transparent;
   border-radius: 999px;
   background: $color-surface-hover;
   color: $color-text-muted;
+  font: inherit;
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
-  text-decoration: none; // the "Add to Cursor" anchor reuses this pill
-  list-style: none; // hide the default disclosure triangle (also ::-webkit below)
-  transition: color 0.15s ease;
-
-  &::-webkit-details-marker {
-    display: none;
-  }
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 
   &:hover {
     color: $color-text;
+  }
+
+  // The open tab reads as selected — inked text and a hairline ring.
+  &[data-state="active"] {
+    color: $color-text;
+    border-color: $color-border-strong;
+    background: $color-bg;
   }
 
   svg {
@@ -126,8 +129,9 @@
 }
 
 .setupBody {
-  margin-top: $space-sm;
+  margin-top: $space-md;
   max-width: 640px;
+  outline: none;
 }
 
 .setupNote {
@@ -154,6 +158,73 @@
   line-height: 1.55;
   color: $color-text;
   white-space: pre;
+}
+
+// An inline text link inside a setup note (e.g. the "Add to Cursor" deeplink).
+.inlineLink {
+  color: $color-accent;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover {
+    color: $color-text;
+  }
+}
+
+// The "install prompt" block: a labelled section whose code box carries a copy
+// button pinned to its top-right corner. Sits below the manual config in each
+// setup disclosure.
+.prompt {
+  margin-top: $space-sm;
+
+  // The label sits above the code box.
+  .setupNote {
+    margin-bottom: $space-xs;
+  }
+}
+
+// Positioning context for the overlaid copy button; the code box keeps room on
+// the right so the prompt text never slides under the button.
+.promptCode {
+  position: relative;
+
+  .setupCode {
+    margin: 0;
+    padding-right: calc($space-xl * 2);
+  }
+}
+
+.copyPrompt {
+  position: absolute;
+  top: $space-sm;
+  right: $space-sm;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: $space-xs $space-sm;
+  border: 1px solid $color-border-strong;
+  border-radius: $radius-sm;
+  background: $color-bg;
+  color: $color-text-muted;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    background: $color-surface-hover;
+    border-color: $color-text-muted;
+    color: $color-text;
+  }
+
+  svg {
+    width: 13px;
+    height: 13px;
+  }
 }
 
 .error {
