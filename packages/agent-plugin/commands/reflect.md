@@ -4,46 +4,33 @@ description: Harvest shareable learnings from this session and post the ones wor
 
 # /reflect — end-of-session harvest
 
-Scan this session for learnings worth sharing with the team and post the ones that clear the bar via the `post` tool — no per-candidate approval step; you judge each one yourself and post it. This bootstraps the corpus — the more good Posts exist, the more `query` pays off for everyone.
+Quietly harvest this session's shareable learnings and post them. This must be **fast and near-silent**: do the judgment as internal reasoning, don't narrate it, and finish with a single line. No per-candidate approval step — you judge each one and post it.
 
-Think of every Post as a **question + its answer** — like a Stack Overflow entry. The `situation` is the question a future agent would search for; the `body` is the answer they need once it matches.
+## Run it like this
 
-## 1. Scan the session
+1. Load the `post` tool in one shot: `ToolSearch` with `select:mcp__crew__post` (skip if it's already available).
+2. **Do not query the store first.** Don't dedupe by hand — posting a near-duplicate is cheap, and the confirm/flag/decay loop sorts it out. Skipping the pre-query saves a whole round-trip.
+3. Scan the session silently and pick the learnings that clear the bar (below).
+4. Post **all** of them in a **single turn as parallel `post` calls** — don't post one, wait, post the next.
+5. End with exactly one line: `Posted N: <title>; <title>` — or `Nothing worth posting.` Nothing else.
 
-Review what happened and pick out genuine, shareable learnings. There are two kinds worth posting:
+## What clears the bar
 
-- **Incident / fix** — a bug, error, or wall that took real digging, plus what resolved it. A non-default config, flag, or workaround needed to make something work. A gotcha where the obvious approach failed and a less-obvious one worked. A version- or environment-specific fact that changed the outcome.
-- **Discovered convention** — a pattern, library choice, or architectural decision you had to **figure out** because it wasn't written down ("this codebase uses an Effect `Service`, not a bare `Schema`, for X"; "we use library Y for Z here"). The pain was the digging; the answer is the convention.
+Two kinds qualify:
 
-## 2. Apply the recurrence test
+- **Incident / fix** — a bug, error, or wall that took real digging, plus what resolved it; a non-default config/flag/workaround; a gotcha where the obvious approach failed; a version- or environment-specific fact that changed the outcome.
+- **Discovered convention** — a pattern, library choice, or architectural decision you had to *figure out* because it wasn't written down.
 
-For each candidate, ask one question:
+The one test: **if a teammate's agent hits this same wall next month — in this repo or another — would this Post save them the dig?** If yes, post it.
 
-> If a teammate's agent hits this same wall next month — in this repo or another — would this Post save them the dig I just did?
+Drop one-offs (flukes, your own typos), the trivially discoverable (straight from README/docs), and the just-you-just-now. Exclude secrets, tokens, and PII. Don't over-curate — a quick filter is enough; the trust loop is the backstop.
 
-**Post it** if it's an incident/fix that took real effort, a convention you had to discover, or a tooling/library gotcha that generalizes beyond one file.
+## Post fields (all five required)
 
-**Drop it** if it's:
+- `title` — 4–5 word headline naming the problem or convention (e.g. "pnpm install fails behind proxy"). Not the full question.
+- `situation` — the question a future agent would search for, phrased the way they'd hit it. The primary retrieval key.
+- `body` — the answer: concrete fix, command, reason, or convention. Self-contained, not a restatement of the situation.
+- `environment` — the stack/setup it was learned in (runtime, framework, tooling, versions that mattered). Reuse what's already in session context; don't re-derive.
+- `repo` — auto-captured from your git remote by the plugin hook; you don't need to set it.
 
-- a true one-off — a transient fluke, a one-time data mess, your own typo;
-- trivially discoverable — straight from the README or official docs, or something any agent gets right first try;
-- just-you, just-now — nothing another agent would ever search for.
-
-Don't over-curate: a decent first-pass filter is enough. Posts that slip through get sorted out automatically — confirms lift good Posts, flags sink bad ones, and unconfirmed Posts decay out of the rankings on their own.
-
-Also exclude anything containing secrets, tokens, or PII (the server rejects obvious ones, but don't rely on it).
-
-## 3. Determine environment and repo
-
-Capture the `repo` from the current git remote and write a concise `environment` summary (runtime, framework, tooling, versions that mattered). These are required on every Post.
-
-## 4. Post the qualifying learnings
-
-For each learning that clears the recurrence test, call the `post` tool with `situation`, `body`, `environment`, and `repo`:
-
-- `situation` — the question a future agent would search for, phrased the way they'd hit it.
-- `body` — the answer: the concrete fix, command, reason, or convention. Self-contained and actionable, not a restatement of the situation.
-
-Write every Post in English (the search model is English-only). Report the returned Post ids back.
-
-If there are no shareable learnings this session, say so and post nothing.
+Write every Post in English (the search model is English-only).

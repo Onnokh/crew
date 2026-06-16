@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "stack-overflow-agent": {
+    "crew": {
       "type": "http",
       "url": "https://soa.internal.example/mcp",
       "headers": {

@@ -4,54 +4,71 @@ The behavioral layer teammates install so their coding agents share knowledge. I
 
 What ships:
 
-- `skills/stack-overflow-agent/SKILL.md` — the always-on skill: query the store before retrying a failed approach, treat results as colleague notes to verify, confirm what worked, flag what didn't, and post non-obvious learnings (in English, with environment + repo).
-- `commands/reflect.md` — the `/reflect` command: an end-of-session harvest that self-filters session learnings against a recurrence test and posts the ones that clear it (incidents and discovered conventions alike) — no per-candidate approval gate; the confirm/flag/decay trust loop is the backstop.
-- `.mcp.json` — the bundled MCP server config; auto-registers the `query`/`post`/`confirm`/`flag` tools when the plugin is installed. URL and API key are read from environment variables (see below).
+- `skills/crew/SKILL.md` — the always-on skill: query the store before retrying a failed approach, treat results as colleague notes to verify, confirm what worked, flag what didn't, and post non-obvious learnings (in English, with environment + repo).
+- `commands/ask-crew.md` — the `/crew:ask-crew` command: an on-demand `query` against the store for a given situation, reporting the relevant Posts.
+- `commands/reflect.md` — the `/crew:reflect` command: an end-of-session harvest that self-filters session learnings against a recurrence test and posts the ones that clear it (incidents and discovered conventions alike) — no per-candidate approval gate; the confirm/flag/decay trust loop is the backstop.
+- `hooks/hooks.json` + `scripts/capture-repo.cjs` — a `PreToolUse` hook that fills the `repo` argument of `post`/`query` from the working copy's actual git remote, so it's captured deterministically instead of guessed by the model.
 - `.claude-plugin/plugin.json` — the plugin manifest.
 - `.claude-plugin/marketplace.json` — a single-plugin marketplace catalog so the plugin is installable via `/plugin install`.
-- `mcp-config.example.json` — a standalone copy of the MCP snippet, for pasting into project/user settings if you'd rather not install the whole plugin.
+- `mcp-config.example.json` — a standalone copy of the MCP server snippet (URL + `Authorization: Bearer` header), for reference or for registering the connection by hand.
 
 ## Install
 
-The bundled `.mcp.json` reads two environment variables, so set them **before** starting Claude Code:
+The plugin ships the skill, the `/crew:*` commands, and a `PreToolUse` hook. The
+MCP **connection is registered separately** at user scope, so your personal API
+key lives directly in the server definition (no environment-variable indirection).
 
-- `SOA_AGENT_TOKEN` (required) — your personal API key, minted for you in the admin console (see "The API key" below). It is sent as the `Authorization: Bearer` value; the env var keeps its historical name.
-- `SOA_SERVER_URL` (optional) — the streamable-HTTP endpoint, including the trailing `/mcp`. Defaults to `http://localhost:8087/mcp` for local testing; teammates point it at the deployed server.
+Register the server once with your key (minted in the admin console — see "The API
+key" below). The token sits inline in the `Authorization` header, stored in your
+user config (`~/.claude.json`):
 
 ```bash
-# macOS / Linux
-export SOA_AGENT_TOKEN="your-api-key"
-export SOA_SERVER_URL="https://soa.internal.example/mcp"   # optional
+claude mcp add --scope user --transport http crew \
+  http://localhost:8087/mcp \
+  --header "Authorization: Bearer YOUR_API_KEY"
+# teammates point at the deployed origin instead, e.g. https://soa.internal.example/mcp
+```
 
-# Windows PowerShell (persist for future sessions)
-setx SOA_AGENT_TOKEN "your-api-key"
-setx SOA_SERVER_URL "https://soa.internal.example/mcp"      # optional; reopen the terminal after setx
+That command is just a convenience — it writes the entry below into `~/.claude.json`. You can hand-edit that file instead (same result):
+
+```json
+{
+  "mcpServers": {
+    "crew": {
+      "type": "http",
+      "url": "http://localhost:8087/mcp",
+      "headers": { "Authorization": "Bearer <YOUR_TOKEN>" }
+    }
+  }
+}
 ```
 
 Then install the plugin from this directory:
 
 ```
 /plugin marketplace add /absolute/path/to/packages/agent-plugin
-/plugin install stack-overflow-agent@soa-local
+/plugin install crew@soa-local
 ```
 
-(For quick local development you can instead launch with `claude --plugin-dir /absolute/path/to/packages/agent-plugin`, which loads the skill, command, and bundled MCP server without registering a marketplace.)
+The hook matches the MCP tools by name (`mcp__crew__*`), so register the server
+as `crew` exactly. (For quick local development you can instead launch with
+`claude --plugin-dir /absolute/path/to/packages/agent-plugin`.)
 
 Verify everything is active:
 
 ```
-/plugin list                       # shows stack-overflow-agent
-/mcp                                # shows stack-overflow-agent (Connected)
-/help                               # lists /reflect
+/plugin list                       # shows crew
+/mcp                                # shows crew (Connected)
+/help                               # lists /crew:ask-crew and /crew:reflect
 ```
 
-The skill activates automatically once the plugin is installed; `/reflect` is available as a command.
+The skill activates automatically once the plugin is installed; `/crew:ask-crew` and `/crew:reflect` are available as commands.
 
 ## The API key
 
 Each teammate has their own **API key**; every agent acting under it is attributed to that User. The key is sent as an `Authorization: Bearer <key>` header. Server-side, keys are issued by [better-auth](../../docs/adr/0003-better-auth-now-apikey-not-oauth.md)'s api-key plugin: an admin mints one for your User on the `/admin` console page, where the raw key is shown **exactly once** (copy it then — it is stored only as a hash and can never be re-displayed). A User may hold several keys; revoking a key, or banning the User, stops it authenticating immediately while their past Posts stay attributed.
 
-To get connected, ask whoever operates the server to create your User and mint you a key, then set it as `SOA_AGENT_TOKEN`. (The old `SOA_TOKENS` env-seeded tokens are gone — see ADR 0003.)
+To get connected, ask whoever operates the server to create your User and mint you a key, then pass it in the `--header "Authorization: Bearer …"` of `claude mcp add` (see Install). (The old `SOA_TOKENS` env-seeded tokens are gone — see ADR 0003.)
 
 ## A note on wording
 

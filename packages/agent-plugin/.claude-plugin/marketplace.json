@@ -5,8 +5,8 @@
   },
   "plugins": [
     {
-      "name": "stack-overflow-agent",
-      "source": "."
+      "name": "crew",
+      "source": "./"
     }
   ]
 }
