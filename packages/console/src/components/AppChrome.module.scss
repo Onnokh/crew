@@ -1,7 +1,8 @@
 // Colocated styles for the signed-in chrome (CSS Modules — ADR 0004). Tokens are
-// shared; component layout is local. Light editorial theme: white header on a
-// hairline rule, pill nav, and a narrow centered content column flanked by faint
-// hatched gutters (the diagonal-stripe margins from the reference design).
+// shared; component layout is local. Light editorial theme: a narrow centered
+// content column flanked by faint hatched gutters (the diagonal-stripe margins
+// from the reference design), with the only chrome a small actions cluster
+// pinned to the top-right of the content, between the rails.
 @use "../styles/tokens" as *;
 
 // Two nested widths, mirroring the reference: the panel is the outer main area;
@@ -17,58 +18,16 @@ $measure: 57.5rem; // 920px
   background: $color-bg;
 }
 
-.header {
-  border-bottom: 1px solid $color-border;
-  background: $color-bg;
-}
-
-// The header mirrors the body's two-width layout so the nav lines up with the
-// content: `.bar` matches the panel (outer width + inline padding), and
-// `.barInner` matches the measure (the centered text column) — so the brand sits
-// exactly above the page content, not inset by the panel padding.
-.bar {
-  max-width: $panel;
-  margin: 0 auto;
-  padding: $space-md $space-lg;
-}
-
-.barInner {
+// Right-side cluster: the theme toggle sitting just before the sign-in / account
+// control, kept on one baseline and pushed to the top-right of the content
+// column (constrained to the measure so it lines up with the page content).
+.actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  gap: $space-md;
   max-width: $measure;
-  margin: 0 auto;
-}
-
-.nav {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-}
-
-.brand {
-  margin-right: $space-md;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-// Nav links read as quiet pills; the active one gets a faint fill.
-.link {
-  padding: $space-xs $space-md;
-  border-radius: $radius-md;
-  color: $color-text-muted;
-  text-decoration: none;
-  font-size: 0.875rem;
-
-  &:hover {
-    color: $color-text;
-    background: $color-surface-hover;
-  }
-}
-
-.linkActive {
-  color: $color-text;
-  background: $color-surface-hover;
+  margin: 0 auto $space-xl;
 }
 
 .signIn {
@@ -211,7 +170,7 @@ $measure: 57.5rem; // 920px
   flex: 1;
   max-width: $panel;
   min-height: 100%;
-  padding: calc($space-xl * 2.5) $space-lg calc($space-xl * 2);
+  padding: $space-lg $space-lg calc($space-xl * 2);
   background: $color-bg;
 }
 

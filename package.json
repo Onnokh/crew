@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "node scripts/start-server.mjs",
+    "dev": "node scripts/dev.mjs",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test"
   },

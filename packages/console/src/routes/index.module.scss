@@ -354,10 +354,8 @@
 }
 
 // Each entry's content runs flush to the column's left edge (lined up with the
-// hero and tabs); the metrics hang in the left margin as an out-of-flow rail, so
-// they never push the title inward.
+// hero and tabs).
 .card {
-  position: relative;
   padding: 0;
 }
 
@@ -365,37 +363,8 @@
   opacity: 0.55;
 }
 
-// Left metrics rail: a mono stat column in the margin to the left of the content
-// (a Stack Overflow stat gutter), right-aligned against the title edge. Views
-// sit on top, then the confirm/flag kudos. The column begins at the situation
-// line (below the title), so it pairs with the body copy, not the heading.
-.rail {
-  position: absolute;
-  top: 1.95rem; // ~top of the situation line (title line + .main gap)
-  right: calc(100% + $space-xl);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: $space-xs;
-  font-family: $font-mono;
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-// One metric: a small icon snug against its number.
-.stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-
-  svg {
-    width: 13px;
-    height: 13px;
-    stroke-width: 2;
-  }
-}
-
+// A confirmed count greens, a flagged count reddens — but only when non-zero; a
+// zero count is just noise, so it drops back to a subtle gray (see .zero below).
 .up {
   color: $color-positive-text;
 }
@@ -404,14 +373,10 @@
   color: $color-danger;
 }
 
-// A zero count is just noise, so it drops back to a subtle gray.
+// A zero count (and the always-neutral view count and timestamp) sits in subtle
+// gray so only real signal stands out.
 .zero {
   color: $color-text-subtle;
-}
-
-// Views are always neutral — the count, never a signal to act on.
-.viewsStat {
-  color: $color-text-muted;
 }
 
 // The content column holds the heading, situation, actions and revealed
@@ -423,10 +388,12 @@
 }
 
 // The heading row: bold Post title, a muted slash, then the repo it came from —
-// "Title / project", mirroring the reference's name / role line.
+// "Title / project", mirroring the reference's name / role line — with the
+// metrics and controls trailing at the right. Centre-aligned so the counts,
+// chevron and retire icon all sit on one line.
 .title {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   margin: 0;
   font-size: 0.9375rem;
   font-weight: 400;
@@ -469,23 +436,78 @@
   flex-shrink: 3;
 }
 
-// Relative post age, pushed to the right end of the title row — a quiet mono
-// timestamp ("3 days ago") that mirrors the reference's right-aligned dates.
-.time {
+// The metrics line trailing the heading — "confirms · flags · views · time"
+// spelled out, pushed to the right end of the title row. A quiet mono run with
+// dot separators; signal colours come from .up / .down / .zero on the spans.
+.metrics {
+  display: inline-flex;
+  align-items: baseline;
+  gap: $space-xs;
   margin-left: auto;
   padding-left: $space-md;
   flex-shrink: 0;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+// The dot separators between metrics — the quietest mark in the row.
+.dot {
+  color: $color-text-subtle;
+}
+
+// The trailing timestamp inside .metrics — a quiet mono clock/date.
+.time {
   color: $color-text-subtle;
   font-family: $font-mono;
-  font-size: 0.6875rem;
   white-space: nowrap;
+}
+
+// The two controls at the very end of the title row — the solution-disclosure
+// chevron and (for a signed-in User) the retire/restore icon. A tight cluster,
+// nudged off the metrics, that never shrinks.
+.controls {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  margin-left: $space-sm;
+  flex-shrink: 0;
+}
+
+// A borderless icon button, quiet at rest and inking on hover, sized to sit on
+// the title line without lifting it. The retire variant adds .danger below.
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    color: $color-text;
+    background: $color-surface-hover;
+    border-color: $color-border;
+  }
+
+  &:disabled {
+    color: $color-text-subtle;
+    cursor: default;
+  }
 }
 
 // The situation (the question the Post answers) — the muted description line
 // shown under the heading, at a comfortable measure.
 .situation {
   margin: 0;
-  max-width: 65ch;
   color: $color-text-muted;
   font-size: 0.875rem;
   line-height: 1.7;
@@ -515,45 +537,14 @@
 
 .body {
   margin: 0;
-  max-width: 65ch;
+  max-width: 100ch;
   color: $color-text-muted;
   font-size: 0.9rem;
   line-height: 1.7;
   white-space: pre-wrap;
 }
 
-// The two actions read at different weights: a quiet disclosure toggle on the
-// left (content navigation) and the moderation button on the right.
-.actions {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-}
-
-// "Show / hide solution" disclosure — borderless and muted, with a chevron that
-// rotates when open. Hidden at rest with the moderation button; both surface on
-// card hover (see the reveal rule below) so the list reads as quiet prose.
-.toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: $space-xs 0;
-  border: none;
-  background: transparent;
-  color: $color-text-muted;
-  font: inherit;
-  font-size: 0.8125rem;
-  cursor: pointer;
-  opacity: 0;
-  transition:
-    opacity 0.15s ease,
-    color 0.15s ease;
-
-  &:hover {
-    color: $color-text;
-  }
-}
-
+// The disclosure chevron rotates when the solution is open (see .iconButton).
 .chevron {
   transition: transform 0.15s ease;
 }
@@ -568,54 +559,12 @@
   font-size: 0.8125rem;
 }
 
-// Retire / restore: the moderation action, a real bordered button pushed to the
-// right end of the row. Hidden at rest, revealed with the toggle on card hover.
-.button {
-  flex-shrink: 0;
-  margin-left: auto;
-  padding: $space-xs $space-md;
-  border: 1px solid $color-border-strong;
-  border-radius: $radius-sm;
-  background: $color-bg;
-  color: $color-text;
-  font: inherit;
-  font-size: 0.8125rem;
-  cursor: pointer;
-  opacity: 0;
-  transition:
-    opacity 0.15s ease,
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease;
-
-  &:hover:not(:disabled) {
-    background: $color-surface-hover;
-    border-color: $color-text-muted;
-  }
-
-  &:disabled {
-    color: $color-text-muted;
-    cursor: default;
-  }
-}
-
-// Destructive variant: muted at rest so it doesn't shout, then fills red on
-// hover to confirm intent.
+// Retire's destructive intent: the icon button reddens on hover so the action
+// reads as consequential, while restore keeps the neutral .iconButton hover.
 .danger {
-  color: $color-text-muted;
-
   &:hover:not(:disabled) {
-    background: $color-danger;
+    color: $color-danger;
     border-color: $color-danger;
-    color: $color-accent-contrast;
+    background: transparent;
   }
-}
-
-// Both actions surface together on card hover / keyboard focus; otherwise they
-// sit hidden so the resting list stays clean.
-.card:hover .toggle,
-.card:hover .button,
-.toggle:focus-visible,
-.button:focus-visible {
-  opacity: 1;
 }

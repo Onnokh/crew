@@ -1,0 +1,37 @@
+@use "../styles/tokens" as *;
+
+// Quiet icon button that sits inline in the header's right cluster, just before
+// the sign-in / account control. Muted until hover, matching the nav links. The
+// view-transition pseudo-elements paint above page content during the swap, so
+// the expanding circle still reads cleanly from the button's position.
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+
+  border: none;
+  background: transparent;
+  color: $color-text-muted;
+  cursor: pointer;
+
+  transition:
+    color 0.15s ease,
+    transform 0.1s ease;
+
+  &:hover {
+    color: $color-text;
+  }
+
+  &:active {
+    transform: scale(0.92);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color-border-strong;
+    outline-offset: 3px;
+    border-radius: $radius-sm;
+  }
+}

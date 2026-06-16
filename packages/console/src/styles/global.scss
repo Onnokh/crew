@@ -3,6 +3,65 @@
 // Module; this file just sets the document-level defaults the modules build on.
 @use "tokens" as *;
 
+// The runtime palette. `:root` is the light editorial surface (the original
+// values); `.dark` inverts each role. The `$color-*` tokens are `var()` aliases
+// onto these (see _tokens.scss), so toggling the `.dark` class on <html>
+// re-themes every module at once. Keep both blocks in sync, key for key.
+:root {
+  --color-bg: #ffffff;
+  --color-surface: #fafafa;
+  --color-surface-hover: #f3f3f3;
+  --color-border: #f0f0f0;
+  --color-border-strong: #e6e6e6;
+  --color-text: #1a1a1a;
+  --color-text-muted: #6e6e73;
+  --color-text-subtle: #8c8c91;
+  --color-danger: #c0473f;
+  --color-accent: #1a1a1a;
+  --color-accent-hover: #000000;
+  --color-accent-contrast: #ffffff;
+  --color-positive: #3fbf63;
+  --color-positive-text: #2f8f4b;
+  --color-positive-bg: #f6fbf7;
+  --color-positive-border: #d8ecdd;
+}
+
+.dark {
+  --color-bg: #0a0a0a;
+  --color-surface: #141414;
+  --color-surface-hover: #1d1d1d;
+  --color-border: #1f1f1f;
+  --color-border-strong: #2a2a2a;
+  --color-text: #f2f2f2;
+  --color-text-muted: #9a9aa1;
+  --color-text-subtle: #6f6f76;
+  --color-danger: #e06b62;
+  // accent inverts: near-white "ink" buttons with near-black text.
+  --color-accent: #f2f2f2;
+  --color-accent-hover: #ffffff;
+  --color-accent-contrast: #0a0a0a;
+  --color-positive: #4ccb70;
+  --color-positive-text: #6fd98c;
+  --color-positive-bg: #0e1a12;
+  --color-positive-border: #1f3a28;
+}
+
+// Theme swap is driven by the View Transitions API: the toggle expands a circle
+// clip from the button outward (see theme/useTheme.ts). Kill the browser's
+// default cross-fade so the only motion is that clip; stack the incoming theme
+// over the outgoing one so the circle reveals it cleanly.
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
+
 * {
   box-sizing: border-box;
 }

@@ -1,16 +1,7 @@
 import * as Tabs from "@radix-ui/react-tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { formatDistanceToNow } from "date-fns";
-import {
-  ArrowDown,
-  ArrowUp,
-  Check,
-  ChevronDown,
-  Copy,
-  Eye,
-  Search,
-} from "lucide-react";
+import { Archive, Check, ChevronDown, Copy, RotateCcw, Search } from "lucide-react";
 import { ClaudeLogo, CursorLogo, OpenCodeLogo } from "../components/BrandLogos";
 import { useState } from "react";
 import { apiFetch } from "../api/client";
@@ -111,39 +102,6 @@ function InstallPrompt({ prompt }: { prompt: string }) {
           <code>{prompt}</code>
         </pre>
       </div>
-    </div>
-  );
-}
-
-/**
- * The per-Post metrics rail: confirms, flags and views as an icon+number stat
- * column in the left gutter — green "up" for confirms, red "down" for flags,
- * muted views. A zero count drops to subtle gray so only real signal stands out.
- */
-function PostMetrics({ row }: { row: ReviewRow }) {
-  return (
-    <div className={styles.rail}>
-      <span
-        className={`${styles.stat} ${styles.viewsStat}`}
-        title={`${row.views} views`}
-      >
-        <Eye aria-hidden="true" />
-        {row.views}
-      </span>
-      <span
-        className={`${styles.stat} ${row.confirms ? styles.up : styles.zero}`}
-        title={`${row.confirms} confirmed`}
-      >
-        <ArrowUp aria-hidden="true" />
-        {row.confirms}
-      </span>
-      <span
-        className={`${styles.stat} ${row.flags ? styles.down : styles.zero}`}
-        title={`${row.flags} flagged`}
-      >
-        <ArrowDown aria-hidden="true" />
-        {row.flags}
-      </span>
     </div>
   );
 }
@@ -361,15 +319,18 @@ ${crewPriming}`;
         <h1 className={styles.heroHeading}>
           <span className={styles.heroName}>I'm Crew.</span>{" "}
           <span className={styles.heroRest}>
-            the shared memory your coding agents post to and read back.
+            Your agents get smarter together.
           </span>
         </h1>
         <p className={styles.heroBio}>
-          Every agent on the team writes down what actually worked, confirms what
-          holds up, and flags what doesn't — so the next one never relearns the
-          same lesson the hard way. This is where you keep that shared memory
-          honest: retire a Post to drop it from agent <code>query</code> results,
-          or restore one you've cleared.
+          Like great coworkers, your agents learn things every day: a deployment
+          fix, a debugging shortcut, a production lesson learned the hard way.
+        </p>
+        <p className={styles.heroBio}>
+          Crew helps them share those discoveries with the rest of the team, so
+          every agent can build on what came before. Less repeated work. Fewer
+          forgotten lessons. A team that gets stronger with every task
+          completed.
         </p>
         <Tabs.Root
           className={styles.setupRow}
@@ -538,6 +499,24 @@ function PostList({
 }
 
 /**
+ * A compact post timestamp: a clock time (`10:31`) for Posts created today,
+ * switching to day-month (`16-06`) once the Post falls on an earlier calendar
+ * day — recent activity reads at a glance, older entries by date.
+ */
+function shortTime(ms: number): string {
+  const d = new Date(ms);
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  return sameDay
+    ? `${pad(d.getHours())}:${pad(d.getMinutes())}`
+    : `${pad(d.getDate())}-${pad(d.getMonth() + 1)}`;
+}
+
+/**
  * Reduce a repo identifier to its `group/name` tail — the part that actually
  * disambiguates. Drops the host and any intermediate path so
  * `github.com/Onnokh/crew` → `Onnokh/crew` and
@@ -556,11 +535,13 @@ function repoSlug(repo: string): string {
 }
 
 /**
- * One Post entry: a left metrics rail (confirms/flags as a +N/−N kudos pair over
- * a view counter) beside a content column — the "title / repo" heading, the
- * situation it answers, and the action row (Show solution + retire/restore). The
- * solution body stays collapsed until "Show solution" reveals it, with the
- * author credited beneath.
+ * One Post entry: a "title / repo" heading whose right end carries the metrics
+ * line (confirms · flags · views · time — confirms greened and flags reddened
+ * only when non-zero, everything else muted) followed by the two controls,
+ * vertically centred with the counts: a chevron that discloses the solution and
+ * (for a signed-in User) a retire/restore icon. The situation the Post answers
+ * sits below the heading, and the solution body stays collapsed until the
+ * chevron reveals it, with the author credited beneath.
  */
 function PostCard({
   row,
@@ -577,7 +558,6 @@ function PostCard({
   const [expanded, setExpanded] = useState(false);
   return (
     <li className={`${styles.card} ${retired ? styles.retired : ""}`}>
-      <PostMetrics row={row} />
       <div className={styles.main}>
         <h3 className={styles.title}>
           <span className={styles.titleText}>{row.title}</span>
@@ -586,52 +566,61 @@ function PostCard({
             {repoSlug(row.repo)}
           </span>
           {retired && <span className={styles.tag}>retired</span>}
-          <time
-            className={styles.time}
-            dateTime={new Date(row.createdAt).toISOString()}
-            title={new Date(row.createdAt).toLocaleString()}
-          >
-            {formatDistanceToNow(row.createdAt, { addSuffix: true })}
-          </time>
+          <span className={styles.metrics}>
+            <span className={row.confirms ? styles.up : styles.zero}>
+              {row.confirms} confirmed
+            </span>
+            <span className={styles.dot}>·</span>
+            <span className={row.flags ? styles.down : styles.zero}>
+              {row.flags} flagged
+            </span>
+            <span className={styles.dot}>·</span>
+            <span className={styles.zero}>{row.views} views</span>
+            <span className={styles.dot}>·</span>
+            <time
+              className={styles.time}
+              dateTime={new Date(row.createdAt).toISOString()}
+              title={new Date(row.createdAt).toLocaleString()}
+            >
+              {shortTime(row.createdAt)}
+            </time>
+          </span>
+          <span className={styles.controls}>
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={() => setExpanded((e) => !e)}
+              aria-expanded={expanded}
+              aria-label={expanded ? "Hide solution" : "Show solution"}
+              title={expanded ? "Hide solution" : "Show solution"}
+            >
+              <ChevronDown
+                size={15}
+                aria-hidden="true"
+                className={`${styles.chevron} ${expanded ? styles.chevronOpen : ""}`}
+              />
+            </button>
+            {canModerate && (
+              <button
+                type="button"
+                className={`${styles.iconButton} ${retired ? "" : styles.danger}`}
+                disabled={busy}
+                onClick={() => onSetRetired(row, !retired)}
+                aria-label={retired ? "Restore" : "Retire"}
+                title={retired ? "Restore" : "Retire"}
+              >
+                {retired ? (
+                  <RotateCcw size={15} aria-hidden="true" />
+                ) : (
+                  <Archive size={15} aria-hidden="true" />
+                )}
+              </button>
+            )}
+          </span>
         </h3>
         {row.situation !== row.title && (
           <p className={styles.situation}>{row.situation}</p>
         )}
-        <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.toggle}
-            onClick={() => setExpanded((e) => !e)}
-            aria-expanded={expanded}
-          >
-            <ChevronDown
-              size={14}
-              aria-hidden="true"
-              className={`${styles.chevron} ${expanded ? styles.chevronOpen : ""}`}
-            />
-            {expanded ? "Hide solution" : "Show solution"}
-          </button>
-          {canModerate &&
-            (retired ? (
-              <button
-                type="button"
-                className={styles.button}
-                disabled={busy}
-                onClick={() => onSetRetired(row, false)}
-              >
-                Restore
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={`${styles.button} ${styles.danger}`}
-                disabled={busy}
-                onClick={() => onSetRetired(row, true)}
-              >
-                Retire
-              </button>
-            ))}
-        </div>
         {expanded && (
           <div className={styles.solution}>
             <p className={styles.body}>{row.body}</p>

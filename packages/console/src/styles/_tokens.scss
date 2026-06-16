@@ -4,8 +4,14 @@
 // near-black ink, generous whitespace, hairline rules instead of filled cards,
 // and weight contrast (not colour) doing most of the work. Colour is used
 // sparingly — ink for primary actions, one green for positive/status, red for
-// destructive. A future dark split would layer CSS custom properties on top of
-// these, but the MVP ships one light surface.
+// destructive.
+//
+// Dark split (the "future" the original note anticipated): the colour tokens
+// below are now thin `var(--…)` aliases, NOT raw hex. The actual values live as
+// CSS custom properties in `global.scss` — light on `:root`, dark on `.dark`.
+// Every `*.module.scss` keeps using `$color-bg` etc. unchanged, so each one
+// emits `var(--color-bg)` and switches at runtime when the `.dark` class flips.
+// Non-colour tokens (spacing/radii/type) stay compile-time SCSS values.
 
 // Type. Inter is loaded from Google Fonts in index.html (sans for everything;
 // mono only for machine values like API keys and counts).
@@ -30,27 +36,29 @@ $radius-sm: 5px;
 $radius-md: 8px;
 $radius-lg: 9px;
 
-// Palette — light editorial.
-$color-bg: #ffffff; // page / input paper
-$color-surface: #fafafa; // faint raised surfaces, hatched gutters
-$color-surface-hover: #f3f3f3; // hover fills, pill backgrounds
-$color-border: #f0f0f0; // hairline rules between rows
-$color-border-strong: #e6e6e6; // input outlines, emphasized edges
-$color-text: #1a1a1a; // ink — names, headings, primary text
-$color-text-muted: #6e6e73; // gray descriptors, body copy, secondary meta
-$color-text-subtle: #8c8c91; // eyebrow / section labels (uppercase, spaced)
-$color-danger: #c0473f; // destructive (retire, ban)
+// Palette — aliases onto the runtime custom properties (defined per-theme in
+// global.scss). The trailing comments describe the LIGHT value; the dark
+// counterpart inverts the same semantic role.
+$color-bg: var(--color-bg); // page / input paper
+$color-surface: var(--color-surface); // faint raised surfaces, hatched gutters
+$color-surface-hover: var(--color-surface-hover); // hover fills, pill backgrounds
+$color-border: var(--color-border); // hairline rules between rows
+$color-border-strong: var(--color-border-strong); // input outlines, emphasized edges
+$color-text: var(--color-text); // ink — names, headings, primary text
+$color-text-muted: var(--color-text-muted); // gray descriptors, body copy, secondary meta
+$color-text-subtle: var(--color-text-subtle); // eyebrow / section labels (uppercase, spaced)
+$color-danger: var(--color-danger); // destructive (retire, ban)
 
-// `accent` = the primary-action colour. In this theme that is ink, not a hue —
-// black buttons with white text. Named `accent` so existing modules (login,
-// admin) pick it up unchanged.
-$color-accent: #1a1a1a;
-$color-accent-hover: #000000;
-$color-accent-contrast: #ffffff;
+// `accent` = the primary-action colour. In light it is ink (black buttons,
+// white text); in dark it inverts to near-white buttons with near-black text.
+// Named `accent` so existing modules (login, admin) pick it up unchanged.
+$color-accent: var(--color-accent);
+$color-accent-hover: var(--color-accent-hover);
+$color-accent-contrast: var(--color-accent-contrast);
 
 // The one true hue: a restrained green for positive/status (the show-once key
 // strip, "active" dots). Used explicitly, never as chrome.
-$color-positive: #3fbf63;
-$color-positive-text: #2f8f4b;
-$color-positive-bg: #f6fbf7;
-$color-positive-border: #d8ecdd;
+$color-positive: var(--color-positive);
+$color-positive-text: var(--color-positive-text);
+$color-positive-bg: var(--color-positive-bg);
+$color-positive-border: var(--color-positive-border);

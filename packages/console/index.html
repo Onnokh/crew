@@ -10,6 +10,21 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
     />
+    <script>
+      // Set the theme class before first paint to avoid a light-on-load flash.
+      // Source of truth: stored choice, else the OS preference. Mirrors the
+      // logic in src/theme/useTheme.ts (key: "crew-theme").
+      (function () {
+        try {
+          var stored = localStorage.getItem("crew-theme");
+          var dark =
+            stored === "dark" ||
+            (stored === null &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) document.documentElement.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
