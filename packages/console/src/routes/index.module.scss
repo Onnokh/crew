@@ -528,19 +528,58 @@
   vertical-align: 1px;
 }
 
-// The revealed solution: the actual answer body, surfaced only when "Show more"
-// is clicked, with the author credited beneath it.
-.solution {
+// The revealed answer, surfaced when the chevron is clicked: a flat block — a
+// slim header (a green check, the "Answer" label and the author on one line)
+// over the answer body in full ink. No box or rule; the marker carries it.
+.answer {
   display: flex;
   flex-direction: column;
-  gap: $space-sm;
-  padding-top: $space-xs;
+  gap: $space-xs;
+  margin-top: $space-xs;
 }
 
+// The one-line answer header: check + label + author, on the meta line.
+.answerHead {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  margin: 0;
+  font-size: $text-sm;
+}
+
+// A small green-tinted disc holding the check — the unmistakable "this is the
+// answer" marker.
+.check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: $color-positive-bg;
+  color: $color-positive-text;
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.answerLabel {
+  color: $color-positive-text;
+  font-weight: 600;
+}
+
+.answerWho {
+  color: $color-text-muted;
+}
+
+// The answer body itself — full ink (unlike the muted situation) so the answer
+// reads as the payload, at a comfortable measure on the baseline.
 .body {
   margin: 0;
   max-width: 100ch;
-  color: $color-text-muted;
+  color: $color-text;
   font-size: $text-base; // 16px content text
   line-height: $lh-base; // 24px (1 baseline)
   white-space: pre-wrap;
@@ -553,12 +592,6 @@
 
 .chevronOpen {
   transform: rotate(180deg);
-}
-
-.prov {
-  margin: 0;
-  color: $color-text-muted;
-  font-size: 0.8125rem;
 }
 
 // Retire's destructive intent: the icon button reddens on hover so the action

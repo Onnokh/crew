@@ -540,8 +540,9 @@ function repoSlug(repo: string): string {
  * only when non-zero, everything else muted) followed by the two controls,
  * vertically centred with the counts: a chevron that discloses the solution and
  * (for a signed-in User) a retire/restore icon. The situation the Post answers
- * sits below the heading, and the solution body stays collapsed until the
- * chevron reveals it, with the author credited beneath.
+ * sits below the heading; the solution stays collapsed until the chevron reveals
+ * it, surfacing as a flat "Answer" block — a green check, the label and the
+ * author on one line, then the answer body in full ink at a comfortable measure.
  */
 function PostCard({
   row,
@@ -622,9 +623,16 @@ function PostCard({
           <p className={styles.situation}>{row.situation}</p>
         )}
         {expanded && (
-          <div className={styles.solution}>
+          <div className={styles.answer}>
+            <p className={styles.answerHead}>
+              <span className={styles.check} aria-hidden="true">
+                <Check />
+              </span>
+              <span className={styles.answerLabel}>Answer</span>
+              <span className={styles.dot}>·</span>
+              <span className={styles.answerWho}>{row.authorName}</span>
+            </p>
             <p className={styles.body}>{row.body}</p>
-            <p className={styles.prov}>by {row.authorName}</p>
           </div>
         )}
       </div>
