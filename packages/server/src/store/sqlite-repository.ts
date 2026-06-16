@@ -14,7 +14,7 @@ import {
   keywordSearch,
   vectorSearch,
 } from "./queries.js";
-import type { PostRepository } from "./repository.js";
+import type { PostRepository, PostSort } from "./repository.js";
 import { postEvents, posts } from "./schema.js";
 import type { PostRow } from "./schema.js";
 
@@ -160,11 +160,66 @@ export class SqliteRepository implements PostRepository {
       .run(...postIds);
   }
 
-  async listRecentPosts(limit: number): Promise<Post[]> {
+  async listRecentPosts(
+    limit: number,
+    sort: PostSort = "newest",
+  ): Promise<Post[]> {
+    // "Most confirmed" orders by a per-Post count over the event log (confirms
+    // are events, never a column — see trust/aggregate), so it needs a LEFT JOIN
+    // aggregate that Drizzle's typed builder doesn't express cleanly; raw SQL,
+    // like listFlaggedPosts. `newest` and `views` are plain column sorts. All
+    // three keep `id DESC` as a stable tiebreaker, and rank across every Post.
+    if (sort === "confirms") {
+      const rows = this.raw
+        .prepare(
+          `SELECT p.id, p.title, p.situation, p.body, p.environment, p.repo, p.status,
+                  p.created_by, p.created_at, p.last_confirmed, p.views
+             FROM posts p
+             LEFT JOIN (
+               SELECT post_id, COUNT(*) AS confirms
+                 FROM post_events
+                WHERE verdict = 'confirm'
+                GROUP BY post_id
+             ) c ON c.post_id = p.id
+            ORDER BY COALESCE(c.confirms, 0) DESC, p.created_at DESC, p.id DESC
+            LIMIT ?`,
+        )
+        .all(limit) as Array<{
+        id: string;
+        title: string | null;
+        situation: string;
+        body: string;
+        environment: string;
+        repo: string;
+        status: string;
+        created_by: string;
+        created_at: number;
+        last_confirmed: number | null;
+        views: number;
+      }>;
+      return rows.map((r) => ({
+        id: r.id,
+        title: r.title ?? r.situation,
+        situation: r.situation,
+        body: r.body,
+        environment: r.environment,
+        repo: r.repo,
+        status: r.status as Post["status"],
+        createdBy: r.created_by,
+        createdAt: r.created_at,
+        lastConfirmed: r.last_confirmed,
+        views: r.views,
+      }));
+    }
+
+    const orderBy =
+      sort === "views"
+        ? [desc(posts.views), desc(posts.id)]
+        : [desc(posts.createdAt), desc(posts.id)];
     const rows = this.db
       .select()
       .from(posts)
-      .orderBy(desc(posts.createdAt), desc(posts.id))
+      .orderBy(...orderBy)
       .limit(limit)
       .all();
     return rows.map(fromRow);

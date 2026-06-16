@@ -295,11 +295,20 @@
   flex-direction: column;
 }
 
+// The list header: the sort tabs on the left and the Flagged filter chip pushed
+// to the right, sharing one bottom rule (the chip and tabs bottom-align to it).
+.listHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: $space-md;
+  border-bottom: 1px solid $color-border;
+  margin-bottom: $space-md;
+}
+
 .tabList {
   display: flex;
   gap: $space-lg;
-  border-bottom: 1px solid $color-border;
-  margin-bottom: $space-md;
 }
 
 .tab {
@@ -328,10 +337,47 @@
   }
 }
 
-.count {
+// The Flagged filter chip at the right of the list header — a quiet pill that
+// fills with ink when the flagged-only filter is on, with its count in mono.
+.flaggedChip {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  margin-bottom: $space-sm;
+  padding: $space-xs $space-md;
+  border: 1px solid $color-border;
+  border-radius: 999px;
+  background: transparent;
   color: $color-text-muted;
+  font: inherit;
+  font-size: $text-sm;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    color: $color-text;
+    border-color: $color-border-strong;
+  }
+}
+
+.flaggedChipActive {
+  background: $color-accent;
+  border-color: $color-accent;
+  color: $color-accent-contrast;
+
+  &:hover {
+    color: $color-accent-contrast;
+    border-color: $color-accent;
+  }
+}
+
+.flaggedCount {
   font-family: $font-mono;
-  font-size: $text-xs; // 12px meta
+  font-size: $text-xs;
 }
 
 .panel {

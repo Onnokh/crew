@@ -2,7 +2,13 @@ import type { Context, Hono, MiddlewareHandler } from "hono";
 import type { Post } from "../core/post.js";
 import type { Deps } from "../deps.js";
 import { MAX_LIMIT, retrieve } from "../search/retrieve.js";
+import type { PostSort } from "../store/repository.js";
 import { aggregateEvents } from "../trust/aggregate.js";
+
+/** Coerce the `?sort=` query into a {@link PostSort}; anything else → newest. */
+function parseSort(value: string | undefined): PostSort {
+  return value === "views" || value === "confirms" ? value : "newest";
+}
 
 /**
  * The human review JSON API (slice 0013) — the async backstop for the
@@ -69,9 +75,16 @@ export function mountReview(app: Hono, deps: Deps): void {
   };
 
   // The two lists. Each hydrates its Posts into ReviewRows so the page gets the
-  // counts inline (one batched events read per list, never k reads).
+  // counts inline (one batched events read per list, never k reads). `recent`
+  // takes a `?sort=newest|views|confirms` (default newest) so the popularity
+  // orders rank across the whole corpus in SQL, not within the fetched window.
   app.get("/api/review/recent", async (c) =>
-    c.json({ posts: await toRows(deps, await deps.repo.listRecentPosts(LIST_LIMIT)) }),
+    c.json({
+      posts: await toRows(
+        deps,
+        await deps.repo.listRecentPosts(LIST_LIMIT, parseSort(c.req.query("sort"))),
+      ),
+    }),
   );
   app.get("/api/review/flagged", async (c) =>
     c.json({ posts: await toRows(deps, await deps.repo.listFlaggedPosts(LIST_LIMIT)) }),

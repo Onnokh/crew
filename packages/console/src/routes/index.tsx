@@ -44,7 +44,11 @@ function HomePage() {
 
 /** Centralized query keys, so the mutation can invalidate exactly these lists. */
 const reviewKeys = {
-  recent: ["review", "recent"] as const,
+  // Keyed by sort so each ordering is its own cache entry and switching sort
+  // refetches the server-ranked list (the popularity orders rank the whole
+  // corpus — see /api/review/recent?sort=). Invalidations target the
+  // ["review","recent"] prefix to clear every sort at once.
+  recent: (sort: SortKey) => ["review", "recent", sort] as const,
   flagged: ["review", "flagged"] as const,
   search: (q: string) => ["review", "search", q] as const,
 };
@@ -63,6 +67,27 @@ type ReviewRow = {
   confirms: number;
   flags: number;
   views: number;
+};
+
+/**
+ * How the browse list is ordered. Mirrors the server's `PostSort`: the recent
+ * list is ranked server-side (`/api/review/recent?sort=`) so the popularity
+ * orders span the whole corpus, not just the fetched window. The matching
+ * client comparators below are used only to re-rank the small, capped flagged
+ * set; the recent list arrives already sorted.
+ */
+type SortKey = "newest" | "views" | "confirms";
+
+const SORTS: ReadonlyArray<{ key: SortKey; label: string }> = [
+  { key: "newest", label: "Newest" },
+  { key: "views", label: "Most viewed" },
+  { key: "confirms", label: "Most confirmed" },
+];
+
+const SORTERS: Record<SortKey, (a: ReviewRow, b: ReviewRow) => number> = {
+  newest: (a, b) => b.createdAt - a.createdAt,
+  views: (a, b) => b.views - a.views,
+  confirms: (a, b) => b.confirms - a.confirms,
 };
 
 /**
@@ -122,6 +147,11 @@ function ReviewPage() {
   const [term, setTerm] = useState("");
   const [query, setQuery] = useState("");
 
+  // Browse-list ordering + the flagged-only filter. Both are view state over the
+  // fetched lists (see SORTERS) — newest by default, flagged off.
+  const [sortKey, setSortKey] = useState<SortKey>("newest");
+  const [flaggedOnly, setFlaggedOnly] = useState(false);
+
   // Which agent-setup tab is open, or "" for none — the three triggers behave
   // like tabs (one panel at a time) but start collapsed, so the row is just the
   // three pills until one is picked.
@@ -138,9 +168,11 @@ function ReviewPage() {
   // One query per tab. While a query is loading, its `data` is `undefined` —
   // which the list components below render as "Loading…" (unchanged behavior).
   const recent = useQuery({
-    queryKey: reviewKeys.recent,
+    queryKey: reviewKeys.recent(sortKey),
     queryFn: () =>
-      apiFetch<{ posts: ReviewRow[] }>("/api/review/recent").then((r) => r.posts),
+      apiFetch<{ posts: ReviewRow[] }>(
+        `/api/review/recent?sort=${sortKey}`,
+      ).then((r) => r.posts),
   });
   const flagged = useQuery({
     queryKey: reviewKeys.flagged,
@@ -159,7 +191,8 @@ function ReviewPage() {
       }),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: reviewKeys.recent }),
+        // Prefix match clears every sorted "recent" entry at once.
+        queryClient.invalidateQueries({ queryKey: ["review", "recent"] }),
         queryClient.invalidateQueries({ queryKey: reviewKeys.flagged }),
       ]);
     },
@@ -191,6 +224,16 @@ function ReviewPage() {
     setQuery("");
   };
   const searching = query !== "";
+
+  // The browse list. The recent list arrives already ordered by the server for
+  // the active sort. The flagged list is the moderation queue: it keeps its
+  // natural most-recently-flagged order under the default sort, and re-ranks
+  // client-side for views/confirms (a small, capped set, so no round-trip).
+  const browseRows = !flaggedOnly
+    ? recent.data
+    : flagged.data && sortKey !== "newest"
+      ? [...flagged.data].sort(SORTERS[sortKey])
+      : flagged.data;
 
   // Agent-setup snippet: the MCP endpoint is this console's own origin + /mcp
   // (the Hono app serves both), so the shown config is always correct for
@@ -427,41 +470,49 @@ ${crewPriming}`;
           />
         </div>
       ) : (
-        <Tabs.Root defaultValue="recent" className={styles.tabs}>
-        <Tabs.List className={styles.tabList} aria-label="Review lists">
-          <Tabs.Trigger className={styles.tab} value="recent">
-            Recent
-            {recent.data && (
-              <span className={styles.count}>{recent.data.length}</span>
-            )}
-          </Tabs.Trigger>
-          <Tabs.Trigger className={styles.tab} value="flagged">
-            Flagged
-            {flagged.data && (
-              <span className={styles.count}>{flagged.data.length}</span>
-            )}
-          </Tabs.Trigger>
-        </Tabs.List>
-
-        <Tabs.Content value="recent" className={styles.panel}>
-          <PostList
-            rows={recent.data}
-            empty="No Posts yet."
-            busyId={busyId}
-            canModerate={canModerate}
-            onSetRetired={onSetRetired}
-          />
-        </Tabs.Content>
-        <Tabs.Content value="flagged" className={styles.panel}>
-          <PostList
-            rows={flagged.data}
-            empty="No flagged Posts."
-            busyId={busyId}
-            canModerate={canModerate}
-            onSetRetired={onSetRetired}
-          />
-        </Tabs.Content>
-        </Tabs.Root>
+        <div className={styles.tabs}>
+          <div className={styles.listHeader}>
+            <div
+              className={styles.tabList}
+              role="tablist"
+              aria-label="Sort Posts"
+            >
+              {SORTS.map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={sortKey === s.key}
+                  className={styles.tab}
+                  data-state={sortKey === s.key ? "active" : "inactive"}
+                  onClick={() => setSortKey(s.key)}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              aria-pressed={flaggedOnly}
+              className={`${styles.flaggedChip} ${flaggedOnly ? styles.flaggedChipActive : ""}`}
+              onClick={() => setFlaggedOnly((f) => !f)}
+            >
+              Flagged
+              {flagged.data && (
+                <span className={styles.flaggedCount}>{flagged.data.length}</span>
+              )}
+            </button>
+          </div>
+          <div className={styles.panel}>
+            <PostList
+              rows={browseRows}
+              empty={flaggedOnly ? "No flagged Posts." : "No Posts yet."}
+              busyId={busyId}
+              canModerate={canModerate}
+              onSetRetired={onSetRetired}
+            />
+          </div>
+        </div>
       )}
     </section>
   );

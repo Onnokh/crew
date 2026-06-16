@@ -25,6 +25,15 @@ import type { Candidate, VecCandidate } from "./queries.js";
  * no ranking — it stores and returns raw events; counting and scoring live in
  * `trust`/`search`.
  */
+/**
+ * How {@link PostRepository.listRecentPosts} orders the browse list. `"newest"`
+ * is creation time (the default); `"views"` and `"confirms"` are popularity
+ * orders ranked across the whole corpus. Confirms are derived from the event log
+ * (never a stored counter — see `trust/aggregate`), so the store computes that
+ * ordering with a per-Post count over `post_events`, not a column sort.
+ */
+export type PostSort = "newest" | "views" | "confirms";
+
 export type PostRepository = {
   /**
    * Persist a new Post, stamping its id, creation timestamp, and default
@@ -85,12 +94,15 @@ export type PostRepository = {
   recordViews(postIds: readonly string[]): Promise<void>;
 
   /**
-   * The most recently created Posts, newest first, capped at `limit`. Unlike the
-   * search legs this returns Posts of EVERY status — the human review page
-   * (slice 0007) must see retired Posts too, so they can be restored. Agent
-   * retrieval never calls this; it goes through the active-only search path.
+   * The browse list for the review page, capped at `limit`, ordered by `sort`
+   * (default `"newest"`): newest-created, most-viewed, or most-confirmed. The
+   * popularity orders rank across the WHOLE corpus in SQL, not within a recency
+   * window, so they stay correct as the corpus grows past `limit`. Unlike the
+   * search legs this returns Posts of EVERY status — the human review page must
+   * see retired Posts too, so they can be restored. Agent retrieval never calls
+   * this; it goes through the active-only search path.
    */
-  listRecentPosts(limit: number): Promise<Post[]>;
+  listRecentPosts(limit: number, sort?: PostSort): Promise<Post[]>;
 
   /**
    * Posts that carry at least one Flag, newest-flagged first, capped at `limit`.
