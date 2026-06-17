@@ -122,13 +122,13 @@ describe("create User returns a one-time password and appears in the listing", (
     // The password is shown exactly once: it is never returned by the listing.
     const list = await adminFetch(srv, cookie, "/users");
     const { users } = (await list.json()) as {
-      users: Array<{ email: string; role: string | null; keyCount: number }>;
+      users: Array<{ email: string; role: string | null; keys: unknown[] }>;
     };
     const bob = users.find((u) => u.email === "bob@test.local");
     expect(bob).toBeDefined();
     expect(bob).not.toHaveProperty("password");
     expect(bob!.role).toBe("user");
-    expect(bob!.keyCount).toBe(0);
+    expect(bob!.keys).toHaveLength(0);
 
     // The password actually works: Bob can sign in with it.
     const signIn = await srv.env.auth.api.signInEmail({
@@ -168,10 +168,10 @@ describe("mint and revoke keys; an agent posts with a minted key", () => {
     const afterMint = await adminFetch(srv, cookie, "/users");
     const bobAfterMint = (
       (await afterMint.json()) as {
-        users: Array<{ id: string; keyCount: number }>;
+        users: Array<{ id: string; keys: unknown[] }>;
       }
     ).users.find((u) => u.id === bobId);
-    expect(bobAfterMint!.keyCount).toBe(1);
+    expect(bobAfterMint!.keys).toHaveLength(1);
 
     // An agent authenticates with the raw key over /mcp and completes a post,
     // attributed to Bob.
@@ -202,10 +202,10 @@ describe("mint and revoke keys; an agent posts with a minted key", () => {
     const afterRevoke = await adminFetch(srv, cookie, "/users");
     const bobAfterRevoke = (
       (await afterRevoke.json()) as {
-        users: Array<{ id: string; keyCount: number }>;
+        users: Array<{ id: string; keys: unknown[] }>;
       }
     ).users.find((u) => u.id === bobId);
-    expect(bobAfterRevoke!.keyCount).toBe(0);
+    expect(bobAfterRevoke!.keys).toHaveLength(0);
 
     await expect(connect(srv.port, key)).rejects.toThrow();
   });

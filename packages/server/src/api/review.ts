@@ -1,9 +1,9 @@
 import type { Context, Hono, MiddlewareHandler } from "hono";
 import type { Post } from "../core/post.js";
 import type { Deps } from "../deps.js";
+import { hydratePosts } from "../read/hydrate.js";
 import { MAX_LIMIT, retrieve } from "../search/retrieve.js";
 import type { PostSort } from "../store/repository.js";
-import { aggregateEvents } from "../trust/aggregate.js";
 
 /** Coerce the `?sort=` query into a {@link PostSort}; anything else → newest. */
 function parseSort(value: string | undefined): PostSort {
@@ -104,21 +104,9 @@ export function mountReview(app: Hono, deps: Deps): void {
       situation: q,
       limit: MAX_LIMIT,
     });
-    const posts: ReviewRow[] = results.map((r) => ({
-      id: r.post.id,
-      title: r.post.title,
-      situation: r.post.situation,
-      body: r.post.body,
-      environment: r.post.environment,
-      repo: r.post.repo,
-      status: r.post.status,
-      createdAt: r.post.createdAt,
-      authorName: r.authorName,
-      confirms: r.confirms,
-      flags: r.flags,
-      views: r.views,
-    }));
-    return c.json({ posts });
+    // `retrieve` already hydrated and ranked these; flatten each to a ReviewRow
+    // with the same projection the Recent/Flagged lists use.
+    return c.json({ posts: results.map(toReviewRow) });
   });
 
   // The human backstop. Both are idempotent no-ops for an unknown id (the
@@ -142,42 +130,42 @@ async function retire(c: Context, deps: Deps, retired: boolean): Promise<Respons
 }
 
 /**
- * Hydrate a list of Posts into {@link ReviewRow}s: resolve each author's name and
- * collapse its event log into confirm/flag counts via `trust/aggregate` (the same
- * pure aggregation the `query` tool uses — counts are derived on read, never a
- * stored counter). Views come straight off the Post's denormalized `views`
- * counter (a display-only popularity signal, not a trust signal). One batched
- * `getEventsForPosts` read covers the whole list.
+ * Hydrate a list of Posts into {@link ReviewRow}s through the shared
+ * `read/hydrate` assembly — the one place that resolves author names and derives
+ * confirm/flag counts from the event log (the same path the `query` tool uses, so
+ * the page and MCP can never drift on "how a Post's counts are computed"). Each
+ * hydrated Post is then flattened to the wire shape by {@link toReviewRow}.
  */
 async function toRows(deps: Deps, posts: Post[]): Promise<ReviewRow[]> {
-  if (posts.length === 0) return [];
+  const hydrated = await hydratePosts(deps.repo, posts);
+  return hydrated.map(toReviewRow);
+}
 
-  const events = await deps.repo.getEventsForPosts(posts.map((p) => p.id));
-  const byPost = new Map<string, typeof events>();
-  for (const event of events) {
-    const list = byPost.get(event.postId);
-    if (list) list.push(event);
-    else byPost.set(event.postId, [event]);
-  }
-
-  const rows: ReviewRow[] = [];
-  for (const post of posts) {
-    const agg = aggregateEvents(byPost.get(post.id) ?? []);
-    const author = await deps.repo.getUser(post.createdBy);
-    rows.push({
-      id: post.id,
-      title: post.title,
-      situation: post.situation,
-      body: post.body,
-      environment: post.environment,
-      repo: post.repo,
-      status: post.status,
-      createdAt: post.createdAt,
-      authorName: author?.name ?? "unknown",
-      confirms: agg.confirms,
-      flags: agg.flags,
-      views: post.views,
-    });
-  }
-  return rows;
+/**
+ * Flatten a hydrated Post — from `hydratePosts` (the lists) or `retrieve` (the
+ * search route), which share the `{ post, authorName, confirms, flags, views }`
+ * shape — into the flat {@link ReviewRow} the page renders. The single projection
+ * both surfaces build their wire rows with.
+ */
+function toReviewRow(h: {
+  post: Post;
+  authorName: string;
+  confirms: number;
+  flags: number;
+  views: number;
+}): ReviewRow {
+  return {
+    id: h.post.id,
+    title: h.post.title,
+    situation: h.post.situation,
+    body: h.post.body,
+    environment: h.post.environment,
+    repo: h.post.repo,
+    status: h.post.status,
+    createdAt: h.post.createdAt,
+    authorName: h.authorName,
+    confirms: h.confirms,
+    flags: h.flags,
+    views: h.views,
+  };
 }
