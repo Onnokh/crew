@@ -156,7 +156,7 @@ function ReviewPage() {
   // like tabs (one panel at a time) but start collapsed, so the row is just the
   // three pills until one is picked.
   const [setupTab, setSetupTab] = useState("");
-  const search = useQuery({
+  const { data: searchData, error: searchError } = useQuery({
     queryKey: reviewKeys.search(query),
     enabled: query !== "",
     queryFn: () =>
@@ -167,14 +167,14 @@ function ReviewPage() {
 
   // One query per tab. While a query is loading, its `data` is `undefined` —
   // which the list components below render as "Loading…" (unchanged behavior).
-  const recent = useQuery({
+  const { data: recentData, error: recentError } = useQuery({
     queryKey: reviewKeys.recent(sortKey),
     queryFn: () =>
       apiFetch<{ posts: ReviewRow[] }>(
         `/api/review/recent?sort=${sortKey}`,
       ).then((r) => r.posts),
   });
-  const flagged = useQuery({
+  const { data: flaggedData, error: flaggedError } = useQuery({
     queryKey: reviewKeys.flagged,
     queryFn: () =>
       apiFetch<{ posts: ReviewRow[] }>("/api/review/flagged").then((r) => r.posts),
@@ -200,7 +200,7 @@ function ReviewPage() {
 
   // Surface whichever load/action failed, mirroring the old single error line.
   const failure =
-    recent.error ?? flagged.error ?? search.error ?? setRetired.error;
+    recentError ?? flaggedError ?? searchError ?? setRetired.error;
   const error = failure
     ? failure instanceof Error
       ? failure.message
@@ -230,10 +230,10 @@ function ReviewPage() {
   // natural most-recently-flagged order under the default sort, and re-ranks
   // client-side for views/confirms (a small, capped set, so no round-trip).
   const browseRows = !flaggedOnly
-    ? recent.data
-    : flagged.data && sortKey !== "newest"
-      ? [...flagged.data].sort(SORTERS[sortKey])
-      : flagged.data;
+    ? recentData
+    : flaggedData && sortKey !== "newest"
+      ? flaggedData.toSorted(SORTERS[sortKey])
+      : flaggedData;
 
   // Agent-setup snippet: the MCP endpoint is this console's own origin + /mcp
   // (the Hono app serves both), so the shown config is always correct for
@@ -462,7 +462,7 @@ ${crewPriming}`;
       {searching ? (
         <div className={styles.panel}>
           <PostList
-            rows={search.data}
+            rows={searchData}
             empty={`No Posts match “${query}”.`}
             busyId={busyId}
             canModerate={canModerate}
@@ -498,8 +498,8 @@ ${crewPriming}`;
               onClick={() => setFlaggedOnly((f) => !f)}
             >
               Flagged
-              {flagged.data && (
-                <span className={styles.flaggedCount}>{flagged.data.length}</span>
+              {flaggedData && (
+                <span className={styles.flaggedCount}>{flaggedData.length}</span>
               )}
             </button>
           </div>

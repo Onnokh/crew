@@ -70,12 +70,12 @@ function AdminPage() {
   const queryClient = useQueryClient();
 
   // The user list. Mutations invalidate this key on success to re-pull it.
-  const usersQuery = useQuery({
+  const { data: usersData, error: usersError } = useQuery({
     queryKey: adminKeys.users,
     queryFn: () =>
       apiFetch<{ users: UserRow[] }>("/api/admin/users").then((r) => r.users),
   });
-  const users = usersQuery.data ?? [];
+  const users = usersData ?? [];
 
   // Show-once secrets, keyed by the User id they belong to so each renders
   // inline in that User's row (never refetchable — the server hands them back
@@ -144,7 +144,7 @@ function AdminPage() {
 
   // First failing operation, run through the same one-line describe() as before.
   const failure =
-    usersQuery.error ??
+    usersError ??
     createUser.error ??
     mintKey.error ??
     revokeKey.error ??
