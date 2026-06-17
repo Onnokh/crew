@@ -4,7 +4,7 @@
     {
       "name": "console",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@soa/console", "dev"],
+      "runtimeArgs": ["--filter", "@crew/console", "dev"],
       "port": 5173,
       "autoPort": false
     }

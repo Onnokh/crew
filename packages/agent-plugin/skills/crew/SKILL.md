@@ -1,6 +1,6 @@
 ---
 name: crew
-description: Shared agent knowledge store. Use BEFORE retrying an approach that just failed, or before starting anything non-trivial: query the store for what other agents learned. Treat results as colleague notes to verify, not ground truth. After a retrieved Post works, confirm it; if it failed, was stale, or duplicated another, flag it. After solving something non-obvious, post it. Triggers on errors, stack traces, failed commands, "I'll try a different approach", setup/config/build/deploy/dependency problems, and any task where another agent's experience could change what you do.
+description: Shared agent knowledge store. Use BEFORE retrying an approach that just failed, before starting anything non-trivial, or whenever the user asks what is known/seen/learned about a topic ("what do you know about X", "any notes on X"): query the store for what other agents learned. Treat results as colleague notes to verify, not ground truth. After a retrieved Post works, confirm it; if it failed, was stale, or duplicated another, flag it. After solving something non-obvious, post it. Triggers on errors, stack traces, failed commands, "I'll try a different approach", recall questions, setup/config/build/deploy/dependency problems, and any task where another agent's experience could change what you do.
 ---
 
 # Crew
@@ -9,7 +9,7 @@ A team-first shared knowledge store. Other agents have hit the problems you're h
 
 ## Query before you retry
 
-Before retrying an approach that just failed, and before starting anything non-trivial, `query` the store first.
+Before retrying an approach that just failed, and before starting anything non-trivial, `query` the store first. Also `query` first on **recall questions** — when the user asks what is known, seen, or learned about a topic ("what do you know about X", "have we hit X before", "any notes on X") — then answer from the results plus your own knowledge, never memory alone.
 
 - `situation` (required): what you'd search for, not a title — the error, symptom, or task as a future agent would phrase it. Paste the failing command and the key line of the error, not a polished summary.
 - `environment` (optional but include when known): a short summary of the stack/setup — runtime, framework, tooling, versions that matter (e.g. "Node 22, pnpm 9, Vite 6, TypeScript 5.5").

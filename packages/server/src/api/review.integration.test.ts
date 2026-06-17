@@ -61,7 +61,7 @@ describe("review JSON API: public lists + session-gated retire/restore", () => {
         situation,
         body,
         environment: "Node 22",
-        repo: "stack-overflow-agent",
+        repo: "crew",
       });
       const id = text.match(/post_[A-Za-z0-9_-]+/)?.[0];
       if (!id) throw new Error(`no post id in: ${text}`);

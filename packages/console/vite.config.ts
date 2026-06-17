@@ -13,9 +13,9 @@ import { defineConfig } from "vite";
  * - The dev server proxies `/api/auth` (better-auth) and `/mcp` (agent transport)
  *   to the running MCP server, so `pnpm dev` here talks to a real backend over
  *   the same-origin paths the production single-port deployment uses. Set
- *   `SOA_SERVER_URL` to point at a non-default backend.
+ *   `CREW_SERVER_URL` to point at a non-default backend.
  */
-const serverUrl = process.env.SOA_SERVER_URL ?? "http://localhost:8080";
+const serverUrl = process.env.CREW_SERVER_URL ?? "http://localhost:8080";
 
 export default defineConfig({
   plugins: [

@@ -27,7 +27,7 @@ A team-first shared knowledge store for coding agents. Agents connect to a singl
 ## Repo layout
 
 ```
-stack-overflow-agent/
+crew/
 ├── CONTEXT.md  TECH.md
 ├── docs/
 │   ├── architecture.html        # interfaces, seams, composition root, diagrams
@@ -57,7 +57,7 @@ stack-overflow-agent/
     ├── console/                 # React SPA (TanStack Router · Radix · *.module.scss · Vite) → built to dist/, served by server's Hono. Talks to server over HTTP/JSON + better-auth only (see ADR 0004)
     └── agent-plugin/            # what teammates install — markdown + JSON, imports NO TS
         ├── .claude-plugin/plugin.json              # Claude Code plugin manifest
-        ├── skills/stack-overflow-agent/SKILL.md    # always-on behaviour
+        ├── skills/crew/SKILL.md    # always-on behaviour
         ├── commands/reflect.md                     # /reflect end-of-session harvest
         ├── mcp-config.example.json                 # snippet teammates paste (URL + API key)
         └── README.md                               # install + API key + HITL-iteration note
@@ -184,7 +184,7 @@ A single `authenticate(request) → User | null` interface is the only thing the
 
 - **Agents** present `Authorization: Bearer <api-key>`; the seam calls the `apiKey` plugin's `verifyApiKey` and resolves the key's owning **User**. No OAuth provider — a static key over a Bearer header is sufficient for our stateless single node (this is the deliberate divergence from ADR 0002).
 - **Humans (admins)** sign in with **email + password** (better-auth session); the `/review` and `/admin` pages read that session. The `admin` plugin supplies the `role` field that gates `/admin`.
-- **Bootstrap:** the first **Admin** is seeded at boot from `SOA_ADMIN_EMAIL`/`SOA_ADMIN_PASSWORD` (created via better-auth sign-up, then promoted to `role = 'admin'` directly on the row — the first admin can't go through the admin-gated API). better-auth needs `SOA_AUTH_SECRET` to sign sessions. Every other User and key is provisioned through `/admin`; the old `SOA_TOKENS` env seeding is gone.
+- **Bootstrap:** the first **Admin** is seeded at boot from `CREW_ADMIN_EMAIL`/`CREW_ADMIN_PASSWORD` (created via better-auth sign-up, then promoted to `role = 'admin'` directly on the row — the first admin can't go through the admin-gated API). better-auth needs `CREW_AUTH_SECRET` to sign sessions. Every other User and key is provisioned through `/admin`; the old `CREW_TOKENS` env seeding is gone.
 
 ## Human surface
 

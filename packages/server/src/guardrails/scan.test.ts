@@ -8,7 +8,7 @@ function clean(overrides: Partial<ScanInput> = {}): ScanInput {
     situation: "fastembed throws on Node 22 with onnxruntime mismatch",
     body: "Pin onnxruntime-node to the version fastembed expects.",
     environment: "Node 22, fastembed bge-small-en-v1.5",
-    repo: "stack-overflow-agent",
+    repo: "crew",
     ...overrides,
   };
 }

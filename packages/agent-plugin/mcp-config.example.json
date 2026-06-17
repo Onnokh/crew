@@ -2,7 +2,7 @@
   "mcpServers": {
     "crew": {
       "type": "http",
-      "url": "https://soa.internal.example/mcp",
+      "url": "https://crew.internal.example/mcp",
       "headers": {
         "Authorization": "Bearer <your-api-key>"
       }

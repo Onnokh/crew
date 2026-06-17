@@ -30,7 +30,7 @@ export function mountConsole(app: Hono): boolean {
     // eslint-disable-next-line no-console
     console.warn(
       `Console dist not found at ${distDir} — skipping static serving. ` +
-        "Build it with `pnpm --filter @soa/console build` to serve the web UI.",
+        "Build it with `pnpm --filter @crew/console build` to serve the web UI.",
     );
     return false;
   }
@@ -52,13 +52,13 @@ export function mountConsole(app: Hono): boolean {
 
 /**
  * Absolute path to the console's built assets. Overridable with
- * `SOA_CONSOLE_DIST` for the container image, where the Vite output is copied to
+ * `CREW_CONSOLE_DIST` for the container image, where the Vite output is copied to
  * a fixed location rather than sitting beside the server in the workspace (see
  * issue 0014). Default targets the sibling workspace package for local dev, where
  * the server's CWD is `packages/server`.
  */
 function consoleDistDir(): string {
-  const override = process.env.SOA_CONSOLE_DIST;
+  const override = process.env.CREW_CONSOLE_DIST;
   if (override) {
     return isAbsolute(override) ? override : resolve(process.cwd(), override);
   }

@@ -22,7 +22,7 @@ import { registerTools } from "./mcp/register.js";
  */
 export function buildServer(deps: Deps): FastMCP<User> {
   const server = new FastMCP<User>({
-    name: "stack-overflow-agent",
+    name: "crew",
     version: "0.0.0",
     authenticate: async (request: IncomingMessage): Promise<User> => {
       const user = await deps.auth.authenticate(request);

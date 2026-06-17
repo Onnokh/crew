@@ -17,7 +17,7 @@ ADR 0002 deferred better-auth to a "v1.1" swap and chose its **OAuth Provider** 
 - **One credential model, reconsidered.** With the `apiKey` plugin every key carries a `userId`, and trust (distinct-confirmer) is computed **per User**, not per key. So a User may now hold **many** API keys without breaking the trust model — reversing the one-key-per-user constraint we briefly adopted. The admin UI is "create/revoke keys for a User."
 - **better-auth's `user` table is canonical.** It replaces the minimal hand-rolled `users` table; `posts.created_by` / `post_events.created_by` FK into it. We are in dev state, so there is **no data migration** — the existing tables are dropped and recreated with the better-auth-managed schema (`user`, `session`, `account`, `verification`, `apikey`) plus our `posts` / `post_events`. The first real act after the swap is re-minting the handful of existing tokens through the new key UI.
 - **Two auth surfaces behind one seam.** Agents → API key (Bearer); humans → email+password session. Both still resolve through the single `authenticate(request) → User | null` interface, so the MCP tools and the `/review` page are untouched by the change.
-- **`SOA_TOKENS` env seeding goes away** in favor of seeding a first admin (via `SOA_ADMIN_EMAIL`/`SOA_ADMIN_PASSWORD` env) who then provisions everyone else through the UI — finally closing the "admin DMs you a token" provisioning gap ADR 0002 named.
+- **`CREW_TOKENS` env seeding goes away** in favor of seeding a first admin (via `CREW_ADMIN_EMAIL`/`CREW_ADMIN_PASSWORD` env) who then provisions everyone else through the UI — finally closing the "admin DMs you a token" provisioning gap ADR 0002 named.
 
 ## Notes from implementation (slice 0010)
 

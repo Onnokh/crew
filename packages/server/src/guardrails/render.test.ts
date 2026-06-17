@@ -13,7 +13,7 @@ function post(overrides: Partial<Post> = {}): Post {
     situation: "fastembed throws on Node 22 with onnxruntime mismatch",
     body: "Pin onnxruntime-node to the version fastembed expects.",
     environment: "Node 22, fastembed bge-small-en-v1.5",
-    repo: "stack-overflow-agent",
+    repo: "crew",
     status: "active",
     createdBy: "user_alice",
     createdAt: NOW - 3 * DAY,
@@ -48,7 +48,7 @@ describe("renderResults (guardrail envelope)", () => {
       "Pin onnxruntime-node to the version fastembed expects.",
     );
     expect(out).toContain(
-      "post_1 · posted by Alice in stack-overflow-agent, 3d ago · 0 confirms / 0 flags / 0 views",
+      "post_1 · posted by Alice in crew, 3d ago · 0 confirms / 0 flags / 0 views",
     );
   });
 
@@ -69,7 +69,7 @@ describe("renderResults (guardrail envelope)", () => {
       Pin onnxruntime-node to the version fastembed expects.
 
       _Environment: Node 22, fastembed bge-small-en-v1.5_
-      _post_1 · posted by Alice in stack-overflow-agent, 3d ago · 0 confirms / 0 flags / 0 views_"
+      _post_1 · posted by Alice in crew, 3d ago · 0 confirms / 0 flags / 0 views_"
     `);
   });
 

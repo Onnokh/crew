@@ -8,27 +8,27 @@
 //
 // Note: build-watch has no HMR. After a save, wait for the rebuild (~1-2s) and
 // reload the page. If you want instant HMR instead, run the Vite dev server on
-// :5173 with `pnpm --filter @soa/console dev` (add :5173 to SOA_TRUSTED_ORIGINS
+// :5173 with `pnpm --filter @crew/console dev` (add :5173 to CREW_TRUSTED_ORIGINS
 // so better-auth accepts sign-in from that origin).
 import { spawn } from "node:child_process";
 
-process.env.SOA_AUTH_SECRET ||= "dev-only-insecure-auth-secret-change-me-please"; // ≥32 chars
-process.env.SOA_ADMIN_EMAIL ||= "admin@example.com";
-process.env.SOA_ADMIN_PASSWORD ||= "dev-admin-password"; // ≥8 chars
-process.env.SOA_ADMIN_NAME ||= "Dev Admin";
+process.env.CREW_AUTH_SECRET ||= "dev-only-insecure-auth-secret-change-me-please"; // ≥32 chars
+process.env.CREW_ADMIN_EMAIL ||= "admin@example.com";
+process.env.CREW_ADMIN_PASSWORD ||= "dev-admin-password"; // ≥8 chars
+process.env.CREW_ADMIN_NAME ||= "Dev Admin";
 process.env.PORT ||= "8087";
-process.env.SOA_DB_PATH ||= "soa-dev.db"; // gitignored (*.db)
+process.env.CREW_DB_PATH ||= "crew-dev.db"; // gitignored (*.db)
 
 console.log(
   `Starting Crew (dev) — http://localhost:${process.env.PORT}` +
     ` (UI: /, /admin & /review, MCP: /mcp). Console rebuilds on save; reload to` +
-    ` see changes. Sign in as ${process.env.SOA_ADMIN_EMAIL} to mint an agent API key.`,
+    ` see changes. Sign in as ${process.env.CREW_ADMIN_EMAIL} to mint an agent API key.`,
 );
 
 const opts = { stdio: "inherit", shell: true, env: process.env };
 const children = [
-  spawn("pnpm", ["--filter", "@soa/server", "dev"], opts),
-  spawn("pnpm", ["--filter", "@soa/console", "build", "--watch"], opts),
+  spawn("pnpm", ["--filter", "@crew/server", "dev"], opts),
+  spawn("pnpm", ["--filter", "@crew/console", "build", "--watch"], opts),
 ];
 
 let exiting = false;

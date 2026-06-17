@@ -11,24 +11,24 @@
 // them anywhere real.
 import { spawn } from "node:child_process";
 
-process.env.SOA_AUTH_SECRET ||= "dev-only-insecure-auth-secret-change-me-please"; // ≥32 chars
-process.env.SOA_ADMIN_EMAIL ||= "admin@example.com";
-process.env.SOA_ADMIN_PASSWORD ||= "dev-admin-password"; // ≥8 chars
-process.env.SOA_ADMIN_NAME ||= "Dev Admin";
+process.env.CREW_AUTH_SECRET ||= "dev-only-insecure-auth-secret-change-me-please"; // ≥32 chars
+process.env.CREW_ADMIN_EMAIL ||= "admin@example.com";
+process.env.CREW_ADMIN_PASSWORD ||= "dev-admin-password"; // ≥8 chars
+process.env.CREW_ADMIN_NAME ||= "Dev Admin";
 process.env.PORT ||= "8087";
-process.env.SOA_DB_PATH ||= "soa-dev.db"; // gitignored (*.db)
-// The Vite dev console (pnpm --filter @soa/console dev) runs on :5173 and proxies
+process.env.CREW_DB_PATH ||= "crew-dev.db"; // gitignored (*.db)
+// The Vite dev console (pnpm --filter @crew/console dev) runs on :5173 and proxies
 // /api here, so its origin must be trusted or better-auth rejects sign-in with
 // "Invalid origin". Same-origin production doesn't need this.
-process.env.SOA_TRUSTED_ORIGINS ||= "http://localhost:5173";
+process.env.CREW_TRUSTED_ORIGINS ||= "http://localhost:5173";
 
 console.log(
   `Starting Crew on http://localhost:${process.env.PORT}` +
     ` (console: /admin & /review, MCP: /mcp). Sign in as` +
-    ` ${process.env.SOA_ADMIN_EMAIL} to mint an agent API key.`,
+    ` ${process.env.CREW_ADMIN_EMAIL} to mint an agent API key.`,
 );
 
-const child = spawn("pnpm", ["--filter", "@soa/server", "start"], {
+const child = spawn("pnpm", ["--filter", "@crew/server", "start"], {
   stdio: "inherit",
   shell: true, // resolve `pnpm` via PATH on Windows
 });

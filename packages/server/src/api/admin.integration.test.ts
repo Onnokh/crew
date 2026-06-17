@@ -183,7 +183,7 @@ describe("mint and revoke keys; an agent posts with a minted key", () => {
         situation: "minted-key agent posts a finding",
         body: "It works end to end through the admin-minted key.",
         environment: "Node 22",
-        repo: "stack-overflow-agent",
+        repo: "crew",
       });
       expect(text).toContain("Posted.");
       postId = text.match(/post_[A-Za-z0-9_-]+/)![0];
@@ -244,7 +244,7 @@ describe("ban stops login + keys while authored Posts stay attributed", () => {
         situation: "a finding authored before its author was banned",
         body: "This Post must stay attributed after the ban.",
         environment: "Node 22",
-        repo: "stack-overflow-agent",
+        repo: "crew",
       });
       postId = text.match(/post_[A-Za-z0-9_-]+/)![0];
     } finally {

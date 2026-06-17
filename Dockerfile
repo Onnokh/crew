@@ -41,7 +41,7 @@ RUN pnpm install --frozen-lockfile
 COPY packages/server/ packages/server/
 
 # Bake the embedding model into the image. Must match the runtime cache dir below.
-ENV SOA_MODEL_CACHE_DIR=/app/models
+ENV CREW_MODEL_CACHE_DIR=/app/models
 RUN cd packages/server && node scripts/fetch-model.mjs
 
 # ── Console builder: Vite-build the web SPA (pure JS, NO native toolchain) ───────
@@ -59,19 +59,19 @@ FROM base AS console-builder
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
 COPY packages/server/package.json packages/server/
 COPY packages/console/package.json packages/console/
-RUN pnpm install --frozen-lockfile --filter @soa/console...
+RUN pnpm install --frozen-lockfile --filter @crew/console...
 
 # Now the console source + the shared base tsconfig it extends. `vite build` runs
 # the TanStack Router plugin, which generates src/routeTree.gen.ts fresh, then
 # emits the static bundle to packages/console/dist.
 COPY packages/console/ packages/console/
-RUN pnpm --filter @soa/console build
+RUN pnpm --filter @crew/console build
 
 # ── Runner: slim, toolchain-free, non-root ──────────────────────────────────────
 FROM base AS runner
 ENV NODE_ENV=production \
-    SOA_MODEL_CACHE_DIR=/app/models \
-    SOA_DB_PATH=/data/soa.db \
+    CREW_MODEL_CACHE_DIR=/app/models \
+    CREW_DB_PATH=/data/crew.db \
     PORT=8080 \
     # FastMCP binds `localhost` by default — unreachable through Docker's port
     # forward. Bind all interfaces so published 8080 is reachable from the host.
@@ -83,7 +83,7 @@ COPY --from=builder /app /app
 # Bundle the built console SPA. The server's CWD is /app/packages/server, and
 # mountConsole's default dist path is resolve(cwd, "../console/dist") =>
 # /app/packages/console/dist — so dropping the Vite output exactly there lets the
-# Hono app find and serve it with no SOA_CONSOLE_DIST override. The console
+# Hono app find and serve it with no CREW_CONSOLE_DIST override. The console
 # builder never had the server's node_modules and the server builder never had
 # the console, so this dist MUST come from console-builder via its own COPY.
 COPY --from=console-builder /app/packages/console/dist /app/packages/console/dist

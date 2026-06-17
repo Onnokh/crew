@@ -4,15 +4,15 @@
 //
 // Run during `docker build` from inside packages/server so that `fastembed`
 // resolves against this package's node_modules. The cache dir MUST match the
-// SOA_MODEL_CACHE_DIR the running container reads (set in the Dockerfile), or the
+// CREW_MODEL_CACHE_DIR the running container reads (set in the Dockerfile), or the
 // runtime would re-download. Kept in lockstep with embedding/fastembed.ts — the
 // model id here mirrors MODEL_NAME there.
 import { EmbeddingModel, FlagEmbedding } from "fastembed";
 
-const cacheDir = process.env.SOA_MODEL_CACHE_DIR;
+const cacheDir = process.env.CREW_MODEL_CACHE_DIR;
 if (!cacheDir) {
   throw new Error(
-    "SOA_MODEL_CACHE_DIR must be set so the baked model lands where the runtime looks for it",
+    "CREW_MODEL_CACHE_DIR must be set so the baked model lands where the runtime looks for it",
   );
 }
 

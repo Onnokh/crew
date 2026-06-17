@@ -20,18 +20,18 @@ import { buildServer } from "./server.js";
  *
  * Identity is better-auth's now (see ADR 0003): agents authenticate with API
  * keys, humans with email + password. The only bootstrap is the FIRST admin,
- * seeded from `SOA_ADMIN_EMAIL`/`SOA_ADMIN_PASSWORD`; every other User and key is
- * provisioned through the admin console. The old `SOA_TOKENS` seeding is gone.
+ * seeded from `CREW_ADMIN_EMAIL`/`CREW_ADMIN_PASSWORD`; every other User and key is
+ * provisioned through the admin console. The old `CREW_TOKENS` seeding is gone.
  */
 async function buildRealDeps(port: number): Promise<Deps> {
-  const dbPath = process.env.SOA_DB_PATH ?? "soa.db";
+  const dbPath = process.env.CREW_DB_PATH ?? "crew.db";
   const { db, raw } = openDatabase(dbPath);
   const clock = new SystemClock();
 
   // Load the pinned embedding model and reconcile it with the corpus: a first
   // boot records the model name, a later boot with a different model refuses to
   // start (all stored vectors must come from one model to be comparable).
-  const embedder = await FastEmbedder.create(process.env.SOA_MODEL_CACHE_DIR);
+  const embedder = await FastEmbedder.create(process.env.CREW_MODEL_CACHE_DIR);
   pinOrCheckEmbeddingModel(raw, embedder.modelName);
 
   const repo = new SqliteRepository(db, raw, clock, new NanoidGen(), embedder);
@@ -40,10 +40,10 @@ async function buildRealDeps(port: number): Promise<Deps> {
   // live in the same file and the `created_by` FKs into `user(id)` hold.
   const authInstance = createAuth(raw, {
     secret: requireSecret(),
-    baseURL: process.env.SOA_BASE_URL ?? `http://localhost:${port}`,
+    baseURL: process.env.CREW_BASE_URL ?? `http://localhost:${port}`,
     // Comma-separated extra origins (e.g. the Vite dev console). Unset in
     // same-origin production, where `baseURL`'s origin is already trusted.
-    trustedOrigins: process.env.SOA_TRUSTED_ORIGINS?.split(",")
+    trustedOrigins: process.env.CREW_TRUSTED_ORIGINS?.split(",")
       .map((o) => o.trim())
       .filter(Boolean),
   });
@@ -63,10 +63,10 @@ async function buildRealDeps(port: number): Promise<Deps> {
  * fall back to a default.
  */
 function requireSecret(): string {
-  const secret = process.env.SOA_AUTH_SECRET;
+  const secret = process.env.CREW_AUTH_SECRET;
   if (!secret || secret.length < 32) {
     throw new Error(
-      "SOA_AUTH_SECRET must be set to a random string of at least 32 characters " +
+      "CREW_AUTH_SECRET must be set to a random string of at least 32 characters " +
         "(e.g. `openssl rand -hex 32`).",
     );
   }
@@ -81,12 +81,12 @@ function requireSecret(): string {
  * row). Skipped with a warning if the env vars are absent.
  */
 async function seedFirstAdmin(auth: Auth, raw: Database): Promise<void> {
-  const email = process.env.SOA_ADMIN_EMAIL;
-  const password = process.env.SOA_ADMIN_PASSWORD;
+  const email = process.env.CREW_ADMIN_EMAIL;
+  const password = process.env.CREW_ADMIN_PASSWORD;
   if (!email || !password) {
     // eslint-disable-next-line no-console
     console.warn(
-      "No SOA_ADMIN_EMAIL/SOA_ADMIN_PASSWORD set — skipping first-admin seed.",
+      "No CREW_ADMIN_EMAIL/CREW_ADMIN_PASSWORD set — skipping first-admin seed.",
     );
     return;
   }
@@ -102,7 +102,7 @@ async function seedFirstAdmin(auth: Auth, raw: Database): Promise<void> {
   }
 
   const result = await auth.api.signUpEmail({
-    body: { email, password, name: process.env.SOA_ADMIN_NAME ?? "Admin" },
+    body: { email, password, name: process.env.CREW_ADMIN_NAME ?? "Admin" },
   });
   raw.prepare(`UPDATE "user" SET role = 'admin' WHERE id = ?`).run(result.user.id);
   // eslint-disable-next-line no-console
