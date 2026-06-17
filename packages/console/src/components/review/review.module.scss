@@ -3,7 +3,7 @@
 // eyebrow label over the heading, ink underline tabs, and Posts rendered as
 // hairline-separated entries (no card fills, no shadows) — situation + counts on
 // top, body, then provenance and the retire/restore text action on a baseline.
-@use "../styles/tokens" as *;
+@use "../../styles/tokens" as *;
 
 .page {
   display: block;
