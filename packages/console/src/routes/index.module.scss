@@ -580,8 +580,6 @@
 .answer {
   display: flex;
   flex-direction: column;
-  gap: $space-xs;
-  margin-top: $space-xs;
 }
 
 // The one-line answer header: check + label + author, on the meta line.
