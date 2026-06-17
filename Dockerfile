@@ -53,7 +53,7 @@ FROM base AS console-builder
 
 # `pnpm install --frozen-lockfile` validates the lockfile against EVERY workspace
 # manifest, so all package.json files must be present even though we only build
-# the console. The workspace has two members (server + console); agent-plugin is
+# the console. The workspace has two members (server + console); claude-plugin is
 # not an npm package. Copy manifests first so this layer caches across source
 # edits, mirroring the server builder's structure.
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./

@@ -1,12 +1,12 @@
 // Dev convenience launcher: `pnpm start` from the repo root.
 // Sets sane local defaults (only if you haven't set them yourself), then runs
-// the server. Port 8087 matches the agent-plugin config in
-// packages/agent-plugin (.mcp.json / the user-scope settings.json env). Override
+// the server. Port 8087 matches the claude-plugin config in
+// packages/claude-plugin (.mcp.json / the user-scope settings.json env). Override
 // any of these by exporting the env var before running.
 //
 // Auth is better-auth now (ADR 0003): there is no static token. These dev
 // defaults seed a first admin so you can sign into the console at /admin and
-// mint an agent API key there — paste that key into the agent-plugin config to
+// mint an agent API key there — paste that key into the claude-plugin config to
 // connect. The secret/password below are INSECURE dev placeholders; never reuse
 // them anywhere real.
 import { spawn } from "node:child_process";

@@ -463,7 +463,7 @@ created_at  <span class="t">INTEGER</span></pre>
 └─ <b class="root">packages/</b>
    ├─ <b class="root">server/</b>                      <span class="c"># the product → Docker image</span>
    │  └─ … (expanded below)
-   └─ <b class="adapt">agent-plugin/</b>                <span class="c"># what teammates install</span>
+   └─ <b class="adapt">claude-plugin/</b>                <span class="c"># what teammates install</span>
       ├─ skill/SKILL.md            <span class="c"># always-on behaviour</span>
       ├─ commands/reflect.md       <span class="c"># /reflect harvest</span>
       └─ mcp-config.example.json   <span class="c"># the snippet to paste in</span></pre>
@@ -516,7 +516,7 @@ created_at  <span class="t">INTEGER</span></pre>
       <li><b>Tests live next to source.</b> <code>rrf.test.ts</code> beside <code>rrf.ts</code>; the one cross-cutting integration test sits in <code>test/</code>.</li>
       <li><b>Raw SQL is quarantined.</b> Only <code>store/queries.ts</code> + <code>migrations/</code> contain SQL — the seam that a future Postgres move touches.</li>
       <li><b>Two “schemas”, never confused.</b> <code>store/schema.ts</code> = Drizzle <em>table</em> defs (drizzle-kit reads it, stays in <code>server</code> — never cross-package, or migrations break). Each tool’s <em>zod input</em> schema lives in its own <code>tools/&lt;name&gt;.ts</code>. Unrelated concerns.</li>
-      <li><b>Two packages, no shared.</b> <code>server/</code> ships as a container; <code>agent-plugin/</code> (markdown + a JSON snippet) ships to humans and imports no TS — so there’s nothing to share. Extract a <code>shared/</code> package only when a real second TS consumer appears.</li>
+      <li><b>Two packages, no shared.</b> <code>server/</code> ships as a container; <code>claude-plugin/</code> (markdown + a JSON snippet) ships to humans and imports no TS — so there’s nothing to share. Extract a <code>shared/</code> package only when a real second TS consumer appears.</li>
     </ul>
   </section>
 

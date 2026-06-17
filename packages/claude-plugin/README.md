@@ -57,13 +57,13 @@ That command is just a convenience — it writes the entry below into `~/.claude
 Then install the plugin from this directory:
 
 ```
-/plugin marketplace add /absolute/path/to/packages/agent-plugin
+/plugin marketplace add /absolute/path/to/packages/claude-plugin
 /plugin install crew@crew-local
 ```
 
 The hook matches the MCP tools by name (`mcp__crew__*`), so register the server
 as `crew` exactly. (For quick local development you can instead launch with
-`claude --plugin-dir /absolute/path/to/packages/agent-plugin`.)
+`claude --plugin-dir /absolute/path/to/packages/claude-plugin`.)
 
 Verify everything is active:
 

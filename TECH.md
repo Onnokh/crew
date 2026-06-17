@@ -21,7 +21,7 @@ A team-first shared knowledge store for coding agents. Agents connect to a singl
 | Embeddings | fastembed, `bge-small-en-v1.5`, 384-dim, in-process, baked into image |
 | Auth | `authenticate(request)` interface backed by better-auth: agents via the `apiKey` plugin (Bearer key), admins via email+password sessions + the `admin` plugin (see [ADR 0003](./docs/adr/0003-better-auth-now-apikey-not-oauth.md), amending [0002](./docs/adr/0002-auth-interface-better-auth.md)) |
 | Web console | React SPA — TanStack Router (routing) + TanStack Query (server-state: queries, mutations, cache invalidation over the JSON API), Radix UI primitives, colocated `*.module.scss` (CSS Modules), Vite build. **No SSR framework**; served as static assets by the Hono app (see [ADR 0004](./docs/adr/0004-web-console-react-spa-on-hono.md)) |
-| Packaging | pnpm monorepo: `packages/server`, `packages/console`, `packages/agent-plugin` (no `shared/` — see Repo layout) |
+| Packaging | pnpm monorepo: `packages/server`, `packages/console`, `packages/claude-plugin` (no `shared/` — see Repo layout) |
 | Deploy | One Docker container, SQLite on a volume (Hetzner or internal — undecided, no build impact). Multi-stage build: Vite-build the console, copy its `dist` into the server image |
 
 ## Repo layout
@@ -55,7 +55,7 @@ crew/
     │       ├── api/              # JSON endpoints + better-auth mount + static-serve the console: review.ts (list/retire/restore) · admin.ts (users + keys + ban, role-gated) · auth.ts (mount better-auth)
     │       └── test/            # fakes.ts (all seam doubles) · harness.ts (in-memory store + boot) · loop.integration.test.ts
     ├── console/                 # React SPA (TanStack Router · Radix · *.module.scss · Vite) → built to dist/, served by server's Hono. Talks to server over HTTP/JSON + better-auth only (see ADR 0004)
-    └── agent-plugin/            # what teammates install — markdown + JSON, imports NO TS
+    └── claude-plugin/            # what teammates install — markdown + JSON, imports NO TS
         ├── .claude-plugin/plugin.json              # Claude Code plugin manifest
         ├── skills/crew/SKILL.md    # always-on behaviour
         ├── commands/reflect.md                     # /reflect end-of-session harvest
@@ -69,7 +69,7 @@ Boundaries to defend as it grows:
 - **`search` + `trust` + `guardrails` are pure functions.** Tuning never needs integration tests; `render`'s output is snapshot-tested so the guardrail framing can't silently regress.
 - **Each seam keeps its interface beside its real implementation** — `embedder.ts` (interface) · `fastembed.ts` (real) — so swapping an implementation is local and visible. The **fakes are test-only fixtures and live under `test/` (`test/fakes.ts`), not beside shipping code** — they have no production callers and must never grow into a second implementation (the deleted `FakePostRepository` was exactly that mistake; the real store is exercised over `:memory:` instead). `buildServer(deps)` (`server.ts`) is the *only* place real implementations are named; tests call the same function with the doubles from `test/`.
 - **Two unrelated "schemas", never confused.** `store/schema.ts` = Drizzle **table** defs (drizzle-kit reads it — stays inside `server`, never a separate package, or migration generation breaks). Each tool's **zod input** schema lives in its own `tools/<name>.ts`. Different concerns.
-- **Still no `shared/` package — even with the console.** A web UI was the predicted trigger, but the console (`packages/console`) consumes the server only over **HTTP/JSON + better-auth**, so the wire is the type boundary (mirroring "MCP is the type boundary, resolved at runtime") and no TS crosses the gap. `server/` ships as a container; `agent-plugin/` imports no TS. Extract `shared/` only if something genuinely needs to *import* the same TS from two packages (e.g. a TS hook needing the zod schema at compile time — see Agent assets), which the console does not.
+- **Still no `shared/` package — even with the console.** A web UI was the predicted trigger, but the console (`packages/console`) consumes the server only over **HTTP/JSON + better-auth**, so the wire is the type boundary (mirroring "MCP is the type boundary, resolved at runtime") and no TS crosses the gap. `server/` ships as a container; `claude-plugin/` imports no TS. Extract `shared/` only if something genuinely needs to *import* the same TS from two packages (e.g. a TS hook needing the zod schema at compile time — see Agent assets), which the console does not.
 
 ## Data model
 
