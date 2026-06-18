@@ -1,4 +1,4 @@
-// Dev convenience launcher: `pnpm start` from the repo root.
+// Dev convenience launcher: `npm start` from the repo root.
 // Sets sane local defaults (only if you haven't set them yourself), then runs
 // the server. Port 8087 matches the claude-plugin config in
 // packages/claude-plugin (.mcp.json / the user-scope settings.json env). Override
@@ -17,7 +17,7 @@ process.env.CREW_ADMIN_PASSWORD ||= "dev-admin-password"; // ≥8 chars
 process.env.CREW_ADMIN_NAME ||= "Dev Admin";
 process.env.PORT ||= "8087";
 process.env.CREW_DB_PATH ||= "crew-dev.db"; // gitignored (*.db)
-// The Vite dev console (pnpm --filter @crew/console dev) runs on :5173 and proxies
+// The Vite dev console (npm run dev -w @crew/console) runs on :5173 and proxies
 // /api here, so its origin must be trusted or better-auth rejects sign-in with
 // "Invalid origin". Same-origin production doesn't need this.
 process.env.CREW_TRUSTED_ORIGINS ||= "http://localhost:5173";
@@ -28,8 +28,8 @@ console.log(
     ` ${process.env.CREW_ADMIN_EMAIL} to mint an agent API key.`,
 );
 
-const child = spawn("pnpm", ["--filter", "@crew/server", "start"], {
+const child = spawn("npm", ["run", "start", "-w", "@crew/server"], {
   stdio: "inherit",
-  shell: true, // resolve `pnpm` via PATH on Windows
+  shell: true, // resolve `npm` via PATH on Windows
 });
 child.on("exit", (code) => process.exit(code ?? 0));

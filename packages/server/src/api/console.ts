@@ -30,7 +30,7 @@ export function mountConsole(app: Hono): boolean {
     // eslint-disable-next-line no-console
     console.warn(
       `Console dist not found at ${distDir} — skipping static serving. ` +
-        "Build it with `pnpm --filter @crew/console build` to serve the web UI.",
+        "Build it with `npm run build -w @crew/console` to serve the web UI.",
     );
     return false;
   }

@@ -21,7 +21,7 @@ A team-first shared knowledge store for coding agents. Agents connect to a singl
 | Embeddings | fastembed, `bge-small-en-v1.5`, 384-dim, in-process, baked into image |
 | Auth | `authenticate(request)` interface backed by better-auth: agents via the `apiKey` plugin (Bearer key), admins via email+password sessions + the `admin` plugin (see [ADR 0003](./docs/adr/0003-better-auth-now-apikey-not-oauth.md), amending [0002](./docs/adr/0002-auth-interface-better-auth.md)) |
 | Web console | React SPA — TanStack Router (routing) + TanStack Query (server-state: queries, mutations, cache invalidation over the JSON API), Radix UI primitives, colocated `*.module.scss` (CSS Modules), Vite build. **No SSR framework**; served as static assets by the Hono app (see [ADR 0004](./docs/adr/0004-web-console-react-spa-on-hono.md)) |
-| Packaging | pnpm monorepo: `packages/server`, `packages/console`, `packages/claude-plugin` (no `shared/` — see Repo layout) |
+| Packaging | npm workspaces monorepo: `packages/server`, `packages/console`, `packages/claude-plugin` (no `shared/` — see Repo layout) |
 | Deploy | One Docker container, SQLite on a volume (Hetzner or internal — undecided, no build impact). Multi-stage build: Vite-build the console, copy its `dist` into the server image |
 
 ## Repo layout
@@ -32,7 +32,7 @@ crew/
 ├── docs/
 │   ├── architecture.html        # interfaces, seams, composition root, diagrams
 │   └── adr/                      # 0001 stack · 0002 auth · 0003 better-auth · 0004 web console
-├── package.json  pnpm-workspace.yaml  tsconfig.base.json
+├── package.json  package-lock.json  tsconfig.base.json
 ├── Dockerfile  docker-compose.yml  .env.example
 └── packages/
     ├── server/                  # the product → Docker image

@@ -449,7 +449,7 @@ created_at  <span class="t">INTEGER</span></pre>
   <!-- 9 -->
   <section id="files">
     <h2><span class="num">9</span>File layout</h2>
-    <p class="lead">A pnpm monorepo. Folder colours match the dependency stack (§1): each module is one folder, and
+    <p class="lead">An npm workspaces monorepo. Folder colours match the dependency stack (§1): each module is one folder, and
       <strong>interface + real impl + fake live side by side</strong> so the seam is obvious on disk.</p>
 
     <div class="card">
@@ -458,7 +458,7 @@ created_at  <span class="t">INTEGER</span></pre>
 │  ├─ architecture.html          <span class="c"># this file</span>
 │  └─ <b class="doc">adr/</b>  0001-…stack.md, 0002-…auth.md
 ├─ CONTEXT.md  TECH.md           <span class="c"># glossary + spec</span>
-├─ package.json  pnpm-workspace.yaml  tsconfig.base.json
+├─ package.json  package-lock.json  tsconfig.base.json
 ├─ Dockerfile  docker-compose.yml  .env.example
 └─ <b class="root">packages/</b>
    ├─ <b class="root">server/</b>                      <span class="c"># the product → Docker image</span>

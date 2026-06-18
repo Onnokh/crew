@@ -10,11 +10,8 @@
 # both. The builder stage carries the C/C++ toolchain; the slim runner copies the
 # already-compiled node_modules so the final image stays toolchain-free.
 
-# ── Shared base: pin Node + enable pnpm via corepack ────────────────────────────
+# ── Shared base: pin Node ────────────────────────────────────────────────────
 FROM node:24-bookworm-slim AS base
-ENV PNPM_HOME="/pnpm" \
-    PATH="/pnpm:$PATH"
-RUN corepack enable
 WORKDIR /app
 
 # ── Builder: install deps (native builds), copy source, bake the model ──────────
@@ -27,15 +24,17 @@ RUN apt-get update \
 # Skip onnxruntime-node's CUDA/GPU binary download (~hundreds of MB) — fastembed
 # only ever runs the CPU execution provider, and the CPU runtime ships in the
 # base package. Without this the postinstall pulls the GPU build, bloating the
-# image to ~1.2 GB. Must precede `pnpm install` (its postinstall reads this).
+# image to ~1.2 GB. Must precede `npm ci` (its postinstall reads this).
 ENV ONNXRUNTIME_NODE_INSTALL_CUDA=skip
 
 # Install with the lockfile first, using only the manifests, so this layer caches
-# across source-only changes. onlyBuiltDependencies (root package.json) limits
-# build scripts to better-sqlite3 / esbuild / onnxruntime-node.
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
+# across source-only changes. `npm ci` validates the lockfile against EVERY
+# workspace manifest, so both must be present even though only the server builds
+# here.
+COPY package-lock.json package.json tsconfig.base.json ./
 COPY packages/server/package.json packages/server/
-RUN pnpm install --frozen-lockfile
+COPY packages/console/package.json packages/console/
+RUN npm ci
 
 # Now the source.
 COPY packages/server/ packages/server/
@@ -51,21 +50,21 @@ RUN cd packages/server && node scripts/fetch-model.mjs
 # only the resulting `dist/` is copied across below.
 FROM base AS console-builder
 
-# `pnpm install --frozen-lockfile` validates the lockfile against EVERY workspace
-# manifest, so all package.json files must be present even though we only build
-# the console. The workspace has two members (server + console); claude-plugin is
-# not an npm package. Copy manifests first so this layer caches across source
-# edits, mirroring the server builder's structure.
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
+# `npm ci` validates the lockfile against EVERY workspace manifest, so all
+# package.json files must be present even though we only build the console. The
+# workspace has two members (server + console); claude-plugin is not an npm
+# package. Copy manifests first so this layer caches across source edits,
+# mirroring the server builder's structure.
+COPY package-lock.json package.json tsconfig.base.json ./
 COPY packages/server/package.json packages/server/
 COPY packages/console/package.json packages/console/
-RUN pnpm install --frozen-lockfile --filter @crew/console...
+RUN npm ci
 
 # Now the console source + the shared base tsconfig it extends. `vite build` runs
 # the TanStack Router plugin, which generates src/routeTree.gen.ts fresh, then
 # emits the static bundle to packages/console/dist.
 COPY packages/console/ packages/console/
-RUN pnpm --filter @crew/console build
+RUN npm run build -w @crew/console
 
 # ── Runner: slim, toolchain-free, non-root ──────────────────────────────────────
 FROM base AS runner
@@ -96,7 +95,8 @@ VOLUME ["/data"]
 EXPOSE 8080
 
 WORKDIR /app/packages/server
-# Run the entry point with tsx as a loader (no compile step). NOT `node .bin/tsx`:
-# pnpm's .bin/tsx is a POSIX shell shim, which `node` would try to parse as JS.
-# `--import tsx` resolves the tsx package itself and registers its ESM loader.
+# Run the entry point with tsx as a loader (no compile step). NOT
+# `node node_modules/.bin/tsx`: that .bin/tsx is a POSIX shell shim, which `node`
+# would try to parse as JS. `--import tsx` resolves the tsx package itself and
+# registers its ESM loader.
 CMD ["node", "--import", "tsx", "src/main.ts"]

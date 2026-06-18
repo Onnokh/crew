@@ -1,4 +1,4 @@
-// Dev launcher: `pnpm dev` from the repo root.
+// Dev launcher: `npm run dev` from the repo root.
 // Everything is served off a single origin (:8087). Runs the server in watch
 // mode (tsx watch) AND the console in build-watch mode (vite build --watch) so
 // packages/console/dist is rebuilt on every save — the server streams those
@@ -8,7 +8,7 @@
 //
 // Note: build-watch has no HMR. After a save, wait for the rebuild (~1-2s) and
 // reload the page. If you want instant HMR instead, run the Vite dev server on
-// :5173 with `pnpm --filter @crew/console dev` (add :5173 to CREW_TRUSTED_ORIGINS
+// :5173 with `npm run dev -w @crew/console` (add :5173 to CREW_TRUSTED_ORIGINS
 // so better-auth accepts sign-in from that origin).
 import { spawn } from "node:child_process";
 
@@ -27,8 +27,8 @@ console.log(
 
 const opts = { stdio: "inherit", shell: true, env: process.env };
 const children = [
-  spawn("pnpm", ["--filter", "@crew/server", "dev"], opts),
-  spawn("pnpm", ["--filter", "@crew/console", "build", "--watch"], opts),
+  spawn("npm", ["run", "dev", "-w", "@crew/server"], opts),
+  spawn("npm", ["run", "build", "-w", "@crew/console", "--", "--watch"], opts),
 ];
 
 let exiting = false;

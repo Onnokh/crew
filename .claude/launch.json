@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "console",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@crew/console", "dev"],
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "-w", "@crew/console"],
       "port": 5173,
       "autoPort": false
     }

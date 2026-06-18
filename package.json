@@ -6,18 +6,18 @@
   "engines": {
     "node": ">=20"
   },
+  "workspaces": ["packages/server", "packages/console"],
   "scripts": {
     "start": "node scripts/start-server.mjs",
     "dev": "node scripts/dev.mjs",
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
     "typescript": "^5.9.0",
     "vitest": "^4.1.0"
   },
-  "packageManager": "pnpm@10.32.1",
-  "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3", "esbuild", "onnxruntime-node"]
+  "overrides": {
+    "vite": "^7.1.0"
   }
 }

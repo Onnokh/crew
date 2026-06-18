@@ -11,7 +11,7 @@ import { defineConfig } from "vite";
  *   `src/routeTree.gen.ts` from the files under `src/routes/`, so routing is
  *   file-based — adding a page is adding a file (see `src/routes/`).
  * - The dev server proxies `/api/auth` (better-auth) and `/mcp` (agent transport)
- *   to the running MCP server, so `pnpm dev` here talks to a real backend over
+ *   to the running MCP server, so `npm run dev` here talks to a real backend over
  *   the same-origin paths the production single-port deployment uses. Set
  *   `CREW_SERVER_URL` to point at a non-default backend.
  */
