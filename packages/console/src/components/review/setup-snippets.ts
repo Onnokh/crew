@@ -62,12 +62,14 @@ export function buildSetupContent(mcpEndpoint: string): SetupContent {
     { label: "Add the Crew plugin marketplace.", code: "claude plugin marketplace add Onnokh/crew" },
     { label: "Install the Crew plugin.", code: "claude plugin install crew@crew" },
     { label: "Register Crew as a user-scoped MCP server.", code: mcpAddCommand },
+    { label: "Append this block to your global ~/.claude/CLAUDE.md (create it if missing).", code: crewPriming },
   ];
 
   const codexManualInstructions = [
     { label: "Add the Crew plugin marketplace.", code: "codex plugin marketplace add Onnokh/crew" },
     { label: "Install the Crew plugin.", code: "codex plugin install codex-plugin@crew" },
     { label: "Add this MCP server config.", code: mcpConfigSnippet },
+    { label: "Append this block to your global ~/.codex/AGENTS.md (create it if missing).", code: crewPriming },
   ];
 
   const cursorManualInstructions = [
@@ -79,16 +81,19 @@ export function buildSetupContent(mcpEndpoint: string): SetupContent {
     }
   }
 }` },
+    { label: "Paste this block into Cursor Settings → Rules → User Rules.", code: crewPriming },
   ];
 
   const openCodeManualInstructions = [
     { label: "Install the Crew skills for OpenCode.", code: "npx skills add Onnokh/crew --agent opencode --global --skill crew --skill ask-crew --skill reflect --skill introduce" },
     { label: "Add this OpenCode MCP config.", code: openCodeSnippet },
+    { label: "Append this block to your global ~/.config/opencode/AGENTS.md (create it if missing).", code: crewPriming },
   ];
 
   const manualManualInstructions = [
     { label: "Install the Crew skills.", code: "npx skills add Onnokh/crew --global --skill crew --skill ask-crew --skill reflect --skill introduce" },
     { label: "Add this global MCP config.", code: mcpConfigSnippet },
+    { label: "Append this block to your global agent instructions file (~/.claude/CLAUDE.md, ~/.codex/AGENTS.md, ~/.config/opencode/AGENTS.md, or Cursor User Rules).", code: crewPriming },
   ];
 
   const manualInstallPrompt = `Set up Crew manually:
