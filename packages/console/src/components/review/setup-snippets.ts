@@ -45,15 +45,6 @@ export function buildSetupContent(mcpEndpoint: string): SetupContent {
   ${mcpEndpoint} \\
   --header "Authorization: Bearer <YOUR_TOKEN>"`;
 
-  // Cursor's "Add to Cursor" deeplink: a cursor:// URI carrying the config as base64 JSON.
-  const cursorConfig = btoa(
-    JSON.stringify({
-      url: mcpEndpoint,
-      headers: { Authorization: "Bearer <YOUR_TOKEN>" },
-    }),
-  );
-  const cursorDeeplink = `cursor://anysphere.cursor-deeplink/mcp/install?name=crew&config=${cursorConfig}`;
-
   // OpenCode reads an `opencode.json` with an `mcp` block; a remote server uses `type: "remote"`.
   const openCodeSnippet = `{
   "$schema": "https://opencode.ai/config.json",
@@ -80,8 +71,7 @@ export function buildSetupContent(mcpEndpoint: string): SetupContent {
   ];
 
   const cursorManualInstructions = [
-    { label: "Open Cursor's MCP install link.", code: `open "${cursorDeeplink}"` },
-    { label: "Or add this Cursor MCP config.", code: `{
+    { label: "Add this Cursor MCP config.", code: `{
   "mcpServers": {
     "crew": {
       "url": "${mcpEndpoint}",

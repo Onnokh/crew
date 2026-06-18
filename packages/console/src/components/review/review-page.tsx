@@ -1,7 +1,7 @@
 import * as Tabs from "@radix-ui/react-tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search } from "lucide-react";
-import { useReducer } from "react";
+import { useReducer, useRef } from "react";
 import { apiFetch } from "../../api/client";
 import crewProfile from "../../assets/crew-profile.png";
 import { useSession } from "../../auth/client";
@@ -104,6 +104,9 @@ export function ReviewPage() {
   const [view, dispatch] = useReducer(reviewReducer, initialView);
   const { term, query, sortKey, flaggedOnly, setupTab } = view;
 
+  // Whether the pressed setup tab was already open, snapshotted at press time (see the trigger below).
+  const tabWasOpen = useRef(false);
+
   const { data: searchData, error: searchError } = useQuery({
     queryKey: reviewKeys.search(query),
     enabled: query !== "",
@@ -172,18 +175,44 @@ export function ReviewPage() {
       : flaggedData;
 
   // Agent-setup copy, derived from this console's MCP endpoint (origin + /mcp).
-  const {
-    manualManualInstructions,
-    manualInstallPrompt,
-    claudeManualInstructions,
-    codexManualInstructions,
-    cursorManualInstructions,
-    openCodeManualInstructions,
-    claudeInstallPrompt,
-    codexInstallPrompt,
-    cursorInstallPrompt,
-    openCodeInstallPrompt,
-  } = buildSetupContent(`${window.location.origin}/mcp`);
+  const setup = buildSetupContent(`${window.location.origin}/mcp`);
+  const setupTabs = [
+    {
+      value: "manual",
+      label: "Manual setup",
+      logo: null,
+      manualInstructions: setup.manualManualInstructions,
+      agentInstructions: setup.manualInstallPrompt,
+    },
+    {
+      value: "claude",
+      label: "Claude setup",
+      logo: <ClaudeLogo size={14} />,
+      manualInstructions: setup.claudeManualInstructions,
+      agentInstructions: setup.claudeInstallPrompt,
+    },
+    {
+      value: "codex",
+      label: "Codex setup",
+      logo: <CodexLogo size={14} />,
+      manualInstructions: setup.codexManualInstructions,
+      agentInstructions: setup.codexInstallPrompt,
+    },
+    {
+      value: "opencode",
+      label: "OpenCode setup",
+      logo: <OpenCodeLogo size={14} />,
+      manualInstructions: setup.openCodeManualInstructions,
+      agentInstructions: setup.openCodeInstallPrompt,
+    },
+    {
+      value: "cursor",
+      label: "Cursor setup",
+      logo: <CursorLogo size={14} />,
+      manualInstructions: setup.cursorManualInstructions,
+      agentInstructions: setup.cursorInstallPrompt,
+    },
+  ];
 
   return (
     <section className={styles.page}>
@@ -220,61 +249,44 @@ export function ReviewPage() {
           onValueChange={(value) => dispatch({ type: "setSetupTab", value })}
         >
           <Tabs.List className={styles.setupTabs} aria-label="Agent setup">
-            <Tabs.Trigger className={styles.setupTab} value="manual">
-              Manual setup
-            </Tabs.Trigger>
-            <Tabs.Trigger className={styles.setupTab} value="claude">
-              <ClaudeLogo size={14} />
-              Claude setup
-            </Tabs.Trigger>
-            <Tabs.Trigger className={styles.setupTab} value="codex">
-              <CodexLogo size={14} />
-              Codex setup
-            </Tabs.Trigger>
-            <Tabs.Trigger className={styles.setupTab} value="opencode">
-              <OpenCodeLogo size={14} />
-              OpenCode setup
-            </Tabs.Trigger>
-            <Tabs.Trigger className={styles.setupTab} value="cursor">
-              <CursorLogo size={14} />
-              Cursor setup
-            </Tabs.Trigger>
+            {setupTabs.map((tab) => (
+              <Tabs.Trigger
+                key={tab.value}
+                className={styles.setupTab}
+                value={tab.value}
+                // Radix activates a tab on pointer/key *down* and never fires onValueChange
+                // for the already-open tab. So snapshot the open state before Radix flips it,
+                // then use that snapshot on the click that follows to toggle the tab shut.
+                onPointerDown={() => {
+                  tabWasOpen.current = setupTab === tab.value;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ")
+                    tabWasOpen.current = setupTab === tab.value;
+                }}
+                onClick={() => {
+                  if (tabWasOpen.current)
+                    dispatch({ type: "setSetupTab", value: "" });
+                }}
+              >
+                {tab.logo}
+                {tab.label}
+              </Tabs.Trigger>
+            ))}
           </Tabs.List>
 
-          <Tabs.Content value="manual" className={styles.setupBody}>
-            <SetupPanel
-              manualInstructions={manualManualInstructions}
-              agentInstructions={manualInstallPrompt}
-            />
-          </Tabs.Content>
-
-          <Tabs.Content value="claude" className={styles.setupBody}>
-            <SetupPanel
-              manualInstructions={claudeManualInstructions}
-              agentInstructions={claudeInstallPrompt}
-            />
-          </Tabs.Content>
-
-          <Tabs.Content value="codex" className={styles.setupBody}>
-            <SetupPanel
-              manualInstructions={codexManualInstructions}
-              agentInstructions={codexInstallPrompt}
-            />
-          </Tabs.Content>
-
-          <Tabs.Content value="opencode" className={styles.setupBody}>
-            <SetupPanel
-              manualInstructions={openCodeManualInstructions}
-              agentInstructions={openCodeInstallPrompt}
-            />
-          </Tabs.Content>
-
-          <Tabs.Content value="cursor" className={styles.setupBody}>
-            <SetupPanel
-              manualInstructions={cursorManualInstructions}
-              agentInstructions={cursorInstallPrompt}
-            />
-          </Tabs.Content>
+          {setupTabs.map((tab) => (
+            <Tabs.Content
+              key={tab.value}
+              value={tab.value}
+              className={styles.setupBody}
+            >
+              <SetupPanel
+                manualInstructions={tab.manualInstructions}
+                agentInstructions={tab.agentInstructions}
+              />
+            </Tabs.Content>
+          ))}
         </Tabs.Root>
       </header>
 
