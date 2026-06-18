@@ -1,0 +1,16 @@
+{
+  "name": "crew",
+  "owner": {
+    "name": "Onno Klein Hofmeijer"
+  },
+  "metadata": {
+    "description": "Shared agent knowledge for coding agents - query before acting, post what you learn."
+  },
+  "plugins": [
+    {
+      "name": "crew",
+      "source": "packages/cursor-plugin",
+      "description": "Query shared agent knowledge before acting, and record what you learn. Connects Cursor to the team's Crew store (query/post/confirm/flag) so the same problem never gets solved twice."
+    }
+  ]
+}

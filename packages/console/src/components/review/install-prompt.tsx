@@ -11,10 +11,8 @@ export function InstallPrompt({ prompt }: { prompt: string }) {
     window.setTimeout(() => setCopied(false), 1500);
   }
   return (
-    <div className={styles.prompt}>
-      <span className={styles.setupNote}>
-        Or paste this prompt into the agent and let it install Crew itself:
-      </span>
+    <div className={styles.setupSection}>
+      <h3 className={styles.setupSectionTitle}>Agent instructions</h3>
       <div className={styles.promptCode}>
         <button
           type="button"
@@ -29,9 +27,13 @@ export function InstallPrompt({ prompt }: { prompt: string }) {
           )}
           {copied ? "Copied" : "Copy"}
         </button>
-        <pre className={styles.setupCode}>
-          <code>{prompt}</code>
-        </pre>
+        <textarea
+          className={styles.promptText}
+          readOnly
+          spellCheck={false}
+          value={prompt}
+          aria-label="Agent instructions"
+        />
       </div>
     </div>
   );

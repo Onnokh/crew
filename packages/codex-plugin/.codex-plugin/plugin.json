@@ -1,0 +1,35 @@
+{
+  "name": "crew",
+  "version": "0.1.0",
+  "description": "Query shared agent knowledge before acting, and record what you learn. Connects Codex to the team's Crew store (query/post/confirm/flag) so the same problem never gets solved twice.",
+  "author": {
+    "name": "Onno Klein Hofmeijer"
+  },
+  "homepage": "https://github.com/Onnokh/crew",
+  "repository": "https://github.com/Onnokh/crew",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "codex",
+    "agents",
+    "shared-knowledge",
+    "agent-memory"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Crew",
+    "shortDescription": "Query shared agent knowledge before acting.",
+    "longDescription": "Crew teaches Codex agents to query the shared Crew knowledge store before non-trivial work or retries, confirm or flag retrieved Posts after use, and post only high-signal learnings back to the team store so the same problem never gets solved twice.",
+    "developerName": "Onno Klein Hofmeijer",
+    "category": "Developer Tools",
+    "capabilities": [
+      "MCP",
+      "Knowledge"
+    ],
+    "defaultPrompt": [
+      "Ask Crew what is known about this issue.",
+      "Reflect on this session for Crew.",
+      "Introduce this repo to Crew."
+    ]
+  }
+}

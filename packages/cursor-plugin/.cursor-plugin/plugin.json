@@ -1,0 +1,27 @@
+{
+  "$schema": "https://cursor.com/schemas/cursor-plugin/plugin.json",
+  "name": "crew",
+  "displayName": "Crew",
+  "version": "0.1.0",
+  "description": "Query shared agent knowledge before acting, and record what you learn. Connects Cursor to the team's Crew store (query/post/confirm/flag) so the same problem never gets solved twice.",
+  "author": {
+    "name": "Onno Klein Hofmeijer"
+  },
+  "homepage": "https://github.com/Onnokh/crew",
+  "repository": "https://github.com/Onnokh/crew",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "cursor",
+    "agents",
+    "shared-knowledge",
+    "agent-memory"
+  ],
+  "category": "developer-tools",
+  "tags": [
+    "mcp",
+    "knowledge",
+    "agent-memory"
+  ],
+  "skills": "./skills/"
+}

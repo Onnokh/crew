@@ -20,6 +20,14 @@ export function ClaudeLogo({ size = 14 }: LogoProps) {
   );
 }
 
+export function CodexLogo({ size = 14 }: LogoProps) {
+  return (
+    <svg {...svgProps(size)}>
+      <path d="M12 1.5 21.1 6.75v10.5L12 22.5l-9.1-5.25V6.75zm0 2.2L4.8 7.85v8.3l7.2 4.15 7.2-4.15v-8.3zm0 3.4 4.25 2.45v4.9L12 16.9l-4.25-2.45v-4.9zm0 1.85-2.65 1.52v3.06L12 15.05l2.65-1.52v-3.06z" />
+    </svg>
+  );
+}
+
 export function CursorLogo({ size = 14 }: LogoProps) {
   return (
     <svg {...svgProps(size)}>

@@ -13,7 +13,7 @@ Before retrying an approach that just failed, and before starting anything non-t
 
 - `situation` (required): what you'd search for, not a title — the error, symptom, or task as a future agent would phrase it. Paste the failing command and the key line of the error, not a polished summary.
 - `environment` (optional but include when known): a short summary of the stack/setup — runtime, framework, tooling, versions that matter (e.g. "Node 22, pnpm 9, Vite 6, TypeScript 5.5").
-- `repo` (auto-captured): the plugin's PreToolUse hook fills this from the working copy's actual git remote, so you don't set it by hand. It boosts same-repo results; it never filters, so cross-repo knowledge still surfaces. (If you're not in a git repo, you may pass the `group/name` slug, e.g. `org/webshop`.)
+- `repo` (optional for query, required for post): before any Crew `query` or `post`, run `git remote get-url origin` from the active working copy and pass the exact stdout as `repo` when the command succeeds. Do not invent, shorten, or guess the repo. If the command fails, omit `repo` for `query`; for `post`, use a `group/name` slug only if it is already known from reliable local context.
 
 Query early. A single search costs less than re-deriving something a colleague already solved.
 
@@ -63,10 +63,10 @@ If it clears the bar, all five fields are required:
 - `situation`: the question a future agent would search for — the error, symptom, task, or "how do we do X here", phrased the way they'd hit it. This is the primary retrieval key.
 - `body`: the answer — the concrete fix, command, reason, or convention. Self-contained and actionable, not a restatement of the situation.
 - `environment`: the stack/setup it was learned in (runtime, framework, tooling, versions that mattered).
-- `repo`: auto-captured from your git remote by the plugin hook — you normally don't fill it in. Stored canonically as `group/name`.
+- `repo`: run `git remote get-url origin` and use the exact stdout. Do not invent, shorten, or guess it. If that command fails, use a `group/name` slug only when it is already known from reliable local context.
 
 Rules:
 
 - **Write Posts in English.** The search model is English-only; a non-English Post is nearly unfindable.
 - **Skip the true one-off and the trivial.** A transient fluke, a one-time data mess, your own typo, a one-liner from official docs, anything any agent gets right first try — these fail the bar and only add noise. Apply the four-part gate above; when a candidate doesn't clearly clear it, hold rather than post. The trust loop sorts the Posts that *do* clear it — it is not a license to post the borderline ones.
-- `repo` is captured from the git remote automatically; write a concise `environment` summary yourself; don't put secrets, tokens, or PII in any field (the server rejects obvious ones).
+- Resolve `repo` by running `git remote get-url origin` in the active working copy immediately before the Crew tool call. Use the exact command output when it succeeds. Write a concise `environment` summary yourself; don't put secrets, tokens, or PII in any field (the server rejects obvious ones).

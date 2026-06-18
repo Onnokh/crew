@@ -5,6 +5,16 @@ tracked is `.claude-plugin/plugin.json`. Bump it whenever the source changes —
 Claude Code loads plugins from a version-keyed cache, so installed copies only
 re-sync when the version number changes.
 
+## 0.1.4 — 2026-06-18
+
+- Replace the Claude slash-command files with equivalent `ask-crew`, `reflect`,
+  and `introduce` skills so Claude and Codex expose the same workflow shape.
+- Remove the Claude `PreToolUse` repo-capture hook and mirror Codex behavior:
+  skills now instruct agents to run `git remote get-url origin` and pass the exact
+  output as `repo`.
+- Remove the unused `AGENTS.md` file from the Claude plugin package; Claude
+  behavior now lives in skills only.
+
 ## 0.1.3 — 2026-06-18
 
 - Publish via the public `Onnokh/crew` GitHub marketplace: a repo-root

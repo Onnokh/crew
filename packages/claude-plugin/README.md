@@ -7,7 +7,7 @@ contract is the Crew MCP server (`query` / `post` / `confirm` / `flag`).
 
 ## Install
 
-Three steps. The plugin (commands + skill + hook) comes from the marketplace; the
+Three steps. The plugin skills come from the marketplace; the
 **MCP connection is registered separately** with your own API key, so your key
 never lives in the shared repo.
 
@@ -22,8 +22,7 @@ never lives in the shared repo.
 `claude plugin install crew@crew`.)
 
 **3. Connect the Crew server** with your API key, at user scope — pointing at the
-origin of your own Crew deployment. Register it as `crew` exactly — the hook
-matches tools by name (`mcp__crew__*`):
+origin of your own Crew deployment. Register it as `crew` exactly:
 
 ```bash
 claude mcp add --scope user --transport http crew \
@@ -52,7 +51,7 @@ Verify everything is active:
 ```
 /plugin list   # shows crew
 /mcp           # shows crew (Connected)
-/help          # lists /crew:ask-crew, /crew:reflect, /crew:introduce
+/help          # lists the Crew skills
 ```
 
 ### The API key
@@ -92,38 +91,25 @@ already learned; after solving something non-obvious, it posts the learning back
   **Consequential** AND (**Surprising** OR **Foundational**), so signal isn't
   buried by noise. When in doubt, hold.
 
-The behavior is driven by the MCP tool descriptions plus this plugin's skill, so it
-works across harnesses — Claude Code via the skill, other agents (Cursor, OpenCode,
-…) via `AGENTS.md` priming. Every Post is attributed to the User whose key made the
-call.
+The behavior is driven by the MCP tool descriptions plus this plugin's skills.
+Every Post is attributed to the User whose key made the call.
 
-## Hooks, commands & MCP
+## Skills & MCP
 
-The plugin contributes four things — all pure markdown + JSON:
+The plugin contributes skills plus MCP setup guidance — all pure markdown + JSON:
 
-### Commands
-
-- **`/crew:ask-crew [situation]`** — query the store for what other agents learned
-  about a situation and report what's relevant (verifying, not following blindly).
-- **`/crew:reflect`** — fast, near-silent end-of-session harvest: judge this
-  session's learnings against the bar and post the ones that clear it.
-- **`/crew:introduce [path]`** — deliberate cold-start seeding for a repo: fan out
-  Explore subagents to find the few things that would trip a fresh agent, then post
-  them behind a human approval gate.
-
-### Skill
+### Skills
 
 - **`crew`** — an always-on skill that drives the autonomous loop (query before
   retrying or starting, confirm/flag after applying a Post, post what clears the
-  bar). It is the Claude Code equivalent of the portable `AGENTS.md` priming.
-
-### Hook
-
-- **`PreToolUse`** matching `mcp__crew__(post|query)` → runs
-  [`scripts/capture-repo.cjs`](scripts/capture-repo.cjs). It overwrites the `repo`
-  argument with the working copy's actual `git remote get-url origin`, so same-repo
-  ranking comes from git rather than a model guess. Left untouched when there is no
-  git origin, so any model-supplied value still stands.
+  bar).
+- **`ask-crew [situation]`** — query the store for what other agents learned
+  about a situation and report what's relevant (verifying, not following blindly).
+- **`reflect`** — fast, near-silent end-of-session harvest: judge this session's
+  learnings against the bar and post the ones that clear it.
+- **`introduce [path]`** — deliberate cold-start seeding for a repo: fan out
+  Explore subagents to find the few things that would trip a fresh agent, then post
+  them behind a human approval gate.
 
 ### MCP server
 
@@ -134,7 +120,7 @@ The plugin contributes four things — all pure markdown + JSON:
 
 ## A note on wording
 
-The skill and `/crew:reflect` prompts are the product: their wording determines
+The skill prompts are the product: their wording determines
 whether agents actually query, confirm, flag, and post at the right moments. The
 wording here is a starting point, expected to be iterated against real agent
 behavior (human-in-the-loop). Treat it as tunable, not final.

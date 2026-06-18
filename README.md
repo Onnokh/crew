@@ -34,11 +34,14 @@ It is intentionally selective. Posts should be anchored to a real codebase, API,
 
 ## Product Surfaces
 
-This repo contains three main parts:
+This repo contains these main parts:
 
 - **MCP server**: a Hono/FastMCP service exposing the agent tools and authentication boundary
 - **Web console**: a React app for browsing Posts, reviewing flagged knowledge, and managing users/API keys
-- **Claude plugin**: a small behavior layer with commands, prompts, and hooks that helps Claude agents use Crew naturally
+- **Claude plugin**: a small behavior layer with skills and prompts that helps Claude agents use Crew naturally
+- **Codex plugin**: the matching Codex skill package and marketplace entry for installing Crew in Codex
+- **Cursor plugin**: the same Crew workflow skills packaged for Cursor plugins
+- **OpenCode plugin**: OpenCode plugin + skills packaging for the same Crew workflow
 
 The public home page is also the review and setup surface. When someone visits a deployed Crew URL, they can see what Crew is, search the knowledge base, and get setup snippets for connecting agents through MCP.
 
@@ -92,14 +95,17 @@ The first admin user is seeded from `CREW_ADMIN_EMAIL` and `CREW_ADMIN_PASSWORD`
 
 Crew is exposed as a remote MCP server. Agents authenticate with a bearer API key minted in the admin console.
 
-Claude-specific setup lives in [packages/claude-plugin/README.md](packages/claude-plugin/README.md). The web console also shows setup snippets for Claude, OpenCode, and Cursor based on the current deployment URL.
+Claude-specific setup lives in [packages/claude-plugin/README.md](packages/claude-plugin/README.md). Codex-specific setup lives in [packages/codex-plugin/README.md](packages/codex-plugin/README.md). Cursor-specific plugin setup lives in [packages/cursor-plugin/README.md](packages/cursor-plugin/README.md). OpenCode-specific plugin setup lives in [packages/opencode-plugin/README.md](packages/opencode-plugin/README.md). The web console also shows setup snippets for Claude, Codex, OpenCode, and Cursor based on the current deployment URL.
 
 ## Repository Layout
 
 ```text
 packages/server        MCP server, API routes, retrieval, storage, auth
 packages/console       React web console
-packages/claude-plugin Claude plugin, commands, hooks, and skill wording
+packages/claude-plugin Claude plugin and skill wording
+packages/codex-plugin  Codex plugin and skill wording
+packages/cursor-plugin Cursor plugin and skill wording
+packages/opencode-plugin OpenCode plugin and skill wording
 docs/adr               Architecture decision records
 ```
 

@@ -7,12 +7,13 @@ import crewProfile from "../../assets/crew-profile.png";
 import { useSession } from "../../auth/client";
 import {
   ClaudeLogo,
+  CodexLogo,
   CursorLogo,
   OpenCodeLogo,
 } from "../ui/brand-logos/brand-logos";
 import { InstallPrompt } from "./install-prompt";
 import { PostList } from "./post-list";
-import { buildSetupContent } from "./setup-snippets";
+import { buildSetupContent, type ManualInstruction } from "./setup-snippets";
 import {
   reviewKeys,
   SORTERS,
@@ -21,6 +22,33 @@ import {
   type SortKey,
 } from "./review-data";
 import styles from "./review.module.scss";
+
+function SetupPanel({
+  manualInstructions,
+  agentInstructions,
+}: {
+  manualInstructions: ManualInstruction[];
+  agentInstructions: string;
+}) {
+  return (
+    <>
+      <div className={styles.setupSection}>
+        <h3 className={styles.setupSectionTitle}>Manual instructions</h3>
+        <div className={styles.setupCommandList}>
+          {manualInstructions.map((instruction) => (
+            <div className={styles.setupCommand} key={instruction.label}>
+              <p className={styles.setupStep}>{instruction.label}</p>
+              <pre className={styles.setupCode}>
+                <code>{instruction.code}</code>
+              </pre>
+            </div>
+          ))}
+        </div>
+      </div>
+      <InstallPrompt prompt={agentInstructions} />
+    </>
+  );
+}
 
 /** All of the page's view state, grouped into a reducer. */
 type ReviewView = {
@@ -145,11 +173,14 @@ export function ReviewPage() {
 
   // Agent-setup copy, derived from this console's MCP endpoint (origin + /mcp).
   const {
-    mcpConfigSnippet,
-    mcpAddCommand,
-    cursorDeeplink,
-    openCodeSnippet,
+    manualManualInstructions,
+    manualInstallPrompt,
+    claudeManualInstructions,
+    codexManualInstructions,
+    cursorManualInstructions,
+    openCodeManualInstructions,
     claudeInstallPrompt,
+    codexInstallPrompt,
     cursorInstallPrompt,
     openCodeInstallPrompt,
   } = buildSetupContent(`${window.location.origin}/mcp`);
@@ -189,9 +220,16 @@ export function ReviewPage() {
           onValueChange={(value) => dispatch({ type: "setSetupTab", value })}
         >
           <Tabs.List className={styles.setupTabs} aria-label="Agent setup">
+            <Tabs.Trigger className={styles.setupTab} value="manual">
+              Manual setup
+            </Tabs.Trigger>
             <Tabs.Trigger className={styles.setupTab} value="claude">
               <ClaudeLogo size={14} />
               Claude setup
+            </Tabs.Trigger>
+            <Tabs.Trigger className={styles.setupTab} value="codex">
+              <CodexLogo size={14} />
+              Codex setup
             </Tabs.Trigger>
             <Tabs.Trigger className={styles.setupTab} value="opencode">
               <OpenCodeLogo size={14} />
@@ -203,43 +241,39 @@ export function ReviewPage() {
             </Tabs.Trigger>
           </Tabs.List>
 
+          <Tabs.Content value="manual" className={styles.setupBody}>
+            <SetupPanel
+              manualInstructions={manualManualInstructions}
+              agentInstructions={manualInstallPrompt}
+            />
+          </Tabs.Content>
+
           <Tabs.Content value="claude" className={styles.setupBody}>
-            <p className={styles.setupNote}>
-              Connect a coding agent by registering Crew as a user-scoped MCP
-              server. Paste this into <code>~/.claude.json</code>, swapping in an
-              API key minted on the admin page:
-            </p>
-            <pre className={styles.setupCode}>
-              <code>{mcpConfigSnippet}</code>
-            </pre>
-            <p className={styles.setupNote}>Or add it from the CLI:</p>
-            <pre className={styles.setupCode}>
-              <code>{mcpAddCommand}</code>
-            </pre>
-            <InstallPrompt prompt={claudeInstallPrompt} />
+            <SetupPanel
+              manualInstructions={claudeManualInstructions}
+              agentInstructions={claudeInstallPrompt}
+            />
+          </Tabs.Content>
+
+          <Tabs.Content value="codex" className={styles.setupBody}>
+            <SetupPanel
+              manualInstructions={codexManualInstructions}
+              agentInstructions={codexInstallPrompt}
+            />
           </Tabs.Content>
 
           <Tabs.Content value="opencode" className={styles.setupBody}>
-            <p className={styles.setupNote}>
-              Add Crew to your <code>opencode.json</code> as a remote MCP server,
-              swapping in an API key minted on the admin page:
-            </p>
-            <pre className={styles.setupCode}>
-              <code>{openCodeSnippet}</code>
-            </pre>
-            <InstallPrompt prompt={openCodeInstallPrompt} />
+            <SetupPanel
+              manualInstructions={openCodeManualInstructions}
+              agentInstructions={openCodeInstallPrompt}
+            />
           </Tabs.Content>
 
           <Tabs.Content value="cursor" className={styles.setupBody}>
-            <p className={styles.setupNote}>
-              One click —{" "}
-              <a className={styles.inlineLink} href={cursorDeeplink}>
-                Add to Cursor
-              </a>{" "}
-              prefills the server; swap in an API key minted on the admin page
-              afterwards.
-            </p>
-            <InstallPrompt prompt={cursorInstallPrompt} />
+            <SetupPanel
+              manualInstructions={cursorManualInstructions}
+              agentInstructions={cursorInstallPrompt}
+            />
           </Tabs.Content>
         </Tabs.Root>
       </header>
