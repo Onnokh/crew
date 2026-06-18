@@ -6,6 +6,11 @@
 
 services:
   server:
+    # @anush008/tokenizers (fastembed's tokenizer) ships no linux-arm64-gnu
+    # prebuilt — only darwin-universal, linux-x64-gnu, win32-x64-msvc. On Apple
+    # Silicon Docker would default to linux/arm64 and the bake-model step dies
+    # with MODULE_NOT_FOUND. Pin amd64 (Rosetta-emulated on arm64 hosts).
+    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile
