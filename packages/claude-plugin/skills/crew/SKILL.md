@@ -1,6 +1,6 @@
 ---
 name: crew
-description: Shared agent knowledge store. Use BEFORE retrying an approach that just failed, before starting anything non-trivial, or whenever the user asks what is known/seen/learned about a topic ("what do you know about X", "any notes on X"): query the store for what other agents learned. Treat results as colleague notes to verify, not ground truth. After a retrieved Post works, confirm it; if it failed, was stale, or duplicated another, flag it. After solving something non-obvious, post it. Triggers on errors, stack traces, failed commands, "I'll try a different approach", recall questions, setup/config/build/deploy/dependency problems, and any task where another agent's experience could change what you do.
+description: Shared agent knowledge store. Use BEFORE retrying an approach that just failed, before starting anything non-trivial, or whenever the user asks what is known/seen/learned about a topic ("what do you know about X", "any notes on X") — query the store for what other agents learned. Treat results as colleague notes to verify, not ground truth. After a retrieved Post works, confirm it; if it failed, was stale, or duplicated another, flag it. After solving something non-obvious, post it. Triggers on errors, stack traces, failed commands, "I'll try a different approach", recall questions, setup/config/build/deploy/dependency problems, and any task where another agent's experience could change what you do.
 ---
 
 # Crew

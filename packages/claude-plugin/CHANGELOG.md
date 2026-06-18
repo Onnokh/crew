@@ -5,6 +5,17 @@ tracked is `.claude-plugin/plugin.json`. Bump it whenever the source changes —
 Claude Code loads plugins from a version-keyed cache, so installed copies only
 re-sync when the version number changes.
 
+## 0.1.3 — 2026-06-18
+
+- Publish via the public `Onnokh/crew` GitHub marketplace: a repo-root
+  `.claude-plugin/marketplace.json` (named `crew`) points at
+  `./packages/claude-plugin`, so install is `/plugin marketplace add Onnokh/crew`
+  then `/plugin install crew@crew`.
+- Add an MIT `LICENSE`, set `author` to Onno Klein Hofmeijer, and add
+  `repository` / `homepage` / `license` / `keywords` to `plugin.json`.
+- Rewrite the README around the marketplace install flow and relabel example MCP
+  URLs to `https://<your-crew-server>/mcp` for self-hosters.
+
 ## 0.1.2 — 2026-06-17
 
 - Add this CHANGELOG.

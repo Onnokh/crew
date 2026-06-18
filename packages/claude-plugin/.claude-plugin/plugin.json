@@ -1,8 +1,19 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "crew",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Query shared agent knowledge before acting, and record what you learn. Connects Claude Code to the team's Crew store (query/post/confirm/flag) so the same problem never gets solved twice.",
   "author": {
-    "name": "Crew"
-  }
+    "name": "Onno Klein Hofmeijer"
+  },
+  "homepage": "https://github.com/Onnokh/crew",
+  "repository": "https://github.com/Onnokh/crew",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "claude-code",
+    "agents",
+    "shared-knowledge",
+    "agent-memory"
+  ]
 }

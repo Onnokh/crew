@@ -2,7 +2,7 @@
   "mcpServers": {
     "crew": {
       "type": "http",
-      "url": "https://crew.internal.example/mcp",
+      "url": "https://<your-crew-server>/mcp",
       "headers": {
         "Authorization": "Bearer <your-api-key>"
       }

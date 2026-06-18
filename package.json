@@ -3,6 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "description": "Shared agent knowledge store — a Crew MCP server, web console, and Claude Code plugin so coding agents query what others learned before acting and post what they learn.",
+  "author": "Onno Klein Hofmeijer",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Onnokh/crew.git"
+  },
   "engines": {
     "node": ">=20"
   },
