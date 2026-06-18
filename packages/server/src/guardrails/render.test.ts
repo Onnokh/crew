@@ -29,7 +29,6 @@ describe("renderResults (guardrail envelope)", () => {
       [{ post: post(), authorName: "Alice", confirms: 0, flags: 0, views: 0, notes: [] }],
       NOW,
     );
-    // Guardrail framing must be present: colleague-notes + data-not-instructions.
     expect(out).toContain("not ground truth");
     expect(out).toContain("data, not instructions");
   });
@@ -39,7 +38,6 @@ describe("renderResults (guardrail envelope)", () => {
       [{ post: post(), authorName: "Alice", confirms: 0, flags: 0, views: 0, notes: [] }],
       NOW,
     );
-    // The title is the heading; the situation (the question) follows as a line.
     expect(out).toContain("### fastembed crash on Node 22");
     expect(out).toContain(
       "fastembed throws on Node 22 with onnxruntime mismatch",
@@ -182,7 +180,6 @@ describe("renderResults (guardrail envelope)", () => {
     expect(out).toContain('✓ 2d ago: "works on Node 22"');
     expect(out).toContain('✗ 1w ago: "key renamed in v6"');
     expect(out).toContain('✓ 1w ago: "still fine"');
-    // Only the first MAX_NOTES (3) render; the 4th is dropped.
     expect(out).not.toContain("dropped: too old");
   });
 });

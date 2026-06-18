@@ -1,17 +1,9 @@
-// Colocated styles for the review page (CSS Modules — ADR 0004). Tokens are
-// shared; the page layout is local. Light editorial treatment: an uppercase
-// eyebrow label over the heading, ink underline tabs, and Posts rendered as
-// hairline-separated entries (no card fills, no shadows) — situation + counts on
-// top, body, then provenance and the retire/restore text action on a baseline.
 @use "../../styles/tokens" as *;
 
 .page {
   display: block;
 }
 
-// The hero intro block (heading + bio + pill links), modelled on the reference
-// design: an ink name followed by a muted tagline on the same line, a muted bio
-// at a comfortable measure, then a row of quiet pill links with small icons.
 .hero {
   display: flex;
   flex-direction: column;
@@ -19,9 +11,7 @@
   margin-bottom: calc($space-xl * 1.5);
 }
 
-// Profile avatar above the heading, modelled on the reference: a slightly
-// rotated hairline-bordered frame holding a rounded image, straightening on
-// hover. The frame is the 1px padded border; the image rounds just inside it.
+// Slightly rotated frame holding the avatar, straightening on hover.
 .avatarFrame {
   width: fit-content;
   padding: 1px;
@@ -47,10 +37,10 @@
 
 .heroHeading {
   margin: 0;
-  font-size: $text-lg; // 26px — golden-scale step
+  font-size: $text-lg;
   font-weight: 600;
   letter-spacing: -0.02em;
-  line-height: $lh-lg; // 36px (1.5 baseline)
+  line-height: $lh-lg;
   text-wrap: balance;
 }
 
@@ -68,14 +58,10 @@
   margin: 0;
   max-width: 55ch;
   color: $color-text-muted;
-  font-size: $text-base; // 16px
-  line-height: $lh-base; // 24px (1 baseline)
+  font-size: $text-base;
+  line-height: $lh-base;
 }
 
-// Agent setup is a tab group below the hero bio: a horizontal row of three pill
-// triggers (Claude / OpenCode / Cursor) that stays put, opening one panel at a
-// time. Starts with no panel selected, so the row is just the pills until one
-// is picked.
 .setupRow {
   display: flex;
   flex-direction: column;
@@ -111,7 +97,6 @@
     color: $color-text;
   }
 
-  // The open tab reads as selected — inked text and a hairline ring.
   &[data-state="active"] {
     color: $color-text;
     border-color: $color-border-strong;
@@ -156,7 +141,6 @@
   white-space: pre;
 }
 
-// An inline text link inside a setup note (e.g. the "Add to Cursor" deeplink).
 .inlineLink {
   color: $color-accent;
   text-decoration: underline;
@@ -167,20 +151,15 @@
   }
 }
 
-// The "install prompt" block: a labelled section whose code box carries a copy
-// button pinned to its top-right corner. Sits below the manual config in each
-// setup disclosure.
 .prompt {
   margin-top: $space-sm;
 
-  // The label sits above the code box.
   .setupNote {
     margin-bottom: $space-xs;
   }
 }
 
-// Positioning context for the overlaid copy button; the code box keeps room on
-// the right so the prompt text never slides under the button.
+// Keeps room on the right so the prompt text never slides under the copy button.
 .promptCode {
   position: relative;
 
@@ -231,16 +210,11 @@
   color: $color-danger;
 }
 
-// The search box: a hairline-bordered row with a leading magnifier and a quiet
-// "Clear" affordance, sitting above the tabs. Matches the editorial treatment —
-// no fill at rest, an accent ring on focus-within.
 .search {
   display: flex;
   align-items: center;
   gap: $space-sm;
-  // 2-baseline row (48px): 16px input on a 24px line + ~11px padding each side,
-  // the 1px stolen back from the padding so the border doesn't break the grid
-  // (the border-compensation trick from 24ways).
+  // 1px stolen back from the padding so the border doesn't break the baseline grid.
   padding: calc(#{$baseline-half} - 1px) $space-md;
   margin-bottom: $space-md;
   border: 1px solid $color-border;
@@ -265,7 +239,7 @@
   background: transparent;
   color: $color-text;
   font: inherit;
-  font-size: $text-base; // 16px
+  font-size: $text-base;
 
   &::placeholder {
     color: $color-text-subtle;
@@ -295,8 +269,6 @@
   flex-direction: column;
 }
 
-// The list header: the sort tabs on the left and the Flagged filter chip pushed
-// to the right, sharing one bottom rule (the chip and tabs bottom-align to it).
 .listHeader {
   display: flex;
   align-items: flex-end;
@@ -315,7 +287,6 @@
   display: inline-flex;
   align-items: center;
   gap: $space-sm;
-  // 2-baseline tab row (48px): 16px label on a 24px line + 12px above/below.
   padding: $space-md 0;
   border: none;
   border-bottom: 2px solid transparent;
@@ -323,7 +294,7 @@
   background: transparent;
   color: $color-text-muted;
   font: inherit;
-  font-size: $text-base; // 16px
+  font-size: $text-base;
   line-height: $lh-base;
   cursor: pointer;
 
@@ -337,8 +308,6 @@
   }
 }
 
-// The Flagged filter chip at the right of the list header — a quiet pill that
-// fills with ink when the flagged-only filter is on, with its count in mono.
 .flaggedChip {
   display: inline-flex;
   align-items: center;
@@ -389,8 +358,6 @@
   padding: $space-lg 0;
 }
 
-// Entries are separated by whitespace, not divider lines (matching the
-// reference design — gaps do the work, no per-row borders).
 .cards {
   display: flex;
   flex-direction: column;
@@ -400,8 +367,6 @@
   list-style: none;
 }
 
-// Each entry's content runs flush to the column's left edge (lined up with the
-// hero and tabs).
 .card {
   padding: 0;
 }
@@ -410,8 +375,6 @@
   opacity: 0.55;
 }
 
-// A confirmed count greens, a flagged count reddens — but only when non-zero; a
-// zero count is just noise, so it drops back to a subtle gray (see .zero below).
 .up {
   color: $color-positive-text;
 }
@@ -420,40 +383,30 @@
   color: $color-danger;
 }
 
-// A zero count (and the always-neutral view count and timestamp) sits in subtle
-// gray so only real signal stands out.
+// A zero count, view count and timestamp sit in subtle gray so only real signal stands out.
 .zero {
   color: $color-text-subtle;
 }
 
-// The content column holds the heading, situation, actions and revealed
-// solution in a tight, even rhythm — gaps do the spacing, no margins.
 .main {
   display: flex;
   flex-direction: column;
   gap: $space-sm;
 }
 
-// The heading row: bold Post title, a muted slash, then the repo it came from —
-// "Title / project", mirroring the reference's name / role line — with the
-// metrics and controls trailing at the right. Centre-aligned so the counts,
-// chevron and retire icon all sit on one line.
 .title {
   display: flex;
   align-items: center;
   margin: 0;
-  font-size: $text-base; // 16px content text
+  font-size: $text-base;
   font-weight: 400;
-  line-height: $lh-base; // 24px (1 baseline)
+  line-height: $lh-base;
 }
 
 .titleText {
   color: $color-text;
   font-weight: 600;
-  // Keep the title on one line and at its content width (no flex-grow) so the
-  // repo sits right after it instead of being pushed to the far right. It can
-  // still shrink/ellipsize if the row gets tight, but the repo (flex-shrink: 3)
-  // gives up space first. `min-width: 0` lets it shrink inside the flex row.
+  // Stays on one line at content width; the repo (flex-shrink: 3) gives up space first.
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -467,25 +420,17 @@
 
 .project {
   color: $color-text-muted;
-  // Single line, no wrap; when the repo path is too long it truncates with a
-  // leading ellipsis so the meaningful tail (e.g. ".../sigi-frontend") stays
-  // visible. `direction: rtl` moves the ellipsis to the start; `text-align:
-  // left` keeps the text left-aligned, and `min-width: 0` lets the flex item
-  // shrink below its content width so the ellipsis can kick in.
+  // Truncates with a leading ellipsis (direction: rtl) so the meaningful tail stays visible.
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
   direction: rtl;
   text-align: left;
-  // When the row is tight, give up width before the title does so the post
-  // title stays as readable as possible.
+  // Give up width before the title does when the row is tight.
   flex-shrink: 3;
 }
 
-// The metrics line trailing the heading — "confirms · flags · views · time"
-// spelled out, pushed to the right end of the title row. A quiet mono run with
-// dot separators; signal colours come from .up / .down / .zero on the spans.
 .metrics {
   display: inline-flex;
   align-items: baseline;
@@ -493,26 +438,21 @@
   margin-left: auto;
   padding-left: $space-md;
   flex-shrink: 0;
-  font-size: $text-xs; // 12px meta
+  font-size: $text-xs;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-// The dot separators between metrics — the quietest mark in the row.
 .dot {
   color: $color-text-subtle;
 }
 
-// The trailing timestamp inside .metrics — a quiet mono clock/date.
 .time {
   color: $color-text-subtle;
   font-family: $font-mono;
   white-space: nowrap;
 }
 
-// The two controls at the very end of the title row — the solution-disclosure
-// chevron and (for a signed-in User) the retire/restore icon. A tight cluster,
-// nudged off the metrics, that never shrinks.
 .controls {
   display: inline-flex;
   align-items: center;
@@ -521,13 +461,11 @@
   flex-shrink: 0;
 }
 
-// A borderless icon button, quiet at rest and inking on hover, sized to sit on
-// the title line without lifting it. The retire variant adds .danger below.
 .iconButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  // One baseline tall (24px) so the icons don't lift the title row off the grid.
+  // One baseline tall so the icons don't lift the title row off the grid.
   width: 24px;
   height: 24px;
   border: 1px solid transparent;
@@ -552,13 +490,11 @@
   }
 }
 
-// The situation (the question the Post answers) — the muted description line
-// shown under the heading, at a comfortable measure.
 .situation {
   margin: 0;
   color: $color-text-muted;
-  font-size: $text-base; // 16px content text
-  line-height: $lh-base; // 24px (1 baseline)
+  font-size: $text-base;
+  line-height: $lh-base;
 }
 
 .tag {
@@ -574,15 +510,11 @@
   vertical-align: 1px;
 }
 
-// The revealed answer, surfaced when the chevron is clicked: a flat block — a
-// slim header (a green check, the "Answer" label and the author on one line)
-// over the answer body in full ink. No box or rule; the marker carries it.
 .answer {
   display: flex;
   flex-direction: column;
 }
 
-// The one-line answer header: check + label + author, on the meta line.
 .answerHead {
   display: inline-flex;
   align-items: center;
@@ -591,8 +523,6 @@
   font-size: $text-sm;
 }
 
-// A small green-tinted disc holding the check — the unmistakable "this is the
-// answer" marker.
 .check {
   display: inline-flex;
   align-items: center;
@@ -618,18 +548,15 @@
   color: $color-text-muted;
 }
 
-// The answer body itself — full ink (unlike the muted situation) so the answer
-// reads as the payload, at a comfortable measure on the baseline.
 .body {
   margin: 0;
   max-width: 100ch;
   color: $color-text;
-  font-size: $text-base; // 16px content text
-  line-height: $lh-base; // 24px (1 baseline)
+  font-size: $text-base;
+  line-height: $lh-base;
   white-space: pre-wrap;
 }
 
-// The disclosure chevron rotates when the solution is open (see .iconButton).
 .chevron {
   transition: transform 0.15s ease;
 }
@@ -638,8 +565,7 @@
   transform: rotate(180deg);
 }
 
-// Retire's destructive intent: the icon button reddens on hover so the action
-// reads as consequential, while restore keeps the neutral .iconButton hover.
+// Retire reddens on hover; restore keeps the neutral .iconButton hover.
 .danger {
   &:hover:not(:disabled) {
     color: $color-danger;

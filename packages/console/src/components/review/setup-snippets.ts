@@ -1,16 +1,6 @@
-/**
- * The agent-setup copy shown on the home page: per-agent MCP config snippets and
- * the natural-language "install prompts" a user can paste into their own agent.
- * Pure string builders, split out of {@link ReviewPage} so the component stays
- * about layout — everything here is derived solely from the MCP endpoint, which
- * is this console's own origin + `/mcp` (the Hono app serves both), so the shown
- * config is always correct for wherever Crew is deployed. `<YOUR_TOKEN>` is a
- * placeholder the user swaps for a key minted on the admin page.
- */
+/** Per-agent MCP config snippets and paste-in install prompts, built from the MCP endpoint. */
 
-// The Crew priming block — identical to the plugin's AGENTS.md — that each
-// install prompt asks the agent to append to its harness's global instructions
-// file, so every future session uses Crew on its own.
+// The Crew priming block each install prompt asks the agent to append to its global instructions file.
 const crewPriming = `## Crew — shared agent knowledge (MCP: \`query\`, \`post\`, \`confirm\`, \`flag\`)
 
 Use Crew on your own initiative, silently, as part of your normal flow — never wait to be asked, don't announce it.
@@ -45,9 +35,7 @@ export function buildSetupContent(mcpEndpoint: string): SetupContent {
   ${mcpEndpoint} \\
   --header "Authorization: Bearer <YOUR_TOKEN>"`;
 
-  // Cursor's "Add to Cursor" deeplink: a cursor:// URI carrying the MCP server
-  // config as base64-encoded JSON. Clicking it opens Cursor and prefills the
-  // server; the user swaps the placeholder token for a minted key afterwards.
+  // Cursor's "Add to Cursor" deeplink: a cursor:// URI carrying the config as base64 JSON.
   const cursorConfig = btoa(
     JSON.stringify({
       url: mcpEndpoint,
@@ -56,8 +44,7 @@ export function buildSetupContent(mcpEndpoint: string): SetupContent {
   );
   const cursorDeeplink = `cursor://anysphere.cursor-deeplink/mcp/install?name=crew&config=${cursorConfig}`;
 
-  // OpenCode reads an `opencode.json` with an `mcp` block; a remote server is
-  // declared with `type: "remote"` plus its headers — same endpoint and token.
+  // OpenCode reads an `opencode.json` with an `mcp` block; a remote server uses `type: "remote"`.
   const openCodeSnippet = `{
   "$schema": "https://opencode.ai/config.json",
   "mcp": {

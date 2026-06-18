@@ -1,10 +1,3 @@
-// Colocated styles for the show-once secret box (CSS Modules — ADR 0004).
-// Shared design tokens live in `src/styles/_tokens.scss`.
-//
-// Editorial treatment to match the admin list: a single compact hairline bar
-// (no heavy filled panel) that tucks under the row that minted it — a muted
-// uppercase label, the secret in a monospace field that scrolls rather than
-// wraps, and a text-style copy affordance like the row's other actions.
 @use "../../../styles/tokens" as *;
 
 .box {

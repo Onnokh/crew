@@ -7,19 +7,6 @@ import {
   type RunningServer,
 } from "./harness.js";
 
-/**
- * The one end-to-end integration test: boot the REAL server — real FTS5 +
- * sqlite-vec over an in-memory SQLite AND real better-auth, only the
- * embedder/clock/id faked — and drive it over a real streamable-HTTP MCP
- * transport with a genuine minted API key (see ADR 0003). Each `describe` boots
- * a fresh server with its own corpus and its own seeded User + key, so the legs
- * stay isolated; the shared harness keeps the boilerplate in one place.
- *
- * Per-leg mechanics (RRF fusion, trust math, the scan rules, FTS5/vec queries)
- * are covered by the colocated pure-function and store unit tests; this file
- * asserts only the things that can solely be observed through the MCP boundary.
- */
-
 describe("auth boundary + empty corpus", () => {
   let srv: RunningServer;
   beforeAll(async () => {
@@ -126,8 +113,7 @@ describe("core loop: keyword query → confirm/flag → re-rank, over real FTS5"
   it("a confirmed Post outranks an equal-relevance one; flags sink it again", async () => {
     const client = await connect(srv.port, srv.env.apiKey);
     try {
-      // Two near-identical Posts so RRF relevance is ~equal — only the trust
-      // signal can separate them.
+      // Two near-identical Posts so only the trust signal can separate them.
       const idA = idFrom(
         await callText(client, "post", {
           title: "retry storm backoff (A)",
@@ -145,7 +131,7 @@ describe("core loop: keyword query → confirm/flag → re-rank, over real FTS5"
         repo: "gateway",
       });
 
-      // Confirm A — it should now outrank B, and its Note + tally render inline.
+      // Confirm A — it should now outrank B.
       await callText(client, "confirm", { post_id: idA, note: "works under load" });
       let text = await callText(client, "query", { situation });
       expect(text).toContain("1 confirms / 0 flags");
@@ -210,12 +196,12 @@ describe("query records a view per surfaced Post, display-only", () => {
         repo: "analytics",
       });
 
-      // First surfacing: the Post has never been viewed, so it reads 0 views.
+      // First surfacing: never viewed, so it reads 0 views.
       let text = await callText(client, "query", { situation });
       expect(text).toContain("0 confirms / 0 flags / 0 views");
 
-      // Each query records a view, so the tally climbs by one each time. The
-      // count shown is always the value BEFORE the current query's own view.
+      // Each query records a view; the count shown is the value BEFORE this
+      // query's own view.
       text = await callText(client, "query", { situation });
       expect(text).toContain("0 confirms / 0 flags / 1 views");
 

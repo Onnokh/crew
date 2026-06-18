@@ -53,8 +53,6 @@ describe("hydratePosts", () => {
   });
 
   it("renders an unresolvable author as 'unknown'", async () => {
-    // hydrate takes Posts, not ids, and must not throw if a Post's author can't
-    // be resolved at read time — it renders "unknown" rather than failing.
     const ghost: Post = {
       id: "post_ghost",
       title: "t",

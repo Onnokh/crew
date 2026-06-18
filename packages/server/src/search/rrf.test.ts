@@ -32,8 +32,7 @@ describe("reciprocalRankFusion", () => {
       ["a", "b"],
       ["b", "a"],
     ]);
-    // Both appear once at rank 0 and once at rank 1, so both score identically;
-    // the tie breaks by first appearance (a before b).
+    // Both score identically; tie breaks by first appearance (a before b).
     expect(fused.map((f) => f.id)).toEqual(["a", "b"]);
     expect(fused[0]!.score).toBeCloseTo(1 / (RRF_K + 1) + 1 / (RRF_K + 2));
     expect(fused[1]!.score).toBeCloseTo(fused[0]!.score);

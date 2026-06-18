@@ -7,33 +7,12 @@ import { ConfirmBan } from "../../components/confirm-ban/confirm-ban";
 import { CopyBox } from "../../components/ui/copy-box/copy-box";
 import styles from "./admin.module.scss";
 
-/**
- * The admin user-management page (issue 0012), backed by the role-gated
- * `/api/admin/*` JSON API. The signed-in guard already runs in the parent
- * `_authed` layout; this route adds the stricter ADMIN-role check in
- * `beforeLoad`, reading `role` off the better-auth session and bouncing any
- * non-admin to `/review` (the server gates the API too — this is just so a
- * non-admin never sees the page chrome).
- *
- * Capabilities: create a User from an email (server returns a one-time
- * password, shown in a {@link CopyBox}); list Users with role + their active api
- * keys (label, last-used, with a per-key Delete); add a key for a User (raw key
- * shown once) and ban a User behind a {@link ConfirmBan} dialog.
- *
- * The user list is a `useQuery`; create/mint/ban are `useMutation`s that each
- * invalidate the list query on success (`apiFetch` stays the transport). The
- * show-once secrets (`newPassword`, `mintedKey`) deliberately stay in local
- * component state — set from each mutation's RESULT, never put in the query
- * cache and never refetchable (you only get them back from the server once).
- */
+/** Admin user-management page, backed by the role-gated `/api/admin/*` API. */
 export const Route = createFileRoute("/_authed/admin")({
   beforeLoad: async () => {
     const { data } = await authClient.getSession();
-    // `role` is the admin plugin's field on the User (see ADR 0003). The shared
-    // `authClient` is built without the admin *client* plugin, so the inferred
-    // session type omits it; we read it through a narrow local shape rather than
-    // widening the shared client (which other pages depend on). The server gates
-    // the API regardless — this bounce is only so a non-admin never sees the page.
+    // `role` is omitted from the inferred session type, so read it through a
+    // narrow local shape. The server gates the API regardless.
     const role = (data?.user as { role?: string | null } | undefined)?.role;
     if (role !== "admin") {
       throw redirect({ to: "/" });
@@ -52,7 +31,7 @@ type ApiKey = {
   lastRequest: string | null;
 };
 
-/** A User row as the listing endpoint returns it (the wire is the type boundary). */
+/** A User row as the listing endpoint returns it. */
 type UserRow = {
   id: string;
   email: string;
@@ -69,7 +48,6 @@ const adminKeys = {
 function AdminPage() {
   const queryClient = useQueryClient();
 
-  // The user list. Mutations invalidate this key on success to re-pull it.
   const { data: usersData, error: usersError } = useQuery({
     queryKey: adminKeys.users,
     queryFn: () =>
@@ -77,10 +55,8 @@ function AdminPage() {
   });
   const users = usersData ?? [];
 
-  // Show-once secrets, keyed by the User id they belong to so each renders
-  // inline in that User's row (never refetchable — the server hands them back
-  // exactly once, so this row is the one chance to copy them). Set from a
-  // mutation's RESULT, never from the query cache.
+  // Show-once secrets, keyed by User id. Set from a mutation result, never the
+  // query cache — the server returns them exactly once.
   const [newPassword, setNewPassword] = useState<{
     userId: string;
     email: string;
@@ -96,8 +72,6 @@ function AdminPage() {
   const invalidateUsers = () =>
     queryClient.invalidateQueries({ queryKey: adminKeys.users });
 
-  // Create a User. The server returns a one-time password; capture it into local
-  // state from the mutation result, then refresh the list.
   const createUser = useMutation({
     mutationFn: (newEmail: string) =>
       apiFetch<{ user: { id: string; email: string }; password: string }>(
@@ -116,7 +90,6 @@ function AdminPage() {
     },
   });
 
-  // Mint a key for a User. The raw key comes back once — capture it locally.
   const mintKey = useMutation({
     mutationFn: (user: UserRow) =>
       apiFetch<{ id: string; key: string }>(`/api/admin/users/${user.id}/keys`, {
@@ -129,7 +102,6 @@ function AdminPage() {
     },
   });
 
-  // Revoke a single key by id (the deleted row stops verifying immediately).
   const revokeKey = useMutation({
     mutationFn: (key: ApiKey) =>
       apiFetch(`/api/admin/keys/${key.id}`, { method: "DELETE" }),
@@ -142,7 +114,7 @@ function AdminPage() {
     onSuccess: () => invalidateUsers(),
   });
 
-  // First failing operation, run through the same one-line describe() as before.
+  // First failing operation, rendered as a single page-level message.
   const failure =
     usersError ??
     createUser.error ??

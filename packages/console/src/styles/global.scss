@@ -1,12 +1,8 @@
-// Global, non-modular base styles — the only stylesheet imported for its side
-// effect (from `main.tsx`). Everything component-specific is a colocated CSS
-// Module; this file just sets the document-level defaults the modules build on.
+// Global base styles. Component-specific styles live in colocated CSS Modules.
 @use "tokens" as *;
 
-// The runtime palette. `:root` is the light editorial surface (the original
-// values); `.dark` inverts each role. The `$color-*` tokens are `var()` aliases
-// onto these (see _tokens.scss), so toggling the `.dark` class on <html>
-// re-themes every module at once. Keep both blocks in sync, key for key.
+// Runtime palette. `:root` is light, `.dark` inverts each role — keep both
+// blocks in sync, key for key.
 :root {
   --color-bg: #ffffff;
   --color-surface: #fafafa;
@@ -46,10 +42,8 @@
   --color-positive-border: #1f3a28;
 }
 
-// Theme swap is driven by the View Transitions API: the toggle expands a circle
-// clip from the button outward (see theme/useTheme.ts). Kill the browser's
-// default cross-fade so the only motion is that clip; stack the incoming theme
-// over the outgoing one so the circle reveals it cleanly.
+// Kill the default cross-fade so the only motion is the toggle's clip expansion;
+// stack the incoming theme over the outgoing one.
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
@@ -72,12 +66,7 @@ body {
   padding: 0;
 }
 
-// Anchor the vertical rhythm: 16px body on a 24px (1.5) baseline. Every vertical
-// measure in the modules derives from `$baseline` (= this line-height), so text
-// blocks, gaps and control heights all land on the same grid. Technique:
-// 24ways.org/2006/compose-to-a-vertical-rhythm and ALA "more meaningful
-// typography" — size the type on a modular scale, line everything to the
-// baseline.
+// Anchor the vertical rhythm: 16px body on a 24px baseline.
 body {
   background: $color-bg;
   color: $color-text;
@@ -88,10 +77,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-// Sensible rhythm defaults for raw markup. Modules override per-element where a
-// role needs tuning (these are element selectors, so any module class wins), but
-// stray headings/paragraphs/lists still fall on the grid: a one-baseline bottom
-// margin and a baseline-multiple line-height.
+// Rhythm defaults for raw markup; module classes override these element selectors.
 h1,
 h2,
 h3,

@@ -1,8 +1,6 @@
-// Theme state + the animated swap. There is no React context for this (ADR 0004
-// keeps providers minimal): the source of truth is the `.dark` class on
-// <html>, mirrored to localStorage. A tiny external store lets any component
-// read/subscribe via `useSyncExternalStore` without a provider, and the initial
-// class is set pre-render by the inline script in index.html (no flash).
+// Theme state + animated swap. Source of truth is the `.dark` class on <html>,
+// mirrored to localStorage; an external store lets components subscribe via
+// `useSyncExternalStore` without a provider.
 import { useCallback, useSyncExternalStore } from "react";
 
 export type Theme = "light" | "dark";
@@ -14,8 +12,7 @@ function getSnapshot(): Theme {
   return document.documentElement.classList.contains("dark") ? "dark" : "light";
 }
 
-// Listeners are notified after each toggle so every mounted `useTheme` re-reads
-// the snapshot. (storage events cover other tabs.)
+// storage events cover other tabs; explicit notify covers this one.
 const listeners = new Set<() => void>();
 function subscribe(cb: () => void): () => void {
   listeners.add(cb);
@@ -43,9 +40,8 @@ function setTheme(next: Theme): void {
 export function useTheme() {
   const theme = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
-  // Toggle, expanding a circular clip from the click point (the toggle button,
-  // top-right) out to the farthest viewport corner. Falls back to an instant
-  // swap when View Transitions are unsupported or motion is reduced.
+  // Expands a circular clip from the click point. Falls back to an instant swap
+  // when View Transitions are unsupported or motion is reduced.
   const toggle = useCallback(
     (event?: { clientX: number; clientY: number }) => {
       const next: Theme = theme === "dark" ? "light" : "dark";

@@ -1,7 +1,3 @@
-// Colocated styles for the admin page (CSS Modules — ADR 0004). Light editorial
-// treatment matching the review page: an uppercase eyebrow over the heading, an
-// inline create form, and the User list as hairline-separated rows (identity on
-// the left, key count and text actions on the right) instead of a bordered table.
 @use "../../styles/tokens" as *;
 
 .page {
@@ -86,8 +82,6 @@
   }
 }
 
-// Section label: small uppercase mono-ish label with a dashed full-width rule
-// beneath it (the reference design's section-header treatment).
 .listLabel {
   width: 100%;
   margin: 0;
@@ -100,7 +94,6 @@
   text-transform: uppercase;
 }
 
-// Rows separated by whitespace, not divider lines.
 .list {
   display: flex;
   flex-direction: column;
@@ -110,9 +103,7 @@
   list-style: none;
 }
 
-// A row stacks its identity line above any show-once secret (password / api
-// key) that belongs to this User, so the secret appears right where it was
-// triggered instead of in a detached box at the top of the page.
+// Stacks the identity line above any show-once secret for this User.
 .row {
   display: flex;
   flex-direction: column;
@@ -167,9 +158,6 @@
   gap: $space-lg;
 }
 
-// A User's active api keys, listed under their row: a hairline-separated stack
-// of compact lines (label · last-used · delete) so an admin sees what already
-// exists before adding more.
 .keyList {
   display: flex;
   flex-direction: column;
@@ -214,7 +202,6 @@
   font-size: 0.75rem;
 }
 
-// Text-style actions, in keeping with the editorial look.
 .action,
 .actionDanger {
   padding: 0;

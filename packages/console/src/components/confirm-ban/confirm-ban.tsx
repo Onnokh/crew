@@ -1,13 +1,7 @@
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import styles from "./confirm-ban.module.scss";
 
-/**
- * The destructive-action guard for banning a User (issue 0012). A ban kills the
- * User's login and revokes every api key they hold — irreversible from this
- * console — so a Radix `AlertDialog` interrupts with an explicit confirm before
- * `onConfirm` fires. The trigger is the page's own "Ban" button, passed in as
- * `children`; the dialog owns nothing but the confirmation.
- */
+/** Confirmation guard for the irreversible ban action; `children` is the trigger button. */
 export function ConfirmBan({
   email,
   onConfirm,

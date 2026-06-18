@@ -1,21 +1,8 @@
 /**
- * Ingestion guardrail — the pure scan a `post` runs over its submitted text
- * *before* the Post reaches the store. A Post's text is later inserted into
- * other agents' contexts, so a stored secret leaks with distribution and a
- * stored injection is an attack with persistence built in. We reject at write
- * time rather than sanitise at read time: the corpus stays clean and the
- * rejection reason teaches the posting agent what not to share.
- *
- * Pure and self-contained — no I/O, no clock, no store (TECH.md "search + trust
- * + guardrails are pure functions"). It takes the four post fields, scans their
- * combined text against a set of high-signal patterns, and returns the first
- * problem found (or `ok`). Unit-tested independently of the server; the post
- * tool turns a rejection into a clear tool error.
- *
- * Deliberately conservative: every pattern targets an *obvious* leak or
- * directive, because a false positive blocks a legitimate learning. This is a
- * first-line tripwire, not a complete DLP engine — thresholds and patterns are a
- * tuning knob, like the ranking weights.
+ * Ingestion guardrail: the pure scan `post` runs over submitted text before a
+ * Post reaches the store. Rejects at write time so the corpus stays clean of
+ * leaked secrets and stored injections. Conservative by design — a false
+ * positive blocks a legitimate learning; this is a tripwire, not a DLP engine.
  */
 
 /** The fields a Post carries into the scan; matches the `post` tool input. */
@@ -28,34 +15,26 @@ export type ScanInput = {
   repo: string;
 };
 
-/** Why a submission was rejected — a category plus a human-readable reason. */
 export type ScanRejection = {
   ok: false;
-  /** Coarse bucket the offending pattern belongs to. */
   category: "secret" | "pii" | "injection";
   /** A clear, agent-facing explanation of what tripped the scan. */
   reason: string;
 };
 
-/** A clean submission passes through unaffected. */
 export type ScanPass = { ok: true };
 
 export type ScanResult = ScanPass | ScanRejection;
 
-/** One detection rule: a category, a regex, and the reason shown on a hit. */
 type Rule = {
   category: ScanRejection["category"];
   pattern: RegExp;
   reason: string;
 };
 
-/**
- * The rule set, ordered so the most specific/dangerous categories are reported
- * first. Each pattern is high-signal on purpose — see the module doc on false
- * positives. Patterns are case-insensitive where casing doesn't carry meaning.
- */
+/** Ordered so the most specific/dangerous categories are reported first. */
 const RULES: Rule[] = [
-  // --- Secrets: provider-prefixed keys and private-key blocks ----------------
+  // --- Secrets ---------------------------------------------------------------
   {
     category: "secret",
     pattern: /-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----/,
@@ -134,12 +113,7 @@ const RULES: Rule[] = [
   },
 ];
 
-/**
- * Scan a submitted Post for obvious secrets/PII or prompt-injection. Returns
- * `{ ok: true }` for clean text, or the first matching rule's category + reason.
- * The whole Post is scanned as one text blob — an injection hidden in
- * `environment` is as dangerous as one in `body`.
- */
+/** Scan a submitted Post for obvious secrets/PII/injection. The whole Post is scanned as one blob. Returns the first matching rule, or `{ ok: true }`. */
 export function scanPost(input: ScanInput): ScanResult {
   const text = [
     input.title ?? "",

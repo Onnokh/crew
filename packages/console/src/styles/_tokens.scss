@@ -1,20 +1,8 @@
-// Design tokens for the console — the ONE place spacing/colour/radius/type values
-// live, `@use`d by every `*.module.scss`. We own our tokens (no third-party
-// theme — ADR 0004). The surface is a light "editorial" theme: white paper,
-// near-black ink, generous whitespace, hairline rules instead of filled cards,
-// and weight contrast (not colour) doing most of the work. Colour is used
-// sparingly — ink for primary actions, one green for positive/status, red for
-// destructive.
-//
-// Dark split (the "future" the original note anticipated): the colour tokens
-// below are now thin `var(--…)` aliases, NOT raw hex. The actual values live as
-// CSS custom properties in `global.scss` — light on `:root`, dark on `.dark`.
-// Every `*.module.scss` keeps using `$color-bg` etc. unchanged, so each one
-// emits `var(--color-bg)` and switches at runtime when the `.dark` class flips.
-// Non-colour tokens (spacing/radii/type) stay compile-time SCSS values.
+// Design tokens — the one place spacing/colour/radius/type values live, `@use`d
+// by every `*.module.scss`. Colour tokens are `var(--…)` aliases; the actual
+// values are CSS custom properties in global.scss (light on `:root`, dark on
+// `.dark`), so flipping the `.dark` class re-themes every module at runtime.
 
-// Type. Inter is loaded from Google Fonts in index.html (sans for everything;
-// mono only for machine values like API keys and counts).
 $font-sans:
   "Inter",
   -apple-system,
@@ -24,27 +12,18 @@ $font-sans:
   sans-serif;
 $font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
-// Vertical rhythm. Every vertical measure (line-heights, block margins, control
-// heights) is a multiple — or a clean half — of this baseline, so the page reads
-// on an even grid (see global.scss for the technique). Body text sits at 16/24
-// (line-height 1.5); headings take half-baseline (12px) line-height steps so a
-// single line stays tight while block margins keep the page on the grid.
+// Vertical rhythm unit; every vertical measure is a multiple (or clean half).
 $baseline: 1.5rem; // 24px — the rhythm unit
 $baseline-half: 0.75rem; // 12px
 
-// Spacing scale (rem) — snapped to the rhythm grid above. `lg` is exactly one
-// baseline and `xl` two, so vertical gaps and block margins land on the grid;
-// `xs`/`sm`/`md` are the 4/8/12px sub-grid for tight clusters (md = ½ baseline).
+// Spacing scale (rem), snapped to the rhythm grid: `lg` = 1 baseline, `xl` = 2.
 $space-xs: 0.25rem; // 4px
 $space-sm: 0.5rem; // 8px
 $space-md: 0.75rem; // 12px — ½ baseline
 $space-lg: 1.5rem; // 24px — 1 baseline
 $space-xl: 3rem; // 48px — 2 baselines
 
-// Type scale — golden ratio (≈1.618) anchored to the 16px body, matching the
-// gridlover scale this design is based on (16 · 26 · 42 · 68). Content text is
-// never below `base` (16px); `xs`/`sm` are reserved for labels, meta and chrome.
-// Each size pairs with a baseline-multiple line-height below.
+// Type scale (golden ratio, anchored to 16px body). Content text never below `base`.
 $text-xs: 0.75rem; // 12px — eyebrow labels, counts, timestamps
 $text-sm: 0.875rem; // 14px — secondary meta, notes, chrome
 $text-base: 1rem; // 16px — body & content text (minimum)
@@ -52,21 +31,17 @@ $text-lg: 1.625rem; // 26px — hero / section heading
 $text-xl: 2.625rem; // 42px — large heading
 $text-2xl: 4.25rem; // 68px — display
 
-// Line-heights, all baseline multiples. Body = 1 baseline; headings take
-// half-baseline steps (1.5× / 2× / 3×) so single lines stay tight on the grid.
+// Line-heights, all baseline multiples.
 $lh-base: 1.5rem; // 24px (1×)   — body, meta
 $lh-lg: 2.25rem; // 36px (1.5×) — 26px heading
 $lh-xl: 3rem; // 48px (2×)   — 42px heading
 $lh-2xl: 4.5rem; // 72px (3×)   — 68px heading
 
-// Radii — tight, in keeping with the restrained look.
 $radius-sm: 5px;
 $radius-md: 8px;
 $radius-lg: 9px;
 
-// Palette — aliases onto the runtime custom properties (defined per-theme in
-// global.scss). The trailing comments describe the LIGHT value; the dark
-// counterpart inverts the same semantic role.
+// Palette — aliases onto the runtime custom properties (per-theme in global.scss).
 $color-bg: var(--color-bg); // page / input paper
 $color-surface: var(--color-surface); // faint raised surfaces, hatched gutters
 $color-surface-hover: var(--color-surface-hover); // hover fills, pill backgrounds
@@ -77,15 +52,12 @@ $color-text-muted: var(--color-text-muted); // gray descriptors, body copy, seco
 $color-text-subtle: var(--color-text-subtle); // eyebrow / section labels (uppercase, spaced)
 $color-danger: var(--color-danger); // destructive (retire, ban)
 
-// `accent` = the primary-action colour. In light it is ink (black buttons,
-// white text); in dark it inverts to near-white buttons with near-black text.
-// Named `accent` so existing modules (login, admin) pick it up unchanged.
+// `accent` = the primary-action colour (ink in light, near-white in dark).
 $color-accent: var(--color-accent);
 $color-accent-hover: var(--color-accent-hover);
 $color-accent-contrast: var(--color-accent-contrast);
 
-// The one true hue: a restrained green for positive/status (the show-once key
-// strip, "active" dots). Used explicitly, never as chrome.
+// Green for positive/status.
 $color-positive: var(--color-positive);
 $color-positive-text: var(--color-positive-text);
 $color-positive-bg: var(--color-positive-bg);

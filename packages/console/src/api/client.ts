@@ -1,14 +1,7 @@
 /**
- * Thin wrapper for the server's review/admin JSON API (the endpoints 0012 and
- * 0013 add under `/api/...`). The console talks to the server over HTTP/JSON +
- * better-auth only — the wire is the type boundary, so there is no shared TS and
- * callers pass the response shape as `<T>` (mirror the server's JSON contract).
- *
- * Same-origin in production (the Hono app serves both the SPA and the API), and
- * proxied in dev (see vite.config.ts), so the better-auth session cookie is
- * first-party — we still pass `credentials: "include"` explicitly so it is sent
- * even if a future deploy splits origins. A non-2xx response throws an
- * {@link ApiError} carrying the status, so a page can branch on 401/403.
+ * Fetch wrapper for the server JSON API. Callers pass the response shape as `<T>`.
+ * `credentials: "include"` is explicit so the session cookie is sent even if a
+ * future deploy splits origins. Non-2xx throws an {@link ApiError} with the status.
  */
 export async function apiFetch<T>(
   path: string,
@@ -27,7 +20,7 @@ export async function apiFetch<T>(
     throw new ApiError(response.status, await response.text());
   }
 
-  // 204 No Content (e.g. a retire/restore with no body) has nothing to parse.
+  // 204 No Content has nothing to parse.
   if (response.status === 204) {
     return undefined as T;
   }

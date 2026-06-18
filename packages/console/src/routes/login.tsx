@@ -5,11 +5,8 @@ import { authClient } from "../auth/client";
 import styles from "./login.module.scss";
 
 /**
- * The public sign-in page (email + password). It is the ONE route outside the
- * `_authed` guard. `beforeLoad` short-circuits an already-signed-in visitor
- * straight to the app, so hitting `/login` with a live session doesn't strand
- * them on a login form. A `redirect` search param (set by the guard when it
- * bounces someone) is honoured on success so deep links survive the round-trip.
+ * Public sign-in page. `beforeLoad` redirects an already-signed-in visitor away
+ * from the form; the `redirect` search param is honoured on success.
  */
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
@@ -37,8 +34,7 @@ function LoginPage() {
     setError(null);
     setSubmitting(true);
 
-    // better-auth 1.6.x returns `{ data, error }` rather than throwing on bad
-    // credentials, so we branch on `error` instead of try/catch.
+    // better-auth returns `{ data, error }` rather than throwing on bad credentials.
     const { error: signInError } = await authClient.signIn.email({
       email,
       password,
@@ -49,8 +45,7 @@ function LoginPage() {
       setError(signInError.message ?? "Sign-in failed. Check your credentials.");
       return;
     }
-    // Land where the guard wanted to send us, or the default page. `invalidate`
-    // forces the now-protected routes to re-run their session-aware loaders.
+    // `invalidate` forces protected routes to re-run their session-aware loaders.
     await router.invalidate();
     await router.navigate({ to: redirectTo ?? "/" });
   }

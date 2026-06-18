@@ -6,32 +6,16 @@ import { authClient, useSession } from "../../auth/client";
 import { ThemeToggle } from "../ui/theme-toggle/theme-toggle";
 import styles from "./app-chrome.module.scss";
 
-/**
- * The app chrome: a narrow centered content column flanked by faint hatched
- * gutters (the rails). There is no top navigation bar — the only chrome is a
- * small actions cluster pinned to the top-right of the content area, between
- * the rails: the theme toggle next to a "Sign in" link, or, when signed in,
- * the User's account menu. It wraps both the PUBLIC home page and the signed-in
- * pages under `_authed`, adapting to the session rather than assuming one. Built
- * from Radix primitives (Avatar, DropdownMenu) styled with the colocated
- * `*.module.scss` (no third-party theme — ADR 0004).
- *
- * Sign-out calls better-auth's `signOut`, then invalidates the router so any
- * `_authed` page re-runs its guard, finds no session, and bounces to `/login`.
- */
+/** App chrome wrapping both the public home page and signed-in pages, adapting to the session. */
 export function AppChrome({ children }: { children: ReactNode }) {
   const router = useRouter();
-  // The brand is a way back to the home page; it would be redundant on home
-  // itself, so we only show it elsewhere (read the live pathname off the router).
+  // Brand links home, so hide it on home itself.
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isHome = pathname === "/";
   const { data } = useSession();
   const user = data?.user;
-  // `role` is the admin plugin's field on the User (see ADR 0003). The shared
-  // `authClient` is built without the admin *client* plugin, so the inferred
-  // session type omits it; we read it through a narrow local shape rather than
-  // widening the shared client. Mirrors the `beforeLoad` gate on `/admin`, so a
-  // non-admin never sees the entry (the server gates the API regardless).
+  // `role` is omitted from the inferred session type (client built without the
+  // admin plugin), so read it through a narrow local shape.
   const isAdmin = (user as { role?: string | null } | undefined)?.role === "admin";
 
   async function onSignOut() {

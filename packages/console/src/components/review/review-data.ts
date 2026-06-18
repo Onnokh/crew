@@ -1,21 +1,15 @@
-/**
- * Shared shapes and constants for the review surface (the home page). Split out
- * of the route so the page, list, and card components all read the same types
- * and query keys without re-declaring them.
- */
+/** Shared shapes and constants for the review surface. */
 
-/** Centralized query keys, so the mutation can invalidate exactly these lists. */
+/** Query keys for the review lists. */
 export const reviewKeys = {
-  // Keyed by sort so each ordering is its own cache entry and switching sort
-  // refetches the server-ranked list (the popularity orders rank the whole
-  // corpus — see /api/review/recent?sort=). Invalidations target the
+  // Keyed by sort so each ordering is its own cache entry; invalidate the
   // ["review","recent"] prefix to clear every sort at once.
   recent: (sort: SortKey) => ["review", "recent", sort] as const,
   flagged: ["review", "flagged"] as const,
   search: (q: string) => ["review", "search", q] as const,
 };
 
-/** Mirrors the server's `ReviewRow` (packages/server/src/api/review.ts). */
+/** Mirrors the server's `ReviewRow`. */
 export type ReviewRow = {
   id: string;
   title: string;
@@ -31,13 +25,7 @@ export type ReviewRow = {
   views: number;
 };
 
-/**
- * How the browse list is ordered. Mirrors the server's `PostSort`: the recent
- * list is ranked server-side (`/api/review/recent?sort=`) so the popularity
- * orders span the whole corpus, not just the fetched window. The matching
- * client comparators below are used only to re-rank the small, capped flagged
- * set; the recent list arrives already sorted.
- */
+/** How the browse list is ordered. The recent list is ranked server-side; the comparators below only re-rank the flagged set. */
 export type SortKey = "newest" | "views" | "confirms";
 
 export const SORTS: ReadonlyArray<{ key: SortKey; label: string }> = [

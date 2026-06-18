@@ -7,14 +7,10 @@ import { DEFAULT_LIMIT, MAX_LIMIT, retrieve } from "../search/retrieve.js";
 import type { PostRepository } from "../store/repository.js";
 
 /**
- * Zod input schema for the `query` tool. Lives beside the handler — MCP is the
- * type boundary, so these `.describe()` annotations are the product surface the
- * client LLM reads to decide how to call the tool (see TECH.md "Tool input
- * schemas"). FastMCP converts this to JSON Schema and advertises it live.
- *
- * `environment` and `repo` are optional: a query without them still works
- * (ranking just loses signal — they boost, never filter). `limit` defaults to
- * {@link DEFAULT_LIMIT} and is capped at {@link MAX_LIMIT}.
+ * Zod input schema for the `query` tool. The `.describe()` annotations are the
+ * surface the client LLM reads. `environment` and `repo` are optional (they
+ * boost ranking, never filter); `limit` defaults to {@link DEFAULT_LIMIT} and
+ * caps at {@link MAX_LIMIT}.
  */
 export const queryParameters = z.object({
   situation: z
@@ -48,13 +44,9 @@ export const queryParameters = z.object({
 export type QueryArgs = z.infer<typeof queryParameters>;
 
 /**
- * Builds the `query` tool: a thin handler over the retrieval pipeline. It hands
- * the query to `search/retrieve` — which fuses the keyword and vector legs,
- * hydrates, scores by trust/recency/repo, and returns ranked results — then
- * records the view tally on what was surfaced and wraps the results in the
- * guardrail envelope. The pipeline is a pure read; the view write and the
- * rendering are the tool's own side effects, kept visible here at the edge
- * (see TECH.md "Retrieval pipeline").
+ * Builds the `query` tool: a thin handler over the retrieval pipeline. Hands the
+ * query to `search/retrieve`, records the view tally on what was surfaced, and
+ * wraps the results in the guardrail envelope.
  */
 export function makeQueryTool(repo: PostRepository, clock: Clock) {
   return {
@@ -65,15 +57,13 @@ export function makeQueryTool(repo: PostRepository, clock: Clock) {
     execute: async (args: QueryArgs, _context: { session?: User }) => {
       const results = await retrieve(repo, clock, {
         situation: args.situation,
-        // Canonicalise to `group/name` so the same-repo boost matches stored
-        // values, which are normalized the same way on write (see normalizeRepo).
+        // Canonicalise to `group/name` so the same-repo boost matches stored values.
         repo: args.repo ? normalizeRepo(args.repo) : undefined,
         limit: args.limit,
       });
 
-      // Every Post we return was surfaced to an agent — bump its view counter.
-      // Display-only (it never feeds ranking), and recorded after retrieval so it
-      // can't influence the order. A write on the read path, kept at the edge.
+      // Bump the display-only view counter; recorded after retrieval so it can't
+      // influence the order.
       await repo.recordViews(results.map((r) => r.post.id));
 
       return renderResults(results, clock.now());

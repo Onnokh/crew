@@ -6,12 +6,7 @@ import { makeFlagTool } from "../tools/flag.js";
 import { makePostTool } from "../tools/post.js";
 import { makeQueryTool } from "../tools/query.js";
 
-/**
- * Maps the `tools/` handlers onto FastMCP `addTool` calls. This is the only
- * place that knows the MCP wiring; the tools themselves stay framework-agnostic
- * orchestration. Tools that need a seam (e.g. `post` needs the repository)
- * receive it here from {@link Deps}.
- */
+/** Maps the `tools/` handlers onto FastMCP `addTool` calls, wiring in their {@link Deps}. */
 export function registerTools(server: FastMCP<User>, deps: Deps): void {
   server.addTool(makeQueryTool(deps.repo, deps.clock));
   server.addTool(makePostTool(deps.repo));

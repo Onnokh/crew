@@ -3,11 +3,8 @@ import type { User } from "../core/user.js";
 import type { PostRepository } from "../store/repository.js";
 
 /**
- * Zod input schema for the `confirm` tool. Lives beside the handler — MCP is the
- * type boundary resolved at runtime, so these `.describe()` annotations are the
- * product surface the client LLM reads to decide how to call the tool (see
- * TECH.md "Tool input schemas"). A Confirm carries the Post id and an optional
- * one-line Note; attribution comes from the bearer token, not the args.
+ * Zod input schema for the `confirm` tool. The `.describe()` annotations are the
+ * surface the client LLM reads. Attribution comes from the bearer token, not args.
  */
 export const confirmParameters = z.object({
   post_id: z
@@ -26,12 +23,7 @@ export const confirmParameters = z.object({
 
 export type ConfirmArgs = z.infer<typeof confirmParameters>;
 
-/**
- * Builds the `confirm` tool: record a Confirm event ("an agent applied this Post
- * and it worked") against a Post, attributed to the authenticated User, with an
- * optional Note. The repository refreshes the Post's `last_confirmed` so ranking
- * recency lifts it. Pure orchestration — names no concrete implementation.
- */
+/** Builds the `confirm` tool: record a Confirm event against a Post, attributed to the authenticated User. */
 export function makeConfirmTool(repo: PostRepository) {
   return {
     name: "confirm",

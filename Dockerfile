@@ -41,7 +41,7 @@ COPY packages/server/ packages/server/
 
 # Bake the embedding model into the image. Must match the runtime cache dir below.
 ENV CREW_MODEL_CACHE_DIR=/app/models
-RUN cd packages/server && node scripts/fetch-model.mjs
+RUN cd packages/server && npm run bake-model
 
 # ── Console builder: Vite-build the web SPA (pure JS, NO native toolchain) ───────
 # The frontend build needs no C/C++ toolchain (no better-sqlite3 / onnxruntime

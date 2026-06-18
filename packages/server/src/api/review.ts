@@ -11,41 +11,21 @@ function parseSort(value: string | undefined): PostSort {
 }
 
 /**
- * The human review JSON API (slice 0013) — the async backstop for the
- * misinformation loop, rebuilt as JSON after 0010 retired the server-rendered
- * HTML. Mounts under `/api/review/*` on the same Hono app FastMCP exposes. The
- * READS are public — anyone can list recent Posts, list flagged Posts with their
- * confirm/flag/view counts, and search the corpus (the shared memory is open to
- * browse; you don't sign in to read it). The moderation WRITES — retire (drops a
- * Post from agent `query`) and restore — stay behind a session. The repository
- * already exposes every read/write this needs
- * (`listRecentPosts`, `listFlaggedPosts`, `getEventsForPosts`, `retirePost`,
- * `restorePost`); this layer adds the JSON shape the home page consumes, plus a
- * session gate on the two writes. Mounted before `mountConsole` so the SPA
- * catch-all never shadows it (see `server.ts`).
+ * The human review JSON API under `/api/review/*`. Reads (recent, flagged,
+ * search) are public; the moderation writes (retire/restore) sit behind a
+ * session — any signed-in User passes, no role check.
  *
  * Routes:
- *   GET  /api/review/recent   → { posts: ReviewRow[] }  most recent Posts (public)
- *   GET  /api/review/flagged  → { posts: ReviewRow[] }  Posts carrying ≥1 Flag (public)
- *   GET  /api/review/search   → { posts: ReviewRow[] }  ranked exactly as `query` (public)
- *   POST /api/review/:id/retire  → 204  drop from agent `query` results (session)
- *   POST /api/review/:id/restore → 204  bring it back (session)
- *
- * The two writes sit behind one session-auth middleware: ANY signed-in User
- * passes (no role check — this is post-hoc review, not a pre-publish gate);
- * a caller with no session gets 401. The reads carry no gate.
+ *   GET  /api/review/recent   → { posts: ReviewRow[] }  most recent Posts
+ *   GET  /api/review/flagged  → { posts: ReviewRow[] }  Posts carrying ≥1 Flag
+ *   GET  /api/review/search   → { posts: ReviewRow[] }  ranked exactly as `query`
+ *   POST /api/review/:id/retire  → 204  drop from agent `query` results
+ *   POST /api/review/:id/restore → 204  bring it back
  */
 
-/** How many Posts each section lists; a review page wants recency, not the corpus. */
 const LIST_LIMIT = 50;
 
-/**
- * A Post flattened to exactly what the `/review` page renders, with its
- * confirm/flag counts derived from the event log (the same `trust/aggregate`
- * the agent surfaces use — counts are never a stored counter) and its view
- * tally read off the Post's denormalized `views`. The wire is the type boundary
- * (ADR 0004): the console mirrors this shape as its `<T>`, no shared TS package.
- */
+/** A Post flattened to what the `/review` page renders. */
 export type ReviewRow = {
   id: string;
   title: string;
@@ -62,10 +42,7 @@ export type ReviewRow = {
 };
 
 export function mountReview(app: Hono, deps: Deps): void {
-  // The gate for the two moderation writes: resolve the caller's session through
-  // the better-auth instance and refuse anyone without one. No role check — any
-  // signed-in User can moderate (the async human backstop, open to the team).
-  // The reads below sit OUTSIDE this gate: browsing the shared memory is public.
+  // Gate for the writes: any signed-in User passes, no session → 401. Reads are public.
   const requireSession: MiddlewareHandler = async (c, next) => {
     const session = await deps.authInstance.api.getSession({
       headers: c.req.raw.headers,
@@ -74,10 +51,7 @@ export function mountReview(app: Hono, deps: Deps): void {
     await next();
   };
 
-  // The two lists. Each hydrates its Posts into ReviewRows so the page gets the
-  // counts inline (one batched events read per list, never k reads). `recent`
-  // takes a `?sort=newest|views|confirms` (default newest) so the popularity
-  // orders rank across the whole corpus in SQL, not within the fetched window.
+  // `recent` takes `?sort=newest|views|confirms` (default newest), ranked in SQL.
   app.get("/api/review/recent", async (c) =>
     c.json({
       posts: await toRows(
@@ -90,13 +64,7 @@ export function mountReview(app: Hono, deps: Deps): void {
     c.json({ posts: await toRows(deps, await deps.repo.listFlaggedPosts(LIST_LIMIT)) }),
   );
 
-  // Search the corpus exactly the way an agent's `query` tool does: the same
-  // `retrieve` pipeline (keyword + vector legs → RRF → trust/recency/repo
-  // scoring), so the page surfaces and ranks Posts identically to MCP. An empty
-  // `q` yields an empty list rather than the whole corpus — search is opt-in,
-  // the Recent/Flagged tabs already cover "show me everything". `retrieve`
-  // already returns hydrated, ranked results carrying every count a ReviewRow
-  // needs, so this maps them straight across without a second events read.
+  // Search via the same `retrieve` pipeline `query` uses. Empty `q` → empty list.
   app.get("/api/review/search", async (c) => {
     const q = (c.req.query("q") ?? "").trim();
     if (q === "") return c.json({ posts: [] });
@@ -104,14 +72,10 @@ export function mountReview(app: Hono, deps: Deps): void {
       situation: q,
       limit: MAX_LIMIT,
     });
-    // `retrieve` already hydrated and ranked these; flatten each to a ReviewRow
-    // with the same projection the Recent/Flagged lists use.
     return c.json({ posts: results.map(toReviewRow) });
   });
 
-  // The human backstop. Both are idempotent no-ops for an unknown id (the
-  // repository swallows it), so a stale page that retires a vanished Post just
-  // gets a clean 204.
+  // Idempotent no-ops for an unknown id (the repository swallows it).
   app.post("/api/review/:id/retire", requireSession, async (c) =>
     retire(c, deps, true),
   );
@@ -129,24 +93,13 @@ async function retire(c: Context, deps: Deps, retired: boolean): Promise<Respons
   return c.body(null, 204);
 }
 
-/**
- * Hydrate a list of Posts into {@link ReviewRow}s through the shared
- * `read/hydrate` assembly — the one place that resolves author names and derives
- * confirm/flag counts from the event log (the same path the `query` tool uses, so
- * the page and MCP can never drift on "how a Post's counts are computed"). Each
- * hydrated Post is then flattened to the wire shape by {@link toReviewRow}.
- */
+/** Hydrate Posts (author names + event-log counts) then flatten to {@link ReviewRow}s. */
 async function toRows(deps: Deps, posts: Post[]): Promise<ReviewRow[]> {
   const hydrated = await hydratePosts(deps.repo, posts);
   return hydrated.map(toReviewRow);
 }
 
-/**
- * Flatten a hydrated Post — from `hydratePosts` (the lists) or `retrieve` (the
- * search route), which share the `{ post, authorName, confirms, flags, views }`
- * shape — into the flat {@link ReviewRow} the page renders. The single projection
- * both surfaces build their wire rows with.
- */
+/** Flatten a hydrated Post (from `hydratePosts` or `retrieve`) into a {@link ReviewRow}. */
 function toReviewRow(h: {
   post: Post;
   authorName: string;

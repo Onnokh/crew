@@ -1,33 +1,19 @@
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 /**
- * Drizzle TABLE definitions — NOT the tools' zod input schemas (a different
- * concern; see TECH.md "Two unrelated schemas"). drizzle-kit reads this file to
- * generate migrations, so it must stay inside `packages/server` and never move
- * to a shared package. It defines `posts` and `post_events`; the hand-written
- * FTS5/vec0 virtual tables live in `migrations/` (drizzle-kit does not model
- * virtual tables).
- *
- * The identity store is deliberately ABSENT here: better-auth owns the `user`
- * table (and session/account/verification/apikey), created by the hand-written
- * `migrations/0000_better_auth.sql` — keeping its tables out of this file means
- * drizzle-kit never tries to manage them (see ADR 0003 and TECH.md data model).
- * `created_by` is therefore a plain text column here; the foreign key into
- * `user(id)` is declared in the SQL migration, not via Drizzle `.references()`
- * (which only feeds migration generation we don't use for that FK).
- *
- * The store knows SQL only — it imports no ranking, search, or trust code.
+ * Drizzle TABLE definitions for `posts` and `post_events`. drizzle-kit reads
+ * this file to generate migrations, so it must stay inside `packages/server`.
+ * The FTS5/vec0 virtual tables and better-auth's `user` table are deliberately
+ * absent (kept in hand-written migrations so drizzle-kit doesn't manage them);
+ * `created_by`'s FK into `user(id)` is declared in SQL, not via `.references()`.
  */
 
 /** One stored item of shared agent knowledge. */
 export const posts = sqliteTable("posts", {
   id: text("id").primaryKey(),
   /**
-   * Short human title — a scannable label for the review console and query
-   * results, distinct from the situation (the question / retrieval key). Nullable
-   * in the DB only because it was added by migration 0006 to a table with
-   * existing rows (see that migration); always written for new Posts and
-   * coalesced to `situation` on read for legacy rows.
+   * Short human title, distinct from the situation. Nullable only because it was
+   * added to a table with existing rows; coalesced to `situation` for legacy rows.
    */
   title: text("title"),
   situation: text("situation").notNull(),
@@ -44,14 +30,10 @@ export const posts = sqliteTable("posts", {
   createdAt: integer("created_at").notNull(),
   /**
    * Denormalized timestamp of the most recent Confirm (unix ms); null until a
-   * Post is confirmed. Source of truth is `post_events` (a later slice).
+   * Post is confirmed. Source of truth is `post_events`.
    */
   lastConfirmed: integer("last_confirmed"),
-  /**
-   * How many times `query` has surfaced this Post — a display-only popularity
-   * counter, NOT a trust signal. Incremented on each surfacing (see
-   * migrations/0005); never feeds ranking.
-   */
+  /** Display-only popularity counter (times `query` surfaced this Post); never feeds ranking. */
   views: integer("views").notNull().default(0),
 });
 

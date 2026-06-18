@@ -9,12 +9,6 @@ import { FakeClock, FakeEmbedder, FakeIdGen } from "../test/fakes.js";
 import { seedUser } from "../test/seed-user.js";
 import { retrieve } from "./retrieve.js";
 
-/**
- * The retrieval pipeline tested directly over the real store (FTS5 + sqlite-vec)
- * with the deterministic fake embedder — the test surface the extraction unlocks.
- * Before, this ranking behaviour was reachable only through the full MCP boot.
- */
-
 let raw: Database.Database;
 let clock: FakeClock;
 let repo: SqliteRepository;
@@ -53,8 +47,7 @@ describe("retrieve", () => {
       situation: "completely unrelated quantum entanglement",
       limit: 5,
     });
-    // The fake embedder still returns vector neighbours, but an all-miss query
-    // against a one-Post corpus may surface it; assert the shape, not emptiness.
+    // Vector neighbours may surface the one Post, so assert shape not emptiness.
     expect(Array.isArray(results)).toBe(true);
   });
 
@@ -101,8 +94,7 @@ describe("retrieve", () => {
   });
 
   it("over-fetches so trust can lift a lower-relevance Post into the top result", async () => {
-    // `exact` matches every query token; `weaker` matches a subset, so it ranks
-    // lower on pure relevance — but several confirms must lift it to the top.
+    // `weaker` ranks lower on relevance but several confirms must lift it to the top.
     const exact = await post({ situation: "typescript build fails on ci" });
     const weaker = await post({ situation: "typescript build" });
     for (let i = 0; i < 4; i++) {

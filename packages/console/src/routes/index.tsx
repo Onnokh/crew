@@ -2,14 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppChrome } from "../components/app-chrome/app-chrome";
 import { ReviewPage } from "../components/review/review-page";
 
-/**
- * The home page (slice 0013) — the async human backstop for the misinformation
- * loop, and the public face of the shared memory. Browsing and searching are
- * PUBLIC (no sign-in — this is the root `/` route, not under the `_authed`
- * guard), so the page supplies its own {@link AppChrome} (the `_authed` layout
- * that wraps the other pages in chrome never runs for `/`). The review surface
- * itself lives in {@link ReviewPage}.
- */
+/** Public home page. Outside the `_authed` guard, so it supplies its own {@link AppChrome}. */
 export const Route = createFileRoute("/")({
   component: HomePage,
 });

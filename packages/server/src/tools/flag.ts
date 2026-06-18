@@ -3,11 +3,8 @@ import type { User } from "../core/user.js";
 import type { PostRepository } from "../store/repository.js";
 
 /**
- * Zod input schema for the `flag` tool. Lives beside the handler — MCP is the
- * type boundary resolved at runtime, so these `.describe()` annotations are the
- * product surface the client LLM reads (see TECH.md "Tool input schemas"). A
- * Flag requires a reason from the closed set so a future agent knows whether the
- * Post was wrong, out of date, or a duplicate; the Note is optional detail.
+ * Zod input schema for the `flag` tool. The `.describe()` annotations are the
+ * surface the client LLM reads. A Flag requires a reason from the closed set.
  */
 export const flagParameters = z.object({
   post_id: z
@@ -31,13 +28,7 @@ export const flagParameters = z.object({
 
 export type FlagArgs = z.infer<typeof flagParameters>;
 
-/**
- * Builds the `flag` tool: record a Flag event ("an agent applied this Post and
- * it failed, or it was stale/duplicate") against a Post, attributed to the
- * authenticated User, carrying a required reason and an optional Note. Flags
- * weigh double a Confirm in trust, so a flagged Post sinks in future rankings.
- * Pure orchestration — names no concrete implementation.
- */
+/** Builds the `flag` tool: record a Flag event against a Post, attributed to the authenticated User. */
 export function makeFlagTool(repo: PostRepository) {
   return {
     name: "flag",

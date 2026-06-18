@@ -30,16 +30,11 @@ export type TestEnv = {
 };
 
 /**
- * Assemble a real {@link Deps} backed by REAL better-auth over an in-memory
- * SQLite — the same store and auth seam `main.ts` runs in production, with only
- * the embedder, clock, and id generator faked (a `:memory:` SQLite needs no file
- * and the fake embedder skips the 30 MB model download). There is deliberately
- * no fake repository or fake authenticator: the integration test must exercise
- * the real FTS5 + sqlite-vec path AND the real api-key verification seam.
- *
- * Seeds one User through better-auth's email sign-up and mints an agent API key
- * bound to it, so an MCP client can authenticate with a genuine Bearer key and
- * persisted Posts attribute to a real `user(id)` (see ADR 0003).
+ * Assemble a real {@link Deps} backed by real better-auth over an in-memory
+ * SQLite — the same store and auth seam `main.ts` runs, with only the embedder,
+ * clock, and id generator faked. No fake repository or authenticator: the
+ * integration test exercises the real FTS5 + sqlite-vec path AND the real
+ * api-key verification seam. Seeds one User and mints a bound agent API key.
  */
 export async function buildTestEnv(): Promise<TestEnv> {
   const raw = new Database(":memory:");

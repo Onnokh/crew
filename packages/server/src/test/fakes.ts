@@ -2,19 +2,8 @@ import type { Embedder } from "../embedding/embedder.js";
 import type { Clock } from "../platform/clock.js";
 import type { IdGen } from "../platform/id-gen.js";
 
-/**
- * Test doubles for every injected seam, gathered in one place under `test/`.
- *
- * These are test-only fixtures, not alternative production implementations — so
- * they live with the tests, never beside shipping code. Each is minimal and
- * behaviourless enough that it cannot drift from the real thing: a clock that
- * returns a fixed time, an id counter, and a deterministic embedder that exists
- * only because the real one downloads a 30 MB model. The store AND the
- * authenticator are never faked — integration tests run the real store over
- * `:memory:` and the real better-auth seam (see harness.ts). The interface +
- * real implementation for each seam stay colocated in `src/<seam>/`; only these
- * fakes moved here.
- */
+// Test doubles for the injected seams. The store and authenticator are never
+// faked — integration tests run the real ones over `:memory:`.
 
 /** {@link Clock} double: a fixed, advanceable time so tests assert ordering. */
 export class FakeClock implements Clock {
@@ -48,19 +37,12 @@ export class FakeIdGen implements IdGen {
 }
 
 /**
- * Deterministic {@link Embedder} double — never downloads the 30 MB model (see
- * TECH.md "Tests use a deterministic fake embedder"). It hashes a text's concept
- * tokens into a fixed-dimension bag-of-concepts vector and L2-normalizes it, so
- * the same text always yields the same vector and texts sharing concepts land
- * near each other under cosine distance — enough to exercise the vector leg and
- * RRF fusion end to end without ONNX.
- *
- * To exercise the "paraphrase with no keyword overlap still finds the Post"
- * criterion deterministically, tokens are first mapped through a tiny synonym
- * table to a canonical concept (e.g. `crash`/`throws` → `failure`), so a query
- * phrased with different words than the Post still hashes onto the same
- * dimensions. This is a stand-in for the real model's semantic space, not a
- * model of it.
+ * Deterministic {@link Embedder} double — never downloads the 30 MB model. It
+ * hashes a text's concept tokens into a fixed-dimension bag-of-concepts vector
+ * and L2-normalizes it, so the same text always yields the same vector and texts
+ * sharing concepts land near each other under cosine distance. Tokens are mapped
+ * through a tiny synonym table first so a paraphrase still hashes onto the same
+ * dimensions. A stand-in for the real model's semantic space, not a model of it.
  */
 export class FakeEmbedder implements Embedder {
   readonly modelName: string;
@@ -92,11 +74,8 @@ function tokenize(text: string): string[] {
   return (text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []) as string[];
 }
 
-/**
- * Collapse known synonyms onto a shared concept token so a paraphrase with no
- * literal keyword overlap still embeds near the original. Deliberately tiny —
- * it only needs to cover the words the tests paraphrase between.
- */
+// Collapse known synonyms onto a shared concept token so a paraphrase still
+// embeds near the original. Only covers the words the tests paraphrase between.
 const SYNONYMS: Record<string, string> = {
   crash: "failure",
   crashes: "failure",

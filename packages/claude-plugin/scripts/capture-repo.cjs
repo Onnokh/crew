@@ -1,16 +1,11 @@
 #!/usr/bin/env node
 // crew PreToolUse hook — deterministic repo capture.
 //
-// When the model calls crew's `post` (or `query`) tool, overwrite the `repo`
-// argument with the working copy's ACTUAL git remote, so the value comes from
-// git rather than being guessed by the model. The server then canonicalises it
-// to `group/name` (see normalizeRepo in packages/server). If the call isn't
-// inside a git repo with an `origin` remote, it's left unchanged so any
-// model-supplied value still stands.
-//
-// Pure Node (no jq) so it runs anywhere Claude Code does. It reads the hook
-// payload on stdin and, to mutate the call, prints a PreToolUse decision whose
-// `updatedInput` is the full original tool input with `repo` replaced.
+// On a `post`/`query` call, overwrite the `repo` argument with the working
+// copy's actual git remote so the value comes from git, not the model. Left
+// unchanged when not in a git repo with an `origin` remote, so any
+// model-supplied value still stands. Reads the hook payload on stdin and prints
+// a PreToolUse decision whose `updatedInput` is the input with `repo` replaced.
 const { execFileSync } = require("node:child_process");
 
 let raw = "";

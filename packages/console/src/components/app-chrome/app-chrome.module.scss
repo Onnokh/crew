@@ -1,13 +1,6 @@
-// Colocated styles for the signed-in chrome (CSS Modules — ADR 0004). Tokens are
-// shared; component layout is local. Light editorial theme: a narrow centered
-// content column flanked by faint hatched gutters (the diagonal-stripe margins
-// from the reference design), with the only chrome a small actions cluster
-// pinned to the top-right of the content, between the rails.
 @use "../../styles/tokens" as *;
 
-// Two nested widths, mirroring the reference: the panel is the outer main area;
-// the text column (measure) is narrower and centered within it, so content sits
-// in a comfortable measure with extra horizontal air before the rails.
+// Panel is the outer main area; measure is the narrower centered text column.
 $panel: 63.75rem; // 1020px
 $measure: 57.5rem; // 920px
 
@@ -18,9 +11,6 @@ $measure: 57.5rem; // 920px
   background: $color-bg;
 }
 
-// Right-side cluster: the theme toggle sitting just before the sign-in / account
-// control, kept on one baseline and pushed to the top-right of the content
-// column (constrained to the measure so it lines up with the page content).
 .actions {
   display: flex;
   align-items: center;
@@ -30,8 +20,7 @@ $measure: 57.5rem; // 920px
   margin: 0 auto $space-xl;
 }
 
-// The brand sits at the left of the actions row; `margin-right: auto` pushes
-// the rest of the cluster (theme toggle + account) to the right edge.
+// `margin-right: auto` pushes the rest of the cluster to the right edge.
 .brand {
   margin-right: auto;
   color: $color-text;
@@ -146,9 +135,6 @@ $measure: 57.5rem; // 920px
   }
 }
 
-// A centered frame: the content column flanked by two narrow rails of diagonal
-// stripes with dashed inner/outer edges (the reference design's side margins).
-// The rails are decorative and only appear on wide viewports.
 .main {
   flex: 1;
   display: flex;
@@ -192,8 +178,6 @@ $measure: 57.5rem; // 920px
   background: $color-bg;
 }
 
-// The text column: narrower than the panel and centered, so there is extra
-// horizontal breathing room inside the panel (the reference's 660-in-760).
 .measure {
   max-width: $measure;
   margin: 0 auto;

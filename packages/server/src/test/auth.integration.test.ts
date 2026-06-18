@@ -10,14 +10,6 @@ import { SqliteRepository } from "../store/sqlite-repository.js";
 import { FakeClock, FakeEmbedder, FakeIdGen } from "./fakes.js";
 import { connect, startTestServer, type RunningServer } from "./harness.js";
 
-/**
- * The auth seam, end to end against REAL better-auth (see ADR 0003). The MCP loop
- * test (loop.integration) already proves the agent API-key path through a booted
- * server; this file pins the two things that path doesn't touch: the human
- * session branch of the {@link BetterAuthAuthenticator} seam, and that
- * better-auth's own routes mount on the Hono app without colliding with `/mcp`.
- */
-
 /** A request the seam can read, carrying just the headers under test. */
 function reqWith(headers: Record<string, string>): IncomingMessage {
   return { headers } as unknown as IncomingMessage;
@@ -47,8 +39,7 @@ describe("BetterAuthAuthenticator resolves both caller shapes", () => {
     });
     authn = new BetterAuthAuthenticator(auth, repo);
 
-    // Seed a first admin exactly as main.ts does: sign up, then promote the row
-    // directly (the very first admin can't go through the admin-gated API).
+    // Seed a first admin: sign up, then promote the row directly.
     const signUp = await auth.api.signUpEmail({
       body: { email: "boss@test.local", password: "password1234", name: "Boss" },
     });
@@ -96,8 +87,6 @@ describe("better-auth routes mount on the Hono app beside /mcp", () => {
   afterAll(() => srv.stop());
 
   it("serves better-auth's sign-in route without /mcp shadowing it", async () => {
-    // The harness seeds Alice with this password; a successful sign-in proves the
-    // /api/auth/* handler is reachable and distinct from the MCP endpoint.
     const res = await fetch(`http://localhost:${srv.port}/api/auth/sign-in/email`, {
       method: "POST",
       headers: { "content-type": "application/json" },

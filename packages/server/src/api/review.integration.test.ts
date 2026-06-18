@@ -7,22 +7,6 @@ import {
   type RunningServer,
 } from "../test/harness.js";
 
-/**
- * Integration test for the review JSON API (slice 0013) — the JSON successor to
- * the server-rendered `/review` integration test 0010 deleted. Drives the REAL
- * Hono app FastMCP exposes (real store over `:memory:`, real better-auth, fake
- * embedder — no model download), exercising what can only be observed through the
- * HTTP boundary: that the reads are public while the writes sit behind the
- * session seam (401 without a cookie), that the lists carry correct
- * confirm/flag/view counts, and that retire/restore actually move a Post in and
- * out of agent `query` results.
- *
- * Posts are seeded and the retire/restore effect is confirmed back through the
- * MCP `query` tool, proving the review surface and the agent surface share one
- * store. The human session cookie is minted through better-auth's email sign-in
- * (the harness seeds Alice with a known password), the same path the console's
- * login flow drives in production.
- */
 describe("review JSON API: public lists + session-gated retire/restore", () => {
   let srv: RunningServer;
   let base: string;
@@ -48,7 +32,7 @@ describe("review JSON API: public lists + session-gated retire/restore", () => {
     expect(res.status).toBe(200);
     const setCookie = res.headers.get("set-cookie") ?? "";
     expect(setCookie).toBeTruthy();
-    // Reduce "better-auth.session_token=<v>; Path=/; ..." to the name=value pair.
+    // Reduce the Set-Cookie header to its name=value pair.
     return setCookie.split(";")[0]!;
   }
 

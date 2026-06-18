@@ -10,27 +10,13 @@ import { pinOrCheckEmbeddingModel } from "./store/meta.js";
 import { SqliteRepository } from "./store/sqlite-repository.js";
 import { buildServer } from "./server.js";
 
-/**
- * Real entry point: assemble real implementations, hand them to the single
- * composition root, and start the server over streamable HTTP in stateless mode.
- * Migrations run on open (creating better-auth's tables from
- * `migrations/0000_better_auth.sql` plus our posts/post_events), the repository
- * persists Posts and resolves author names, and the platform Clock/IdGen seams
- * stamp ids and timestamps.
- *
- * Identity is better-auth's now (see ADR 0003): agents authenticate with API
- * keys, humans with email + password. The only bootstrap is the FIRST admin,
- * seeded from `CREW_ADMIN_EMAIL`/`CREW_ADMIN_PASSWORD`; every other User and key is
- * provisioned through the admin console. The old `CREW_TOKENS` seeding is gone.
- */
 async function buildRealDeps(port: number): Promise<Deps> {
   const dbPath = process.env.CREW_DB_PATH ?? "crew.db";
   const { db, raw } = openDatabase(dbPath);
   const clock = new SystemClock();
 
-  // Load the pinned embedding model and reconcile it with the corpus: a first
-  // boot records the model name, a later boot with a different model refuses to
-  // start (all stored vectors must come from one model to be comparable).
+  // All stored vectors must come from one model to be comparable: first boot
+  // records the model name, a later boot with a different model refuses to start.
   const embedder = await FastEmbedder.create(process.env.CREW_MODEL_CACHE_DIR);
   pinOrCheckEmbeddingModel(raw, embedder.modelName);
 
@@ -41,8 +27,7 @@ async function buildRealDeps(port: number): Promise<Deps> {
   const authInstance = createAuth(raw, {
     secret: requireSecret(),
     baseURL: process.env.CREW_BASE_URL ?? `http://localhost:${port}`,
-    // Comma-separated extra origins (e.g. the Vite dev console). Unset in
-    // same-origin production, where `baseURL`'s origin is already trusted.
+    // Comma-separated extra origins (e.g. the Vite dev console).
     trustedOrigins: process.env.CREW_TRUSTED_ORIGINS?.split(",")
       .map((o) => o.trim())
       .filter(Boolean),
@@ -57,11 +42,7 @@ async function buildRealDeps(port: number): Promise<Deps> {
   };
 }
 
-/**
- * The session-signing secret. Required in production — a missing or trivially
- * short secret would make sessions forgeable, so we refuse to boot rather than
- * fall back to a default.
- */
+// A missing or short secret makes sessions forgeable, so refuse to boot.
 function requireSecret(): string {
   const secret = process.env.CREW_AUTH_SECRET;
   if (!secret || secret.length < 32) {
@@ -73,13 +54,8 @@ function requireSecret(): string {
   return secret;
 }
 
-/**
- * Seed the first Admin so an operator can sign into the console on a fresh
- * database. Idempotent: if a User already owns the configured email we only
- * ensure its role is `admin` (the very first admin can't be promoted through the
- * admin-gated API — there is no admin yet — so we set the role directly on the
- * row). Skipped with a warning if the env vars are absent.
- */
+// Seed the first admin on a fresh database. Idempotent; the first admin can't be
+// promoted through the admin-gated API, so set the role directly on the row.
 async function seedFirstAdmin(auth: Auth, raw: Database): Promise<void> {
   const email = process.env.CREW_ADMIN_EMAIL;
   const password = process.env.CREW_ADMIN_PASSWORD;
@@ -109,9 +85,7 @@ async function seedFirstAdmin(auth: Auth, raw: Database): Promise<void> {
   console.log(`Seeded first admin: ${email}`);
 }
 
-// 8087 is the canonical local port — it matches the claude-plugin connect URL
-// (packages/claude-plugin → http://localhost:8087/mcp). The Docker image overrides
-// this with PORT=8080 internally and publishes it on the host as 8087.
+// 8087 is the canonical local port, matching the claude-plugin connect URL.
 const port = Number(process.env.PORT ?? 8087);
 const server = buildServer(await buildRealDeps(port));
 

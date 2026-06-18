@@ -5,12 +5,8 @@ import { scanPost } from "../guardrails/scan.js";
 import type { PostRepository } from "../store/repository.js";
 
 /**
- * Zod input schema for the `post` tool. Lives beside the handler — MCP is the
- * type boundary resolved at runtime, so these `.describe()` annotations are the
- * product surface the client LLM reads to decide how to call the tool (see
- * TECH.md "Tool input schemas"). Every field carries a description; all four
- * are required because environment and repo are part of the artifact, not
- * optional hints (unlike on `query`).
+ * Zod input schema for the `post` tool. The `.describe()` annotations are the
+ * surface the client LLM reads. All fields are required (unlike on `query`).
  */
 export const postParameters = z.object({
   title: z
@@ -49,16 +45,8 @@ export type PostArgs = z.infer<typeof postParameters>;
 
 /**
  * Builds the `post` tool: validate input, attribute it to the authenticated
- * User resolved from the bearer token (`context.session`), persist a Post via
- * the repository, and confirm back with the new id. The repository stamps the
- * id and creation timestamp; this handler is pure orchestration and names no
- * concrete implementation.
- *
- * Before persisting, the submission runs through the ingestion guardrail
- * (`guardrails/scan`): a Post's text is later inserted into other agents'
- * contexts, so a stored secret leaks with distribution and a stored injection
- * is an attack with persistence. A rejection becomes a clear tool error and the
- * Post never reaches the store.
+ * User, run it through the ingestion guardrail, and persist a Post. A guardrail
+ * rejection becomes a tool error and the Post never reaches the store.
  */
 export function makePostTool(repo: PostRepository) {
   return {
@@ -69,19 +57,15 @@ export function makePostTool(repo: PostRepository) {
     execute: async (args: PostArgs, context: { session?: User }) => {
       const user = context.session;
       if (!user) {
-        // Defensive: buildServer's authenticate hook rejects unauthenticated
-        // requests before reaching here, so a missing session is a wiring bug.
+        // Defensive: the authenticate hook rejects unauthenticated requests first.
         throw new Error("Unauthorized: no authenticated user on the session");
       }
 
-      // Canonicalise the repo to its `group/name` tail before storing, so the
-      // corpus is consistent no matter what form a client sends (full URL, ssh
-      // remote, bare slug — see normalizeRepo). The plugin's PreToolUse hook
-      // feeds the raw git remote; this is what makes it uniform.
+      // Canonicalise the repo to `group/name` so stored values are uniform
+      // whatever form the client sends (full URL, ssh remote, bare slug).
       const normalizedRepo = normalizeRepo(args.repo);
 
-      // Ingestion guardrail: reject obvious secrets/PII and prompt-injection
-      // before anything is stored, so the corpus other agents read stays clean.
+      // Reject secrets/PII and prompt-injection before anything is stored.
       const scan = scanPost({
         title: args.title,
         situation: args.situation,

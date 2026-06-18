@@ -7,31 +7,13 @@ import {
   type RunningServer,
 } from "../test/harness.js";
 
-/**
- * The admin user-management API end to end against the REAL booted server — real
- * better-auth over an in-memory SQLite, driven over HTTP exactly as the console
- * SPA drives it (session cookie) and exactly as an agent drives `/mcp` (Bearer
- * key). The harness seeds one ordinary User ("alice"); each leg promotes a fresh
- * admin and signs in to obtain the cookie the role gate reads.
- *
- * What this pins, per the slice's acceptance criteria (issue 0012):
- *  - the API is reachable only to `role === 'admin'` (401 with no session, 403
- *    for a signed-in non-admin);
- *  - creating a User from an email returns a one-time password;
- *  - the listing shows Users with role + api-key counts;
- *  - a freshly minted key lets an agent authenticate and `post`, revoking it
- *    stops that, and the count tracks both;
- *  - banning a User stops its login AND its keys while authored Posts survive.
- */
-
 /** Boot a server and promote a brand-new admin, returning the cookie to gate on. */
 async function bootWithAdmin(): Promise<{
   srv: RunningServer;
   cookie: string;
 }> {
   const env = await buildTestEnv();
-  // Seed the first admin exactly as main.ts does: sign up, then promote the row
-  // directly (the very first admin can't go through the admin-gated API).
+  // Sign up, then promote the row directly (the first admin can't use the gated API).
   const signUp = await env.auth.api.signUpEmail({
     body: { email: "boss@test.local", password: "password1234", name: "Boss" },
   });
@@ -80,8 +62,7 @@ describe("admin API is role-gated", () => {
   });
 
   it("refuses a signed-in non-admin (403)", async () => {
-    // The harness's seeded "alice" is an ordinary User (role null). Sign her in
-    // and replay her cookie: the gate must reject on role, not on session.
+    // Seeded "alice" is an ordinary User: the gate must reject on role, not session.
     const res = await srv.env.auth.api.signInEmail({
       body: { email: "alice@test.local", password: "password1234" },
       asResponse: true,
@@ -119,7 +100,7 @@ describe("create User returns a one-time password and appears in the listing", (
     expect(payload.password).toBeTruthy();
     expect(payload.password.length).toBeGreaterThanOrEqual(16);
 
-    // The password is shown exactly once: it is never returned by the listing.
+    // The password is never returned by the listing.
     const list = await adminFetch(srv, cookie, "/users");
     const { users } = (await list.json()) as {
       users: Array<{ email: string; role: string | null; keys: unknown[] }>;

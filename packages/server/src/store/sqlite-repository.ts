@@ -19,16 +19,9 @@ import { postEvents, posts } from "./schema.js";
 import type { PostRow } from "./schema.js";
 
 /**
- * Drizzle/SQLite-backed {@link PostRepository}. Knows SQL and the table shapes
- * only; it stamps a fresh id (via {@link IdGen}) and creation time (via
- * {@link Clock}) onto each new Post and persists it. Keyword search runs raw
- * FTS5 (via {@link keywordSearch}) and returns raw candidates; ranking lives in
- * `search`, never here.
- *
- * It holds both the Drizzle wrapper (CRUD) and the raw better-sqlite3 handle
- * (FTS5/vec0 virtual-table queries Drizzle cannot model) over the same
- * connection, plus the {@link Embedder} so write-time and query-time vectors
- * both come from the one pinned model.
+ * Drizzle/SQLite-backed {@link PostRepository}. Holds the Drizzle wrapper (CRUD)
+ * and the raw better-sqlite3 handle (FTS5/vec0 virtual-table queries) over one
+ * connection, plus the {@link Embedder} shared by write- and query-time vectors.
  */
 export class SqliteRepository implements PostRepository {
   constructor(
@@ -42,8 +35,7 @@ export class SqliteRepository implements PostRepository {
   async createPost(input: NewPost): Promise<Post> {
     const post: Post = {
       id: this.idGen.next("post"),
-      // Title is required at the tool boundary; here it falls back to the
-      // situation so test/legacy callers that omit it still produce a valid Post.
+      // Falls back to situation so callers that omit title still produce a valid Post.
       title: input.title ?? input.situation,
       situation: input.situation,
       body: input.body,
@@ -56,12 +48,9 @@ export class SqliteRepository implements PostRepository {
       views: 0,
     };
 
-    // Embed BEFORE the transaction: embedding is async and can throw, and a
-    // Post with no vector is invisible to half of retrieval — so if either
-    // embed fails the whole write fails loudly and nothing is persisted
-    // (see TECH.md "fail the write loudly"). The embedder cannot be injected
-    // into a sync better-sqlite3 transaction, so we resolve both vectors first
-    // then write the row and its vectors atomically.
+    // Embed BEFORE the transaction: the embedder is async and can't run inside a
+    // sync better-sqlite3 transaction, so resolve both vectors first, then write
+    // the row and vectors atomically. A failed embed throws and persists nothing.
     const [situationEmbedding, environmentEmbedding] = await Promise.all([
       this.embedder.embed(post.situation),
       this.embedder.embed(post.environment),
@@ -106,8 +95,7 @@ export class SqliteRepository implements PostRepository {
     };
 
     this.raw.transaction(() => {
-      // The Post must exist — an event has to anchor to a real Post. The FK
-      // would also catch this, but checking gives a clear error and lets us
+      // The Post must exist — explicit check gives a clear error and lets us
       // refresh last_confirmed conditionally in the same transaction.
       const exists = this.db
         .select({ id: posts.id })
@@ -131,8 +119,8 @@ export class SqliteRepository implements PostRepository {
         })
         .run();
 
-      // A Confirm refreshes the denormalized last_confirmed so ranking recency
-      // lifts the Post; the event log remains the source of truth.
+      // A Confirm refreshes the denormalized last_confirmed; the event log
+      // remains the source of truth.
       if (event.verdict === "confirm") {
         this.db
           .update(posts)
@@ -151,9 +139,7 @@ export class SqliteRepository implements PostRepository {
 
   async recordViews(postIds: readonly string[]): Promise<void> {
     if (postIds.length === 0) return;
-    // One batched UPDATE: bump the display-only counter for every surfaced Post.
-    // No event row and no existence check — a missing id simply matches nothing,
-    // and the count never feeds ranking, so this stays a cheap single statement.
+    // One batched UPDATE; missing ids match nothing. No event, never feeds ranking.
     const placeholders = postIds.map(() => "?").join(", ");
     this.raw
       .prepare(`UPDATE posts SET views = views + 1 WHERE id IN (${placeholders})`)
@@ -164,11 +150,9 @@ export class SqliteRepository implements PostRepository {
     limit: number,
     sort: PostSort = "newest",
   ): Promise<Post[]> {
-    // "Most confirmed" orders by a per-Post count over the event log (confirms
-    // are events, never a column — see trust/aggregate), so it needs a LEFT JOIN
-    // aggregate that Drizzle's typed builder doesn't express cleanly; raw SQL,
-    // like listFlaggedPosts. `newest` and `views` are plain column sorts. All
-    // three keep `id DESC` as a stable tiebreaker, and rank across every Post.
+    // "Most confirmed" counts confirm events per Post via a LEFT JOIN aggregate
+    // (raw SQL, like listFlaggedPosts); `newest`/`views` are plain column sorts.
+    // All keep `id DESC` as a stable tiebreaker.
     if (sort === "confirms") {
       const rows = this.raw
         .prepare(
@@ -226,10 +210,8 @@ export class SqliteRepository implements PostRepository {
   }
 
   async listFlaggedPosts(limit: number): Promise<Post[]> {
-    // A Post is "flagged" if it has at least one flag event; order by its most
-    // recent flag (newest-flagged first). Raw SQL because the ordering key is a
-    // per-Post aggregate over post_events that Drizzle's typed builder doesn't
-    // express cleanly; the store still returns plain Posts, no counts.
+    // A Post is "flagged" if it has at least one flag event; ordered newest-
+    // flagged first. Raw SQL because the ordering key is a per-Post aggregate.
     const rows = this.raw
       .prepare(
         `SELECT p.id, p.title, p.situation, p.body, p.environment, p.repo, p.status,
@@ -289,9 +271,8 @@ export class SqliteRepository implements PostRepository {
   }
 
   async getUser(id: string): Promise<User | null> {
-    // better-auth owns the `user` table, so this reads it with raw SQL rather
-    // than a Drizzle model (keeping the auth tables out of store/schema.ts —
-    // see ADR 0003). Quoted identifier because `user` is a SQL keyword.
+    // Raw SQL because better-auth owns the `user` table (kept out of schema.ts).
+    // Quoted identifier because `user` is a SQL keyword.
     const row = this.raw
       .prepare(`SELECT id, name, role FROM "user" WHERE id = ?`)
       .get(id) as { id: string; name: string; role: string | null } | undefined;
@@ -330,7 +311,7 @@ function fromEventRow(row: PostEventRow): PostEvent {
 function fromRow(row: PostRow): Post {
   return {
     id: row.id,
-    // Legacy rows (pre-0006) have a null title; fall back to the situation.
+    // Legacy rows have a null title; fall back to the situation.
     title: row.title ?? row.situation,
     situation: row.situation,
     body: row.body,

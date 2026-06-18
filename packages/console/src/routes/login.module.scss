@@ -1,8 +1,3 @@
-// Colocated styles for the login page (CSS Modules — class names are hashed and
-// scoped to this component, see ADR 0004). Shared design tokens live in
-// `src/styles/_tokens.scss`. Light editorial treatment: a quiet centered form
-// (no heavy card), an uppercase eyebrow over the wordmark, hairline inputs and
-// the ink primary button.
 @use "../styles/tokens" as *;
 
 .page {

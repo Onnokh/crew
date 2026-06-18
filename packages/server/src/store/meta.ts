@@ -4,17 +4,8 @@ import type { Database } from "better-sqlite3";
 export const EMBEDDING_MODEL_KEY = "embedding_model";
 
 /**
- * Pin the embedding model name on first boot, or assert it matches on every
- * later boot. All stored vectors must come from one model to be comparable, so
- * a mismatch means the corpus is unusable with this embedder and the server must
- * refuse to start (see TECH.md "Embeddings", ADR 0001).
- *
- * - First boot (no pin yet): record `modelName`.
- * - Later boot, same name: no-op.
- * - Later boot, different name: throw — the operator must re-embed the corpus or
- *   restore the original model before the server can serve comparable results.
- *
- * Pure SQL on the raw handle, kept in `store` because it owns the `meta` table.
+ * Pin the embedding model name on first boot, or throw on a later boot if it
+ * differs. All stored vectors must come from one model to be comparable.
  */
 export function pinOrCheckEmbeddingModel(
   raw: Database,

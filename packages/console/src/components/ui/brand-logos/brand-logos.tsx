@@ -1,10 +1,4 @@
-/**
- * Brand logos for the agent-setup tabs (Claude, OpenCode, Cursor). The path data
- * is the official mark from Simple Icons (simpleicons.org); each renders as a
- * monochrome glyph using `currentColor`, so it inherits the tab pill's text
- * colour and tracks the muted→inked active state like the lucide icons it
- * replaced. Sizing mirrors the lucide `size` prop.
- */
+/** Monochrome brand logos (Simple Icons) for the agent-setup tabs; render via `currentColor`. */
 type LogoProps = { size?: number };
 
 function svgProps(size: number) {

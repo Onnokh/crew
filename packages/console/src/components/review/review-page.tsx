@@ -22,29 +22,7 @@ import {
 } from "./review-data";
 import styles from "./review.module.scss";
 
-/**
- * The home page's review surface (slice 0013) — the async human backstop for the
- * misinformation loop, and the public face of the shared memory. Lists recent and
- * flagged Posts with their confirm/flag/view counts and offers a search box.
- * Browsing and searching are PUBLIC (no sign-in — this is the root `/` route);
- * the moderation controls (retire drops a Post from agent `query` results,
- * restore brings it back) only render for a signed-in User, and the server gates
- * those writes regardless.
- *
- * The two lists are a Radix Tabs split (recent vs flagged), each its own
- * `useQuery` over the server's `/api/review/*` JSON (the wire is the type
- * boundary — ADR 0004 — so {@link ReviewRow} mirrors the server's shape, no
- * shared package; `apiFetch` is the queryFn transport). Retire/restore is a
- * `useMutation` that, on success, invalidates BOTH list queries so a Post that
- * gains/loses a flag moves between tabs correctly.
- */
-
-/**
- * All of the page's view state in one place — the search box (live `term` vs the
- * submitted `query` that drives the request), the browse ordering + flagged-only
- * filter, and which agent-setup tab is open. Grouped into a reducer so one
- * intent (submit, clear) is a single update instead of several `setState` calls.
- */
+/** All of the page's view state, grouped into a reducer. */
 type ReviewView = {
   term: string;
   query: string;
@@ -73,8 +51,7 @@ function reviewReducer(state: ReviewView, action: ReviewAction): ReviewView {
   switch (action.type) {
     case "setTerm":
       return { ...state, term: action.value };
-    // Submit the live input as the active search, trimmed so a whitespace-only
-    // box reads as "clear" (empty query → tabs return).
+    // Trimmed so a whitespace-only box reads as "clear".
     case "submitSearch":
       return { ...state, query: state.term.trim() };
     case "clearSearch":
@@ -91,16 +68,11 @@ function reviewReducer(state: ReviewView, action: ReviewAction): ReviewView {
 export function ReviewPage() {
   const queryClient = useQueryClient();
 
-  // Moderation (retire/restore) is for signed-in Users only — anonymous visitors
-  // browse and search but see no retire/restore controls. The server gates the
-  // writes regardless; this just hides buttons that would 401.
+  // Moderation controls render only for signed-in Users; the server gates the writes regardless.
   const { data: session } = useSession();
   const canModerate = !!session?.user;
 
-  // `term` is the live input; `query` is the submitted text that actually drives
-  // the request — set on submit so we fire one search per Enter (the same
-  // one-shot shape the agent's `query` tool has), not on every keystroke. An
-  // empty `query` means "not searching": the tabs show instead.
+  // `term` is the live input; `query` is the submitted text that drives the request. Empty `query` means "not searching".
   const [view, dispatch] = useReducer(reviewReducer, initialView);
   const { term, query, sortKey, flaggedOnly, setupTab } = view;
 
@@ -113,8 +85,6 @@ export function ReviewPage() {
       ).then((r) => r.posts),
   });
 
-  // One query per tab. While a query is loading, its `data` is `undefined` —
-  // which the list components below render as "Loading…" (unchanged behavior).
   const { data: recentData, error: recentError } = useQuery({
     queryKey: reviewKeys.recent(sortKey),
     queryFn: () =>
@@ -130,10 +100,7 @@ export function ReviewPage() {
       ),
   });
 
-  // Retire/restore. On success, invalidate BOTH lists so counts and tab
-  // membership stay in sync with the server (the source of truth for status and
-  // flags) — a Post that gains/loses a flag moves between tabs. `variables.row.id`
-  // is what drives the per-row busy disabling below.
+  // On success, invalidate both lists so a Post that gains/loses a flag moves between tabs.
   const setRetired = useMutation({
     mutationFn: ({ row, retired }: { row: ReviewRow; retired: boolean }) =>
       apiFetch(`/api/review/${row.id}/${retired ? "retire" : "restore"}`, {
@@ -148,7 +115,7 @@ export function ReviewPage() {
     },
   });
 
-  // Surface whichever load/action failed, mirroring the old single error line.
+  // Surface whichever load/action failed.
   const failure =
     recentError ?? flaggedError ?? searchError ?? setRetired.error;
   const error = failure
@@ -169,20 +136,14 @@ export function ReviewPage() {
   };
   const searching = query !== "";
 
-  // The browse list. The recent list arrives already ordered by the server for
-  // the active sort. The flagged list is the moderation queue: it keeps its
-  // natural most-recently-flagged order under the default sort, and re-ranks
-  // client-side for views/confirms (a small, capped set, so no round-trip).
+  // Recent arrives already ordered by the server; the flagged set re-ranks client-side for views/confirms.
   const browseRows = !flaggedOnly
     ? recentData
     : flaggedData && sortKey !== "newest"
       ? flaggedData.toSorted(SORTERS[sortKey])
       : flaggedData;
 
-  // Agent-setup copy (config snippets + paste-in install prompts). All derived
-  // from the MCP endpoint — this console's own origin + /mcp (the Hono app
-  // serves both) — so the shown config is always correct wherever Crew is
-  // deployed. Built in one pure call to keep this component about layout.
+  // Agent-setup copy, derived from this console's MCP endpoint (origin + /mcp).
   const {
     mcpConfigSnippet,
     mcpAddCommand,
