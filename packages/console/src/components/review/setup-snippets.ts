@@ -67,7 +67,7 @@ export function buildSetupContent(mcpEndpoint: string): SetupContent {
 
   const codexManualInstructions = [
     { label: "Add the Crew plugin marketplace.", code: "codex plugin marketplace add Onnokh/crew" },
-    { label: "Install the Crew plugin.", code: "codex plugin install codex-plugin@crew" },
+    { label: "Install the Crew plugin.", code: "codex plugin add crew@crew" },
     { label: "Add this MCP server config.", code: mcpConfigSnippet },
     { label: "Append this block to your global ~/.codex/AGENTS.md (create it if missing).", code: crewPriming },
   ];
@@ -147,7 +147,7 @@ codex plugin marketplace add Onnokh/crew
 
 2. Install the Crew plugin:
 
-codex plugin install codex-plugin@crew
+codex plugin add crew@crew
 
 3. Register Crew as a global MCP server named "crew" using this endpoint and bearer token:
 
