@@ -6,14 +6,21 @@
   "engines": {
     "node": ">=20"
   },
-  "workspaces": ["packages/server", "packages/console"],
+  "workspaces": [
+    "packages/server",
+    "packages/console"
+  ],
   "scripts": {
-    "start": "node scripts/start-server.mjs",
-    "dev": "node scripts/dev.mjs",
+    "dev": "concurrently -k -n server,console -c blue,magenta \"npm:dev:server\" \"npm:dev:console\"",
+    "dev:server": "npm run dev -w @crew/server",
+    "dev:console": "npm run build -w @crew/console -- --watch",
+    "build": "npm run build -w @crew/console",
+    "start": "npm run start -w @crew/server",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
+    "concurrently": "^10.0.3",
     "typescript": "^5.9.0",
     "vitest": "^4.1.0"
   },

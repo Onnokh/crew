@@ -109,7 +109,10 @@ async function seedFirstAdmin(auth: Auth, raw: Database): Promise<void> {
   console.log(`Seeded first admin: ${email}`);
 }
 
-const port = Number(process.env.PORT ?? 8080);
+// 8087 is the canonical local port — it matches the claude-plugin connect URL
+// (packages/claude-plugin → http://localhost:8087/mcp). The Docker image overrides
+// this with PORT=8080 internally and publishes it on the host as 8087.
+const port = Number(process.env.PORT ?? 8087);
 const server = buildServer(await buildRealDeps(port));
 
 await server.start({

@@ -5,8 +5,8 @@
   "type": "module",
   "main": "src/main.ts",
   "scripts": {
-    "start": "tsx src/main.ts",
-    "dev": "tsx watch src/main.ts",
+    "start": "node --env-file-if-exists=../../.env --import tsx src/main.ts",
+    "dev": "node --env-file-if-exists=../../.env --watch --import tsx src/main.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
