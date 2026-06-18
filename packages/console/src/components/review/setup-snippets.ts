@@ -73,6 +73,7 @@ export function buildSetupContent(mcpEndpoint: string): SetupContent {
   ];
 
   const cursorManualInstructions = [
+    { label: "Install the Crew skills for Cursor.", code: "npx skills add Onnokh/crew --agent cursor --global --skill crew --skill ask-crew --skill reflect --skill introduce" },
     { label: "Add this Cursor MCP config.", code: `{
   "mcpServers": {
     "crew": {
@@ -163,7 +164,11 @@ ${crewPriming}`;
 
   const cursorInstallPrompt = `Set up the Crew shared-knowledge MCP server for me, globally, then prime yourself to use it automatically:
 
-1. Add Crew to my global Cursor MCP config at ~/.cursor/mcp.json (create the file or merge into its "mcpServers" object):
+1. Install the Crew skills from the Crew GitHub repository:
+
+npx skills add Onnokh/crew --agent cursor --global --skill crew --skill ask-crew --skill reflect --skill introduce
+
+2. Add Crew to my global Cursor MCP config at ~/.cursor/mcp.json (create the file or merge into its "mcpServers" object):
 
 {
   "mcpServers": {
@@ -176,7 +181,7 @@ ${crewPriming}`;
 
 Replace <YOUR_TOKEN> with the API key I'll give you (minted on the Crew admin page).
 
-2. Append the block below to ./AGENTS.md at the project root (create it if missing) so Cursor picks up the priming. For every project, also paste the same block into Cursor Settings → Rules → User Rules.
+3. Append the block below to ./AGENTS.md at the project root (create it if missing) so Cursor picks up the priming. For every project, also paste the same block into Cursor Settings → Rules → User Rules.
 
 ${crewPriming}`;
 
