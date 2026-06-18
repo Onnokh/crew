@@ -93,6 +93,25 @@ describe("retrieve", () => {
     expect(order.indexOf(sameRepo)).toBeLessThan(order.indexOf(otherRepo));
   });
 
+  it("boosts an environment-matching Post when situation relevance is equal", async () => {
+    const k8s = await post({
+      situation: "dependency install fails with native binary mismatch",
+      environment: "kubernetes 1.29 alpine container",
+    });
+    const node = await post({
+      situation: "dependency install fails with native binary mismatch",
+      environment: "Node 22 fastembed onnxruntime",
+    });
+
+    const results = await retrieve(repo, clock, {
+      situation: "dependency install fails with native binary mismatch",
+      environment: "Node 22 fastembed onnxruntime",
+      limit: 5,
+    });
+    const order = results.map((r) => r.post.id);
+    expect(order.indexOf(node)).toBeLessThan(order.indexOf(k8s));
+  });
+
   it("over-fetches so trust can lift a lower-relevance Post into the top result", async () => {
     // `weaker` ranks lower on relevance but several confirms must lift it to the top.
     const exact = await post({ situation: "typescript build fails on ci" });

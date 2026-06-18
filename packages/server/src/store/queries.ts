@@ -82,12 +82,33 @@ export function vectorSearch(
   queryEmbedding: number[],
   limit: number,
 ): VecCandidate[] {
+  return vectorSearchByColumn(raw, "situation_embedding", queryEmbedding, limit);
+}
+
+/**
+ * Vector (sqlite-vec) KNN over active Posts by cosine distance against
+ * `environment_embedding`, nearest-first, capped at `limit`.
+ */
+export function environmentVectorSearch(
+  raw: Database,
+  queryEmbedding: number[],
+  limit: number,
+): VecCandidate[] {
+  return vectorSearchByColumn(raw, "environment_embedding", queryEmbedding, limit);
+}
+
+function vectorSearchByColumn(
+  raw: Database,
+  column: "situation_embedding" | "environment_embedding",
+  queryEmbedding: number[],
+  limit: number,
+): VecCandidate[] {
   const rows = raw
     .prepare(
       `SELECT v.post_id AS postId, v.distance AS distance
          FROM posts_vec v
          JOIN posts p ON p.id = v.post_id
-        WHERE v.situation_embedding MATCH ?
+        WHERE v.${column} MATCH ?
           AND v.k = ?
           AND p.status = 'active'
         ORDER BY v.distance`,

@@ -38,6 +38,12 @@ export type PostRepository = {
   searchByVector(query: string, limit: number): Promise<VecCandidate[]>;
 
   /**
+   * Vector (sqlite-vec) search over environment summaries; raw active candidates
+   * capped at `limit`. This is a ranking boost for applicability, never a filter.
+   */
+  searchByEnvironmentVector(query: string, limit: number): Promise<VecCandidate[]>;
+
+  /**
    * Append a Confirm or Flag to the event log and return the stored event. A
    * Confirm also refreshes the Post's denormalized `last_confirmed` in the same
    * transaction. Throws if the Post does not exist.

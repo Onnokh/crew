@@ -57,6 +57,7 @@ export function makeQueryTool(repo: PostRepository, clock: Clock) {
     execute: async (args: QueryArgs, _context: { session?: User }) => {
       const results = await retrieve(repo, clock, {
         situation: args.situation,
+        environment: args.environment,
         // Canonicalise to `group/name` so the same-repo boost matches stored values.
         repo: args.repo ? normalizeRepo(args.repo) : undefined,
         limit: args.limit,

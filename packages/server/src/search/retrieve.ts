@@ -17,6 +17,8 @@ export const CANDIDATE_OVERFETCH = 4;
 
 export type RetrieveInput = {
   situation: string;
+  /** The querying agent's stack/runtime context, if known: matching environments get a ranking boost. */
+  environment?: string;
   /** The querying agent's repo, if known: same-repo Posts get a ranking boost. */
   repo?: string;
   /** Requested result count; clamped to [1, MAX_LIMIT] internally. */
@@ -33,14 +35,19 @@ export async function retrieve(
   const now = clock.now();
 
   const fetch = Math.min(MAX_LIMIT, limit * CANDIDATE_OVERFETCH);
-  const [keyword, vector] = await Promise.all([
+  const environment = input.environment?.trim();
+  const [keyword, vector, environmentVector] = await Promise.all([
     repo.searchByKeyword(input.situation, fetch),
     repo.searchByVector(input.situation, fetch),
+    environment
+      ? repo.searchByEnvironmentVector(environment, fetch)
+      : Promise.resolve([]),
   ]);
 
   const fused = reciprocalRankFusion([
     keyword.map((c) => c.postId),
     vector.map((c) => c.postId),
+    environmentVector.map((c) => c.postId),
   ]);
   if (fused.length === 0) return [];
 

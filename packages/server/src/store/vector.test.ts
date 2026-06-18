@@ -46,6 +46,20 @@ async function seed(situation: string, body = "body"): Promise<string> {
   return post.id;
 }
 
+async function seedWithEnvironment(
+  situation: string,
+  environment: string,
+): Promise<string> {
+  const post = await repo.createPost({
+    situation,
+    body: "body",
+    environment,
+    repo: "demo",
+    createdBy: "user_alice",
+  });
+  return post.id;
+}
+
 describe("vectorSearch (real sqlite-vec vec0)", () => {
   it("stores an embedding per Post and finds it by vector similarity", async () => {
     const id = await seed("fastembed throws on Node 22 with onnxruntime mismatch");
@@ -66,6 +80,20 @@ describe("vectorSearch (real sqlite-vec vec0)", () => {
 
     // Query shares no literal keyword with the target situation/body.
     const hits = await repo.searchByVector("library crash dependency conflict", 5);
+    expect(hits[0]!.postId).toBe(target);
+  });
+
+  it("searches the environment embedding independently of the situation", async () => {
+    await seedWithEnvironment("same install failure", "kubernetes 1.29 alpine");
+    const target = await seedWithEnvironment(
+      "same install failure",
+      "Node 22 fastembed onnxruntime",
+    );
+
+    const hits = await repo.searchByEnvironmentVector(
+      "Node 22 fastembed onnxruntime",
+      5,
+    );
     expect(hits[0]!.postId).toBe(target);
   });
 

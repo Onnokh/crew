@@ -9,6 +9,7 @@ import type { Clock } from "../platform/clock.js";
 import type { IdGen } from "../platform/id-gen.js";
 import type { Candidate, PostEventRow, VecCandidate } from "./queries.js";
 import {
+  environmentVectorSearch,
   eventsForPosts,
   insertEmbeddings,
   keywordSearch,
@@ -81,6 +82,14 @@ export class SqliteRepository implements PostRepository {
   async searchByVector(query: string, limit: number): Promise<VecCandidate[]> {
     const embedding = await this.embedder.embed(query);
     return vectorSearch(this.raw, embedding, limit);
+  }
+
+  async searchByEnvironmentVector(
+    query: string,
+    limit: number,
+  ): Promise<VecCandidate[]> {
+    const embedding = await this.embedder.embed(query);
+    return environmentVectorSearch(this.raw, embedding, limit);
   }
 
   async recordEvent(input: NewPostEvent): Promise<PostEvent> {
