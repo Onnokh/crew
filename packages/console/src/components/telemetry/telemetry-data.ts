@@ -7,6 +7,18 @@ export const telemetryKeys = {
   coverage: ["telemetry", "coverage"] as const,
 };
 
+/** Mirrors the server's `RetrievalResultRow` (api/telemetry.ts). */
+export type RetrievalResultRow = {
+  postId: string;
+  postTitle: string | null;
+  rank: number;
+  rrfScore: number;
+  trust: number;
+  recency: number;
+  repoBoost: number;
+  final: number;
+};
+
 /** Mirrors the server's `RetrievalRow` (api/telemetry.ts). */
 export type RetrievalRow = {
   id: string;
@@ -14,6 +26,8 @@ export type RetrievalRow = {
   repo: string | null;
   resultCount: number;
   createdAt: number;
+  converted: boolean;
+  results: RetrievalResultRow[];
 };
 
 /** Mirrors the server's `ConversionPoint` (api/telemetry.ts) — one day's counts. */

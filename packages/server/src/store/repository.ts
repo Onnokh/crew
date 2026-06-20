@@ -8,6 +8,7 @@ import type {
   CoverageStats,
   CoverageWindow,
   NewRetrieval,
+  RecentRetrievalDetail,
   RecentRetrievalRow,
   VecCandidate,
 } from "./queries.js";
@@ -104,6 +105,14 @@ export type PostRepository = {
    * at `limit`. One row per `query`, carrying situation/result count/time.
    */
   listRecentRetrievals(limit: number): Promise<RecentRetrievalRow[]>;
+
+  /**
+   * The most recent Retrievals for the tuning view, newest first, capped at
+   * `limit`, each carrying its returned Posts (rank + full score breakdown) with
+   * a human-readable Post title (null if the Post was retired/deleted). The
+   * converted? verdict is NOT here — derive it from {@link conversionStats}.
+   */
+  listRecentRetrievalsDetailed(limit: number): Promise<RecentRetrievalDetail[]>;
 
   /**
    * Conversion attribution over Retrievals-with-results in `[from, to)`: classify

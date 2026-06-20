@@ -44,7 +44,8 @@ const PANELS: Panel[] = [
   {
     id: "recent-retrievals",
     title: "Recent retrievals",
-    description: "The latest agent queries, with how many Posts each returned.",
+    description:
+      "The latest agent queries — each with whether it converted and the returned Posts by rank; expand a result for its score breakdown.",
     render: () => <RecentRetrievalsPanel />,
   },
   {

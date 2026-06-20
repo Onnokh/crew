@@ -15,6 +15,7 @@ import type {
   CoverageWindow,
   NewRetrieval,
   PostEventRow,
+  RecentRetrievalDetail,
   RecentRetrievalRow,
   VecCandidate,
 } from "./queries.js";
@@ -27,6 +28,7 @@ import {
   insertRetrieval,
   keywordSearch,
   recentRetrievals,
+  recentRetrievalsDetailed,
   vectorSearch,
 } from "./queries.js";
 import type { PostRepository, PostSort } from "./repository.js";
@@ -312,6 +314,12 @@ export class SqliteRepository implements PostRepository {
 
   async listRecentRetrievals(limit: number): Promise<RecentRetrievalRow[]> {
     return recentRetrievals(this.raw, limit);
+  }
+
+  async listRecentRetrievalsDetailed(
+    limit: number,
+  ): Promise<RecentRetrievalDetail[]> {
+    return recentRetrievalsDetailed(this.raw, limit);
   }
 
   async conversionStats(window: ConversionWindow): Promise<ConversionStats> {

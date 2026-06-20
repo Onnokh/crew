@@ -28,9 +28,32 @@ export function mountTelemetry(app: Hono, deps: Deps): void {
     await next();
   });
 
+  // Recent retrievals, enriched into the tuning view (PLO-51): each retrieval
+  // carries its returned Posts (rank + full score breakdown) and a converted?
+  // indicator. The converted? value comes from the PLO-48 `conversionStats`
+  // helper, indexed by retrievalId — not a re-implemented join. We run
+  // conversionStats once over a range that covers every listed retrieval (oldest
+  // listed `created_at` → now), so each retrieval gets its full attribution
+  // window; retrievals with zero results never appear in `byRetrieval` and stay
+  // converted: false.
   telemetry.get("/recent", async (c) => {
-    const rows = await deps.repo.listRecentRetrievals(LIST_LIMIT);
-    return c.json({ retrievals: rows.map(toRetrievalRow) });
+    const details = await deps.repo.listRecentRetrievalsDetailed(LIST_LIMIT);
+
+    const verdicts = new Map<string, boolean>();
+    if (details.length > 0) {
+      const to = deps.clock.now();
+      const oldest = Math.min(...details.map((d) => d.createdAt));
+      const stats = await deps.repo.conversionStats({
+        from: oldest,
+        to,
+        windowMs: DEFAULT_ATTRIBUTION_WINDOW_MS,
+      });
+      for (const v of stats.byRetrieval) verdicts.set(v.retrievalId, v.converted);
+    }
+
+    return c.json({
+      retrievals: details.map((d) => toRetrievalRow(d, verdicts.get(d.id) ?? false)),
+    });
   });
 
   // Query→Confirm conversion: the headline rate over the range plus a per-day
@@ -183,27 +206,62 @@ export type CoveragePanelData = {
   trend: CoveragePoint[];
 };
 
-/** A Retrieval flattened to what the dashboard's recent-Retrievals panel renders. */
+/** One returned Post within a retrieval, as the tuning view renders it. */
+export type RetrievalResultRow = {
+  postId: string;
+  /** The Post's current title, or null if it was retired/deleted (show postId). */
+  postTitle: string | null;
+  rank: number;
+  rrfScore: number;
+  trust: number;
+  recency: number;
+  repoBoost: number;
+  final: number;
+};
+
+/**
+ * A Retrieval flattened to what the tuning view renders: the situation, its
+ * returned Posts (rank + score breakdown), and a converted? indicator (derived
+ * from `conversionStats.byRetrieval`).
+ */
 export type RetrievalRow = {
   id: string;
   situation: string;
   repo: string | null;
   resultCount: number;
   createdAt: number;
+  /** True iff the querying User later Confirmed a returned Post in window. */
+  converted: boolean;
+  results: RetrievalResultRow[];
 };
 
-function toRetrievalRow(r: {
-  id: string;
-  situation: string;
-  repo: string | null;
-  resultCount: number;
-  createdAt: number;
-}): RetrievalRow {
+function toRetrievalRow(
+  r: {
+    id: string;
+    situation: string;
+    repo: string | null;
+    resultCount: number;
+    createdAt: number;
+    results: RetrievalResultRow[];
+  },
+  converted: boolean,
+): RetrievalRow {
   return {
     id: r.id,
     situation: r.situation,
     repo: r.repo,
     resultCount: r.resultCount,
     createdAt: r.createdAt,
+    converted,
+    results: r.results.map((res) => ({
+      postId: res.postId,
+      postTitle: res.postTitle,
+      rank: res.rank,
+      rrfScore: res.rrfScore,
+      trust: res.trust,
+      recency: res.recency,
+      repoBoost: res.repoBoost,
+      final: res.final,
+    })),
   };
 }

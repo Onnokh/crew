@@ -125,6 +125,134 @@
   color: $color-text-subtle;
 }
 
+// The tuning view (PLO-51): each retrieval is a block — its situation/meta row
+// on top, then its returned Posts (each a disclosure for the score breakdown).
+.retrieval {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  padding-bottom: $space-md;
+  border-bottom: 1px solid $color-border;
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+// Converted? pills: a quiet pair so the contrast carries the meaning, not noise.
+.converted,
+.notConverted {
+  border-radius: $radius-sm;
+  padding: 0 $space-xs;
+  font-size: $text-xs;
+  font-weight: 500;
+}
+
+.converted {
+  color: $color-positive-text;
+  background: $color-positive-bg;
+}
+
+.notConverted {
+  color: $color-text-subtle;
+  background: $color-surface;
+}
+
+// The returned Posts within a retrieval, indented under its situation row.
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0 0 0 $space-md;
+  list-style: none;
+}
+
+.result {
+  min-width: 0;
+}
+
+// The disclosure: summary is the always-visible result line; expanding reveals
+// the score grid. Native <details>, so no dependency for the drill-down.
+.breakdown {
+  summary {
+    cursor: pointer;
+  }
+}
+
+.resultSummary {
+  display: flex;
+  align-items: baseline;
+  gap: $space-sm;
+  padding: $space-xs 0;
+  font-size: $text-sm;
+  line-height: $lh-base;
+}
+
+.rank {
+  flex-shrink: 0;
+  color: $color-text-subtle;
+  font-family: $font-mono;
+  font-size: $text-xs;
+  font-variant-numeric: tabular-nums;
+}
+
+.postLabel {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: $color-text;
+}
+
+// A Post that has since been retired/deleted: only its bare id, shown subtle.
+.missingPost {
+  color: $color-text-subtle;
+  font-family: $font-mono;
+  font-size: $text-xs;
+}
+
+.finalScore {
+  flex-shrink: 0;
+  color: $color-text-muted;
+  font-family: $font-mono;
+  font-size: $text-xs;
+  font-variant-numeric: tabular-nums;
+}
+
+// The expanded score breakdown: a compact label/value grid.
+.scores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: $space-xs $space-md;
+  margin: $space-xs 0 $space-sm;
+  padding: $space-sm $space-md;
+  border-radius: $radius-sm;
+  background: $color-surface;
+}
+
+.score {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.scoreLabel {
+  color: $color-text-subtle;
+  font-size: $text-xs;
+  font-family: $font-mono;
+}
+
+.scoreValue {
+  margin: 0;
+  color: $color-text;
+  font-size: $text-sm;
+  font-variant-numeric: tabular-nums;
+}
+
 // The conversion panel: a big headline rate, its supporting fraction, then a
 // lightweight per-day sparkline. Plain elements + a single inline SVG — no
 // charting dependency, matching the dashboard's quiet visual weight.

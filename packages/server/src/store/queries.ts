@@ -194,6 +194,36 @@ export type RecentRetrievalRow = {
 };
 
 /**
+ * One returned Post within a Retrieval, as the tuning view (PLO-51) renders it:
+ * the rank, a human-readable label for the Post (its current `title`, or null if
+ * the Post has since been retired/deleted — callers fall back to `postId`), and
+ * the full captured score breakdown so a row can explain why it ranked here.
+ */
+export type RecentRetrievalResultRow = {
+  postId: string;
+  /** The Post's current title, or null if the Post no longer exists. */
+  postTitle: string | null;
+  /** 1-based position in the returned list. */
+  rank: number;
+  rrfScore: number;
+  trust: number;
+  recency: number;
+  repoBoost: number;
+  final: number;
+};
+
+/**
+ * A Retrieval plus its returned Posts (rank + score breakdown), for the tuning
+ * view. The retrieval-level fields mirror {@link RecentRetrievalRow}; `results`
+ * carries one {@link RecentRetrievalResultRow} per returned Post, by rank. The
+ * converted? verdict is NOT here — it is derived in the API handler from the
+ * PLO-48 `conversionStats` helper, never re-joined in SQL.
+ */
+export type RecentRetrievalDetail = RecentRetrievalRow & {
+  results: RecentRetrievalResultRow[];
+};
+
+/**
  * The read-time parameters for {@link conversionStats}: the half-open range
  * `[from, to)` over a retrieval's `created_at`, and the attribution window in ms
  * (default 7 days) a Confirm must fall within after the retrieval. All three are
@@ -362,6 +392,65 @@ export function recentRetrievals(
     limit: r.limit,
     resultCount: r.result_count,
     createdAt: r.created_at,
+  }));
+}
+
+/**
+ * The most recent Retrievals, newest first, capped at `limit`, each carrying its
+ * returned Posts (rank + full score breakdown) for the tuning view. Two reads:
+ * the retrieval rows, then their result rows in one batched query, left-joined to
+ * `posts` for a human-readable title (a retired/deleted Post yields a null
+ * title, which the caller renders as the bare `post_id`). Results are grouped
+ * back onto their retrieval and ordered by rank. The converted? verdict is left
+ * to the caller — it comes from `conversionStats`, not from this read.
+ */
+export function recentRetrievalsDetailed(
+  raw: Database,
+  limit: number,
+): RecentRetrievalDetail[] {
+  const retrievals = recentRetrievals(raw, limit);
+  if (retrievals.length === 0) return [];
+
+  const placeholders = retrievals.map(() => "?").join(", ");
+  const resultRows = raw
+    .prepare(
+      `SELECT rr.retrieval_id AS retrievalId,
+              rr.post_id AS postId,
+              p.title AS postTitle,
+              rr.rank AS rank,
+              rr.rrf_score AS rrfScore,
+              rr.trust AS trust,
+              rr.recency AS recency,
+              rr.repo_boost AS repoBoost,
+              rr.final AS final
+         FROM retrieval_results rr
+         LEFT JOIN posts p ON p.id = rr.post_id
+        WHERE rr.retrieval_id IN (${placeholders})
+        ORDER BY rr.retrieval_id, rr.rank`,
+    )
+    .all(...retrievals.map((r) => r.id)) as Array<
+    { retrievalId: string } & RecentRetrievalResultRow
+  >;
+
+  const byRetrieval = new Map<string, RecentRetrievalResultRow[]>();
+  for (const row of resultRows) {
+    const list = byRetrieval.get(row.retrievalId) ?? [];
+    list.push({
+      postId: row.postId,
+      postTitle: row.postTitle,
+      rank: row.rank,
+      rrfScore: row.rrfScore,
+      trust: row.trust,
+      recency: row.recency,
+      repoBoost: row.repoBoost,
+      final: row.final,
+    });
+    byRetrieval.set(row.retrievalId, list);
+  }
+
+  return retrievals.map((r) => ({
+    ...r,
+    results: byRetrieval.get(r.id) ?? [],
   }));
 }
 
