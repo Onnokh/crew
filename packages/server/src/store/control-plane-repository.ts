@@ -60,6 +60,44 @@ export class ControlPlaneRepository {
   }
 
   /**
+   * Rename a Team — a DISPLAY-ONLY update of `name`. The Team's opaque id (which
+   * names its corpus DB file) is never touched, so a rename never moves storage
+   * or affects routing (ADR 0007). No-op if the id does not exist.
+   */
+  renameTeam(id: string, name: string): void {
+    this.raw.prepare(`UPDATE team SET name = ? WHERE id = ?`).run(name, id);
+  }
+
+  /** Every Team, newest first. The default Team (earliest) sorts last. */
+  listTeams(): Array<Team & { createdAt: number }> {
+    const rows = this.raw
+      .prepare(
+        `SELECT id, org_id AS orgId, name, created_at AS createdAt FROM team
+          ORDER BY created_at DESC, id DESC`,
+      )
+      .all() as Array<{
+      id: string;
+      orgId: string;
+      name: string;
+      createdAt: number;
+    }>;
+    return rows.map((r) => ({
+      id: r.id,
+      orgId: r.orgId,
+      name: r.name,
+      createdAt: r.createdAt,
+    }));
+  }
+
+  /** Look up a single Team by id, or null. */
+  getTeam(id: string): Team | null {
+    const row = this.raw
+      .prepare(`SELECT id, org_id AS orgId, name FROM team WHERE id = ?`)
+      .get(id) as { id: string; orgId: string; name: string } | undefined;
+    return row ? { id: row.id, orgId: row.orgId, name: row.name } : null;
+  }
+
+  /**
    * Bind a User to a Team (their single Membership). Idempotent: a User already
    * having a membership is left untouched (the 1:1 PRIMARY KEY on user_id).
    */

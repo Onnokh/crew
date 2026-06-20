@@ -58,6 +58,34 @@ describe("ControlPlaneRepository", () => {
     expect(controlPlane.firstTeam()?.id).toBe("team_a");
   });
 
+  it("listTeams returns every Team (newest first) and getTeam looks one up", () => {
+    expect(controlPlane.listTeams()).toEqual([]);
+    controlPlane.createOrg("org_1", "Org", 0);
+    controlPlane.createTeam({ id: "team_a", orgId: "org_1", name: "A" }, 1);
+    controlPlane.createTeam({ id: "team_b", orgId: "org_1", name: "B" }, 2);
+    expect(controlPlane.listTeams().map((t) => t.id)).toEqual(["team_b", "team_a"]);
+    expect(controlPlane.getTeam("team_a")).toEqual({
+      id: "team_a",
+      orgId: "org_1",
+      name: "A",
+    });
+    expect(controlPlane.getTeam("team_nope")).toBeNull();
+  });
+
+  it("renameTeam changes only the display name, never the id", () => {
+    controlPlane.createOrg("org_1", "Org", 0);
+    controlPlane.createTeam({ id: "team_a", orgId: "org_1", name: "Old" }, 0);
+    controlPlane.renameTeam("team_a", "New");
+    expect(controlPlane.getTeam("team_a")).toEqual({
+      id: "team_a",
+      orgId: "org_1",
+      name: "New",
+    });
+    // Renaming a non-existent id is a harmless no-op.
+    controlPlane.renameTeam("team_nope", "X");
+    expect(controlPlane.getTeam("team_nope")).toBeNull();
+  });
+
   it("membership is 1:1 — a second addMembership is ignored", () => {
     controlPlane.createOrg("org_1", "Org", 0);
     controlPlane.createTeam({ id: "team_1", orgId: "org_1", name: "T1" }, 0);

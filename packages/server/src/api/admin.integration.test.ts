@@ -194,6 +194,110 @@ describe("mint and revoke keys; an agent posts with a minted key", () => {
   });
 });
 
+describe("team management: create, list, rename — role-gated, no delete", () => {
+  let srv: RunningServer;
+  let cookie: string;
+  beforeAll(async () => {
+    ({ srv, cookie } = await bootWithAdmin());
+  });
+  afterAll(() => srv.stop());
+
+  it("gates listing teams: no session → 401, non-admin → 403", async () => {
+    expect((await adminFetch(srv, null, "/teams")).status).toBe(401);
+    const res = await srv.env.auth.api.signInEmail({
+      body: { email: "alice@test.local", password: "password1234" },
+      asResponse: true,
+    });
+    const aliceCookie = (res.headers.get("set-cookie") ?? "").split(";")[0]!;
+    expect((await adminFetch(srv, aliceCookie, "/teams")).status).toBe(403);
+  });
+
+  it("lists the auto-created default Team", async () => {
+    const res = await adminFetch(srv, cookie, "/teams");
+    expect(res.status).toBe(200);
+    const { teams } = (await res.json()) as {
+      teams: Array<{ id: string; name: string; createdAt: number }>;
+    };
+    expect(teams.length).toBeGreaterThanOrEqual(1);
+    expect(teams.some((t) => t.id === srv.env.teamId)).toBe(true);
+  });
+
+  it("creates a Team that gets its own corpus; a user routed there is isolated", async () => {
+    const created = await adminFetch(srv, cookie, "/teams", {
+      method: "POST",
+      body: JSON.stringify({ name: "Platform" }),
+    });
+    expect(created.status).toBe(201);
+    const { team } = (await created.json()) as {
+      team: { id: string; name: string; createdAt: number };
+    };
+    expect(team.name).toBe("Platform");
+    expect(team.id).not.toBe(srv.env.teamId);
+
+    // It now appears in the listing alongside the default Team.
+    const list = await adminFetch(srv, cookie, "/teams");
+    const { teams } = (await list.json()) as {
+      teams: Array<{ id: string; name: string }>;
+    };
+    expect(teams.some((t) => t.id === team.id && t.name === "Platform")).toBe(true);
+
+    // The new Team's corpus was provisioned by create and is a DISTINCT store:
+    // a Post written through its repo is invisible to the default Team's repo.
+    const newRepo = srv.env.teams.getRepository(team.id);
+    const defaultRepo = srv.env.teams.getRepository(srv.env.teamId);
+    expect(newRepo).not.toBe(defaultRepo);
+
+    // Assign a fresh user to the new Team and confirm routing points there.
+    const su = await srv.env.auth.api.signUpEmail({
+      body: { email: "dan@platform.local", password: "password1234", name: "Dan" },
+    });
+    srv.env.controlPlane.addMembership(su.user.id, team.id, 0);
+    expect(srv.env.controlPlane.getTeamForUser(su.user.id)?.id).toBe(team.id);
+  });
+
+  it("rename is display-only: name changes, id/corpus/routing unchanged", async () => {
+    const created = await adminFetch(srv, cookie, "/teams", {
+      method: "POST",
+      body: JSON.stringify({ name: "Initial" }),
+    });
+    const { team } = (await created.json()) as { team: { id: string } };
+    const repoBefore = srv.env.teams.getRepository(team.id);
+
+    const renamed = await adminFetch(srv, cookie, `/teams/${team.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name: "Renamed" }),
+    });
+    expect(renamed.status).toBe(200);
+    expect((await renamed.json()) as { team: { name: string } }).toMatchObject({
+      team: { id: team.id, name: "Renamed" },
+    });
+
+    // Same id, same cached connection (no file move).
+    expect(srv.env.controlPlane.getTeam(team.id)?.name).toBe("Renamed");
+    expect(srv.env.teams.getRepository(team.id)).toBe(repoBefore);
+  });
+
+  it("rejects an empty team name (400) and an unknown id on rename (404)", async () => {
+    const empty = await adminFetch(srv, cookie, "/teams", {
+      method: "POST",
+      body: JSON.stringify({ name: "   " }),
+    });
+    expect(empty.status).toBe(400);
+    const missing = await adminFetch(srv, cookie, "/teams/team_nope", {
+      method: "PATCH",
+      body: JSON.stringify({ name: "X" }),
+    });
+    expect(missing.status).toBe(404);
+  });
+
+  it("exposes no team-deletion route", async () => {
+    const res = await adminFetch(srv, cookie, `/teams/${srv.env.teamId}`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(404);
+  });
+});
+
 describe("ban stops login + keys while authored Posts stay attributed", () => {
   let srv: RunningServer;
   let cookie: string;

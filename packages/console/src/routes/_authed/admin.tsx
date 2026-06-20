@@ -40,9 +40,17 @@ type UserRow = {
   keys: ApiKey[];
 };
 
-/** Centralized query key for the user list, reused by every mutation's invalidate. */
+/** A Team row as the listing endpoint returns it. */
+type TeamRow = {
+  id: string;
+  name: string;
+  createdAt: number;
+};
+
+/** Centralized query keys, reused by every mutation's invalidate. */
 const adminKeys = {
   users: ["admin", "users"] as const,
+  teams: ["admin", "teams"] as const,
 };
 
 function AdminPage() {
@@ -162,6 +170,8 @@ function AdminPage() {
         </button>
       </form>
 
+      <Teams />
+
       <p className={styles.listLabel}>Users</p>
       <ul className={styles.list}>
         {users.map((user) => (
@@ -229,6 +239,151 @@ function AdminPage() {
         ))}
       </ul>
     </section>
+  );
+}
+
+/**
+ * Team management: list every Team (incl. the auto-created default), create a new
+ * Team (which provisions its own corpus server-side), and rename a Team inline.
+ * A rename is display-only — the corpus and routing are keyed by the opaque id.
+ * There is no delete: Teams own physically-isolated corpora and are never removed.
+ */
+function Teams() {
+  const queryClient = useQueryClient();
+
+  const { data: teamsData, error: teamsError } = useQuery({
+    queryKey: adminKeys.teams,
+    queryFn: () =>
+      apiFetch<{ teams: TeamRow[] }>("/api/admin/teams").then((r) => r.teams),
+  });
+  const teams = teamsData ?? [];
+
+  const [name, setName] = useState("");
+  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+
+  const invalidateTeams = () =>
+    queryClient.invalidateQueries({ queryKey: adminKeys.teams });
+
+  const createTeam = useMutation({
+    mutationFn: (newName: string) =>
+      apiFetch<{ team: TeamRow }>("/api/admin/teams", {
+        method: "POST",
+        body: JSON.stringify({ name: newName }),
+      }),
+    onSuccess: async () => {
+      setName("");
+      await invalidateTeams();
+    },
+  });
+
+  const renameTeam = useMutation({
+    mutationFn: (vars: { id: string; name: string }) =>
+      apiFetch<{ team: TeamRow }>(`/api/admin/teams/${vars.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: vars.name }),
+      }),
+    onSuccess: async () => {
+      setEditing(null);
+      await invalidateTeams();
+    },
+  });
+
+  const failure = teamsError ?? createTeam.error ?? renameTeam.error ?? null;
+  const error = failure ? describe(failure) : null;
+
+  function onCreate(event: FormEvent) {
+    event.preventDefault();
+    createTeam.mutate(name);
+  }
+
+  function onRename(event: FormEvent) {
+    event.preventDefault();
+    if (editing && editing.name.trim()) renameTeam.mutate(editing);
+  }
+
+  return (
+    <>
+      <p className={styles.listLabel}>Teams</p>
+
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
+
+      <form className={styles.create} onSubmit={onCreate}>
+        <input
+          className={styles.input}
+          type="text"
+          placeholder="New team name"
+          aria-label="New team name"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <button
+          className={styles.primary}
+          type="submit"
+          disabled={createTeam.isPending}
+        >
+          {createTeam.isPending ? "Creating…" : "Create Team"}
+        </button>
+      </form>
+
+      <ul className={styles.list}>
+        {teams.map((team) => (
+          <li key={team.id} className={styles.row}>
+            <div className={styles.rowMain}>
+              {editing?.id === team.id ? (
+                <form className={styles.create} onSubmit={onRename}>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    aria-label={`Rename ${team.name}`}
+                    required
+                    autoFocus
+                    value={editing.name}
+                    onChange={(e) =>
+                      setEditing({ id: team.id, name: e.target.value })
+                    }
+                  />
+                  <button
+                    className={styles.action}
+                    type="submit"
+                    disabled={renameTeam.isPending}
+                  >
+                    Save
+                  </button>
+                  <button
+                    className={styles.action}
+                    type="button"
+                    onClick={() => setEditing(null)}
+                  >
+                    Cancel
+                  </button>
+                </form>
+              ) : (
+                <>
+                  <div className={styles.identity}>
+                    <span className={styles.email}>{team.name}</span>
+                    <span className={styles.role}>/ {team.id}</span>
+                  </div>
+                  <div className={styles.rowActions}>
+                    <button
+                      type="button"
+                      className={styles.action}
+                      onClick={() => setEditing({ id: team.id, name: team.name })}
+                    >
+                      Rename
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 

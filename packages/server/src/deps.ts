@@ -1,6 +1,7 @@
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Auth } from "./auth/better-auth.js";
 import type { Clock } from "./platform/clock.js";
+import type { IdGen } from "./platform/id-gen.js";
 import type { ControlPlaneRepository } from "./store/control-plane-repository.js";
 import type { TeamRepositoryResolver } from "./store/team-repository-resolver.js";
 
@@ -19,4 +20,6 @@ export type Deps = {
   // there is no single shared corpus `repo` anymore (ADR 0007/0008).
   teams: TeamRepositoryResolver;
   clock: Clock;
+  // Mints prefixed opaque ids (e.g. a new Team's id) for control-plane writes.
+  idGen: IdGen;
 };

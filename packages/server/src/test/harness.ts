@@ -95,6 +95,7 @@ export async function buildTestEnv(): Promise<TestEnv> {
     controlPlane,
     teams,
     clock,
+    idGen,
   };
 
   // Provision an isolated Team + member + key — used by the two-team isolation test.

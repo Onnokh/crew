@@ -61,6 +61,7 @@ async function buildRealDeps(port: number): Promise<Deps> {
     controlPlane,
     teams,
     clock,
+    idGen,
   };
 }
 

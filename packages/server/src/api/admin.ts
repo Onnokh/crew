@@ -84,6 +84,55 @@ export function mountAdmin(app: Hono, deps: Deps): void {
     }
   });
 
+  // List every Team (including the auto-created default), newest first.
+  admin.get("/teams", (c) => {
+    const teams = deps.controlPlane.listTeams().map((t) => ({
+      id: t.id,
+      name: t.name,
+      createdAt: t.createdAt,
+    }));
+    return c.json({ teams });
+  });
+
+  // Create a Team: mint an opaque id, persist it under the default Org, then warm
+  // its corpus DB through the resolver so it is provisioned and immediately
+  // routable (ADR 0007/0008). No delete path is exposed (by design).
+  admin.post("/teams", async (c) => {
+    const body: { name?: unknown } = await c.req
+      .json()
+      .catch(() => ({}) as { name?: unknown });
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (!name) return c.json({ error: "A team name is required" }, 400);
+
+    // New Teams join the existing default Org (the first Team's org).
+    const org = deps.controlPlane.firstTeam();
+    if (org === null) {
+      return c.json({ error: "No Org to attach the Team to" }, 400);
+    }
+    const id = deps.idGen.next("team");
+    const createdAt = deps.clock.now();
+    deps.controlPlane.createTeam({ id, orgId: org.orgId, name }, createdAt);
+    // Materialize the corpus DB now so the Team is routable on first user assignment.
+    deps.teams.getRepository(id);
+    return c.json({ team: { id, name, createdAt } }, 201);
+  });
+
+  // Rename a Team — DISPLAY-ONLY. The opaque id (and thus the corpus file) is
+  // never touched, so routing/storage are unaffected (ADR 0007).
+  admin.patch("/teams/:id", async (c) => {
+    const id = c.req.param("id");
+    const body: { name?: unknown } = await c.req
+      .json()
+      .catch(() => ({}) as { name?: unknown });
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (!name) return c.json({ error: "A team name is required" }, 400);
+    if (deps.controlPlane.getTeam(id) === null) {
+      return c.json({ error: "No such Team" }, 404);
+    }
+    deps.controlPlane.renameTeam(id, name);
+    return c.json({ team: { id, name } });
+  });
+
   // Revoke a single key by id, through the adapter so an admin can revoke ANY key.
   admin.delete("/keys/:keyId", async (c) => {
     const adapter = await keyAdapter(auth);
