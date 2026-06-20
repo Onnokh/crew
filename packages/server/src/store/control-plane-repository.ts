@@ -110,6 +110,19 @@ export class ControlPlaneRepository {
       .run(userId, teamId, createdAt);
   }
 
+  /**
+   * Remove a User's (1:1) Membership row. Idempotent — a no-op when the User has
+   * no membership. Part of deleting a User: the membership must go before the
+   * better-auth `user` row, since `team_membership.user_id` FK-references it with
+   * no cascade. The User's authored Posts/events live in the team corpus and are
+   * NOT touched here (their author simply stops resolving → "unknown").
+   */
+  removeMembership(userId: string): void {
+    this.raw
+      .prepare(`DELETE FROM team_membership WHERE user_id = ?`)
+      .run(userId);
+  }
+
   /** The first Team by creation order, or null on a fresh DB. Used to find the default Team. */
   firstTeam(): Team | null {
     const row = this.raw

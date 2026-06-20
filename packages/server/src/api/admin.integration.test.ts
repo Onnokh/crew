@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { hydratePosts } from "../read/hydrate.js";
+import { aggregateEvents } from "../trust/aggregate.js";
 import {
   buildTestEnv,
   callText,
@@ -102,16 +104,25 @@ describe("create User returns a one-time password and appears in the listing", (
     expect(payload.password).toBeTruthy();
     expect(payload.password.length).toBeGreaterThanOrEqual(16);
 
-    // The password is never returned by the listing.
+    // The password is never returned by the listing; the row carries the Team.
     const list = await adminFetch(srv, cookie, "/users");
     const { users } = (await list.json()) as {
-      users: Array<{ email: string; role: string | null; keys: unknown[] }>;
+      users: Array<{
+        email: string;
+        role: string | null;
+        teamId: string | null;
+        teamName: string | null;
+        keys: unknown[];
+      }>;
     };
     const bob = users.find((u) => u.email === "bob@test.local");
     expect(bob).toBeDefined();
     expect(bob).not.toHaveProperty("password");
     expect(bob!.role).toBe("user");
     expect(bob!.keys).toHaveLength(0);
+    // With no teamId given, the new User defaults to the default Team.
+    expect(bob!.teamId).toBe(srv.env.teamId);
+    expect(bob!.teamName).toBeTruthy();
 
     // The password actually works: Bob can sign in with it.
     const signIn = await srv.env.auth.api.signInEmail({
@@ -298,7 +309,7 @@ describe("team management: create, list, rename — role-gated, no delete", () =
   });
 });
 
-describe("ban stops login + keys while authored Posts stay attributed", () => {
+describe("create a User on a chosen Team; a minted key routes to that Team's corpus", () => {
   let srv: RunningServer;
   let cookie: string;
   beforeAll(async () => {
@@ -306,7 +317,70 @@ describe("ban stops login + keys while authored Posts stay attributed", () => {
   });
   afterAll(() => srv.stop());
 
-  it("a banned User can no longer sign in or use its keys, but its Post remains", async () => {
+  it("binds the User to the picked Team and routes its key there end-to-end", async () => {
+    // A second Team to assign the User to (distinct from the default Team).
+    const createdTeam = await adminFetch(srv, cookie, "/teams", {
+      method: "POST",
+      body: JSON.stringify({ name: "Research" }),
+    });
+    const { team } = (await createdTeam.json()) as { team: { id: string } };
+    expect(team.id).not.toBe(srv.env.teamId);
+
+    // Create a User WITH teamId — it must land in the Research Team, not default.
+    const createdUser = await adminFetch(srv, cookie, "/users", {
+      method: "POST",
+      body: JSON.stringify({ email: "rey@research.local", teamId: team.id }),
+    });
+    expect(createdUser.status).toBe(201);
+    const reyId = ((await createdUser.json()) as { user: { id: string } }).user
+      .id;
+    expect(srv.env.controlPlane.getTeamForUser(reyId)?.id).toBe(team.id);
+
+    // Mint a key for the User and post with it — the Post lands in the Research
+    // Team's corpus (routed by the key alone), invisible to the default corpus.
+    const minted = await adminFetch(srv, cookie, `/users/${reyId}/keys`, {
+      method: "POST",
+    });
+    const { key } = (await minted.json()) as { key: string };
+    const client = await connect(srv.port, key);
+    let postId: string;
+    try {
+      const text = await callText(client, "post", {
+        title: "research finding",
+        situation: "a finding posted by a Research-team agent",
+        body: "It must land in the Research corpus only.",
+        environment: "Node 22",
+        repo: "crew",
+      });
+      postId = text.match(/post_[A-Za-z0-9_-]+/)![0];
+    } finally {
+      await client.close();
+    }
+
+    const researchRepo = srv.env.teams.getRepository(team.id);
+    const defaultRepo = srv.env.teams.getRepository(srv.env.teamId);
+    expect(await researchRepo.getPost(postId)).not.toBeNull();
+    expect(await defaultRepo.getPost(postId)).toBeNull();
+  });
+
+  it("rejects an unknown teamId (400)", async () => {
+    const res = await adminFetch(srv, cookie, "/users", {
+      method: "POST",
+      body: JSON.stringify({ email: "nobody@team.local", teamId: "team_nope" }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("delete is the single off-switch: kills login + keys, frees the email, keeps Posts", () => {
+  let srv: RunningServer;
+  let cookie: string;
+  beforeAll(async () => {
+    ({ srv, cookie } = await bootWithAdmin());
+  });
+  afterAll(() => srv.stop());
+
+  it("revokes keys + removes user+membership; the email frees up; the Post stays with unchanged trust, rendered unknown", async () => {
     const created = await adminFetch(srv, cookie, "/users", {
       method: "POST",
       body: JSON.stringify({ email: "carol@test.local" }),
@@ -317,7 +391,7 @@ describe("ban stops login + keys while authored Posts stay attributed", () => {
     };
     const carolId = user.id;
 
-    // Carol mints a key and posts before the ban — that Post must outlive her.
+    // Carol mints a key and posts before the delete — that Post must outlive her.
     const minted = await adminFetch(srv, cookie, `/users/${carolId}/keys`, {
       method: "POST",
     });
@@ -327,43 +401,94 @@ describe("ban stops login + keys while authored Posts stay attributed", () => {
     let postId: string;
     try {
       const text = await callText(client, "post", {
-        title: "finding authored before the ban",
-        situation: "a finding authored before its author was banned",
-        body: "This Post must stay attributed after the ban.",
+        title: "finding authored before the delete",
+        situation: "a finding authored before its author was deleted",
+        body: "This Post must stay in the corpus after the author is deleted.",
         environment: "Node 22",
         repo: "crew",
       });
       postId = text.match(/post_[A-Za-z0-9_-]+/)![0];
+      // Confirm + flag it so we can assert the trust counts survive the delete.
+      await callText(client, "confirm", { post_id: postId, note: "works" });
+      await callText(client, "flag", { post_id: postId, reason: "incorrect" });
     } finally {
       await client.close();
     }
 
-    // Ban Carol.
-    const banned = await adminFetch(srv, cookie, `/users/${carolId}/ban`, {
-      method: "POST",
+    // Trust counts before the delete: 1 confirm, 1 flag.
+    const before = aggregateEvents(
+      await srv.env.repo.getEventsForPosts([postId]),
+    );
+    expect(before).toMatchObject({ confirms: 1, flags: 1 });
+
+    // Delete Carol.
+    const deleted = await adminFetch(srv, cookie, `/users/${carolId}`, {
+      method: "DELETE",
     });
-    expect(banned.status).toBe(200);
-    expect((await banned.json()) as { keysRevoked: number }).toMatchObject({
-      banned: true,
+    expect(deleted.status).toBe(200);
+    expect((await deleted.json()) as { keysRevoked: number }).toMatchObject({
+      deleted: true,
       keysRevoked: 1,
     });
 
-    // Login is blocked (banned users are refused, 4xx).
+    // Login is gone: the credentials no longer authenticate.
     const signIn = await srv.env.auth.api
       .signInEmail({
         body: { email: "carol@test.local", password },
         asResponse: true,
       })
       .then((r) => r.status)
-      .catch(() => 403);
+      .catch(() => 401);
     expect(signIn).toBeGreaterThanOrEqual(400);
 
     // The key is dead: it can no longer connect over /mcp.
     await expect(connect(srv.port, key)).rejects.toThrow();
 
-    // Her Post survives, still attributed to her id — the row was kept.
+    // Identity is gone: the user row and its membership were removed.
+    expect(srv.env.controlPlane.getUser(carolId)).toBeNull();
+    expect(srv.env.controlPlane.getTeamForUser(carolId)).toBeNull();
+
+    // Her Post survives, still recorded against her (now-orphaned) id, with the
+    // SAME trust counts — deletion does not rewrite history.
     const stored = await srv.env.repo.getPost(postId);
     expect(stored).not.toBeNull();
     expect(stored!.createdBy).toBe(carolId);
+    const after = aggregateEvents(
+      await srv.env.repo.getEventsForPosts([postId]),
+    );
+    expect(after).toMatchObject({ confirms: 1, flags: 1 });
+
+    // The author no longer resolves and renders as "unknown" (read-time lookup).
+    const [hydrated] = await hydratePosts(
+      srv.env.repo,
+      (id) => srv.env.controlPlane.getUser(id),
+      [stored!],
+    );
+    expect(hydrated!.authorName).toBe("unknown");
+
+    // The email frees up: a brand-new User can be created with it again.
+    const recreated = await adminFetch(srv, cookie, "/users", {
+      method: "POST",
+      body: JSON.stringify({ email: "carol@test.local" }),
+    });
+    expect(recreated.status).toBe(201);
+    const newId = ((await recreated.json()) as { user: { id: string } }).user.id;
+    expect(newId).not.toBe(carolId);
+  });
+});
+
+describe("the ban endpoint is gone", () => {
+  let srv: RunningServer;
+  let cookie: string;
+  beforeAll(async () => {
+    ({ srv, cookie } = await bootWithAdmin());
+  });
+  afterAll(() => srv.stop());
+
+  it("POST /users/:id/ban 404s — ban is no longer a route", async () => {
+    const res = await adminFetch(srv, cookie, "/users/anyone/ban", {
+      method: "POST",
+    });
+    expect(res.status).toBe(404);
   });
 });

@@ -3,7 +3,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { ApiError, apiFetch } from "../../api/client";
 import { authClient } from "../../auth/client";
-import { ConfirmBan } from "../../components/confirm-ban/confirm-ban";
+import { ConfirmDelete } from "../../components/confirm-delete/confirm-delete";
 import { CopyBox } from "../../components/ui/copy-box/copy-box";
 import styles from "./admin.module.scss";
 
@@ -36,7 +36,9 @@ type UserRow = {
   id: string;
   email: string;
   role: string | null;
-  banned: boolean;
+  /** The Team this User belongs to (its single Membership), or null if unbound. */
+  teamId: string | null;
+  teamName: string | null;
   keys: ApiKey[];
 };
 
@@ -63,6 +65,17 @@ function AdminPage() {
   });
   const users = usersData ?? [];
 
+  // The create-User form's Team picker. Shares the `teams` query key with the
+  // Teams section below, so the two stay in sync from one fetch.
+  const { data: teamsData } = useQuery({
+    queryKey: adminKeys.teams,
+    queryFn: () =>
+      apiFetch<{ teams: TeamRow[] }>("/api/admin/teams").then((r) => r.teams),
+  });
+  const teams = teamsData ?? [];
+  // The default Team sorts last (earliest-created); pick it as the default option.
+  const defaultTeamId = teams.length > 0 ? teams[teams.length - 1]!.id : "";
+
   // Show-once secrets, keyed by User id. Set from a mutation result, never the
   // query cache — the server returns them exactly once.
   const [newPassword, setNewPassword] = useState<{
@@ -76,15 +89,24 @@ function AdminPage() {
   } | null>(null);
 
   const [email, setEmail] = useState("");
+  // The picked Team for the next created User; "" means "use the default Team".
+  const [teamId, setTeamId] = useState("");
 
   const invalidateUsers = () =>
     queryClient.invalidateQueries({ queryKey: adminKeys.users });
 
   const createUser = useMutation({
-    mutationFn: (newEmail: string) =>
+    mutationFn: (vars: { email: string; teamId: string }) =>
       apiFetch<{ user: { id: string; email: string }; password: string }>(
         "/api/admin/users",
-        { method: "POST", body: JSON.stringify({ email: newEmail }) },
+        {
+          method: "POST",
+          body: JSON.stringify({
+            email: vars.email,
+            // Omit when empty so the server applies its default-Team fallback.
+            ...(vars.teamId ? { teamId: vars.teamId } : {}),
+          }),
+        },
       ),
     onSuccess: async (created) => {
       setNewPassword({
@@ -94,6 +116,7 @@ function AdminPage() {
       });
       setMintedKey(null);
       setEmail("");
+      setTeamId("");
       await invalidateUsers();
     },
   });
@@ -116,9 +139,9 @@ function AdminPage() {
     onSuccess: () => invalidateUsers(),
   });
 
-  const banUser = useMutation({
+  const deleteUser = useMutation({
     mutationFn: (user: UserRow) =>
-      apiFetch(`/api/admin/users/${user.id}/ban`, { method: "POST" }),
+      apiFetch(`/api/admin/users/${user.id}`, { method: "DELETE" }),
     onSuccess: () => invalidateUsers(),
   });
 
@@ -128,7 +151,7 @@ function AdminPage() {
     createUser.error ??
     mintKey.error ??
     revokeKey.error ??
-    banUser.error ??
+    deleteUser.error ??
     null;
   const error = failure ? describe(failure) : null;
 
@@ -136,7 +159,8 @@ function AdminPage() {
 
   function onCreate(event: FormEvent) {
     event.preventDefault();
-    createUser.mutate(email);
+    // An empty teamId falls back to the default Team server-side.
+    createUser.mutate({ email, teamId });
   }
 
   return (
@@ -165,6 +189,18 @@ function AdminPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
+        <select
+          className={styles.input}
+          aria-label="Team"
+          value={teamId || defaultTeamId}
+          onChange={(e) => setTeamId(e.target.value)}
+        >
+          {teams.map((team) => (
+            <option key={team.id} value={team.id}>
+              {team.name}
+            </option>
+          ))}
+        </select>
         <button className={styles.primary} type="submit" disabled={busy}>
           {busy ? "Creating…" : "Create User"}
         </button>
@@ -180,7 +216,9 @@ function AdminPage() {
               <div className={styles.identity}>
                 <span className={styles.email}>{user.email}</span>
                 <span className={styles.role}>/ {user.role ?? "user"}</span>
-                {user.banned && <span className={styles.banned}>banned</span>}
+                {user.teamName && (
+                  <span className={styles.team}>{user.teamName}</span>
+                )}
               </div>
               <span className={styles.keys}>
                 {user.keys.length} {user.keys.length === 1 ? "key" : "keys"}
@@ -190,20 +228,18 @@ function AdminPage() {
                   type="button"
                   className={styles.action}
                   onClick={() => mintKey.mutate(user)}
-                  disabled={user.banned || mintKey.isPending}
+                  disabled={mintKey.isPending}
                 >
                   Add key
                 </button>
-                {!user.banned && (
-                  <ConfirmBan
-                    email={user.email}
-                    onConfirm={() => banUser.mutate(user)}
-                  >
-                    <button type="button" className={styles.actionDanger}>
-                      Ban
-                    </button>
-                  </ConfirmBan>
-                )}
+                <ConfirmDelete
+                  email={user.email}
+                  onConfirm={() => deleteUser.mutate(user)}
+                >
+                  <button type="button" className={styles.actionDanger}>
+                    Delete
+                  </button>
+                </ConfirmDelete>
               </div>
             </div>
             {newPassword?.userId === user.id && (

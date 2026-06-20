@@ -131,12 +131,13 @@
   color: $color-text-muted;
 }
 
-.banned {
+// The Team a User belongs to, shown as a quiet tag on the identity line.
+.team {
   margin-left: $space-sm;
   padding: 1px $space-xs;
-  border: 1px solid $color-danger;
+  border: 1px solid $color-border-strong;
   border-radius: $radius-sm;
-  color: $color-danger;
+  color: $color-text-muted;
   font-size: 0.625rem;
   font-weight: 500;
   letter-spacing: 0.08em;

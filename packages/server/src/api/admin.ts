@@ -6,10 +6,15 @@ import type { Auth } from "../auth/better-auth.js";
 /**
  * Admin user-management JSON API under `/api/admin/*`, role-gated to `admin`.
  * Mutations route through better-auth's own `api` surface. Admin-gated endpoints
- * (createUser/listUsers/banUser) re-check `role`, so we replay the request
+ * (createUser/listUsers/removeUser) re-check `role`, so we replay the request
  * headers into them. API keys are server-side: mint via `createApiKey` with
  * `body.userId` (sets `referenceId`), and count/list/revoke through the
  * better-auth adapter so an admin can touch ANY User's keys, not just the caller's.
+ *
+ * Deleting a User is the single off-switch (CONTEXT.md "User"; ADR 0008): it
+ * revokes the User's keys, removes their Membership, and removes the better-auth
+ * `user` row (cascading sessions) so login stops and the email frees up. Their
+ * authored Posts/events stay in the team corpus and render as an unknown author.
  */
 export function mountAdmin(app: Hono, deps: Deps): void {
   const auth = deps.authInstance;
@@ -25,7 +30,9 @@ export function mountAdmin(app: Hono, deps: Deps): void {
     await next();
   });
 
-  // Keys come from the adapter (keyed by `referenceId`), never the secret.
+  // Keys come from the adapter (keyed by `referenceId`), never the secret. Each
+  // row carries the User's Team (resolved via the control-plane membership), so
+  // the console can show who belongs where.
   admin.get("/users", async (c) => {
     const { users } = await auth.api.listUsers({
       query: { limit: 200, sortBy: "createdAt", sortDirection: "desc" },
@@ -33,24 +40,40 @@ export function mountAdmin(app: Hono, deps: Deps): void {
     });
     const adapter = await keyAdapter(auth);
     const rows = await Promise.all(
-      users.map(async (u) => ({
-        id: u.id,
-        email: u.email,
-        role: u.role ?? null,
-        banned: u.banned ?? false,
-        keys: await adapter.list(u.id),
-      })),
+      users.map(async (u) => {
+        const team = deps.controlPlane.getTeamForUser(u.id);
+        return {
+          id: u.id,
+          email: u.email,
+          role: u.role ?? null,
+          teamId: team?.id ?? null,
+          teamName: team?.name ?? null,
+          keys: await adapter.list(u.id),
+        };
+      }),
     );
     return c.json({ users: rows });
   });
 
-  // Generate a strong password and return it ONCE; only its hash is stored.
+  // Generate a strong password and return it ONCE; only its hash is stored. The
+  // User is bound to exactly one Team at creation (ADR 0008): `teamId` picks it,
+  // defaulting to the default (first) Team when omitted.
   admin.post("/users", async (c) => {
-    const body: { email?: unknown } = await c.req
+    const body: { email?: unknown; teamId?: unknown } = await c.req
       .json()
-      .catch(() => ({}) as { email?: unknown });
+      .catch(() => ({}) as { email?: unknown; teamId?: unknown });
     const email = typeof body.email === "string" ? body.email.trim() : "";
     if (!email) return c.json({ error: "An email is required" }, 400);
+
+    // Resolve the requested Team (must exist); fall back to the default Team.
+    const requestedTeamId =
+      typeof body.teamId === "string" ? body.teamId.trim() : "";
+    const team = requestedTeamId
+      ? deps.controlPlane.getTeam(requestedTeamId)
+      : deps.controlPlane.firstTeam();
+    if (team === null) {
+      return c.json({ error: "No such Team" }, 400);
+    }
 
     const password = generatePassword();
     try {
@@ -59,11 +82,7 @@ export function mountAdmin(app: Hono, deps: Deps): void {
         headers: c.req.raw.headers,
       });
       // A User must belong to exactly one Team for its keys to route (ADR 0008).
-      // PLO-54 assigns the default Team; PLO-56 adds the team picker.
-      const team = deps.controlPlane.firstTeam();
-      if (team !== null) {
-        deps.controlPlane.addMembership(user.id, team.id, deps.clock.now());
-      }
+      deps.controlPlane.addMembership(user.id, team.id, deps.clock.now());
       return c.json({ user: { id: user.id, email: user.email }, password }, 201);
     } catch (err) {
       return c.json({ error: messageOf(err, "Could not create the User") }, 400);
@@ -140,21 +159,28 @@ export function mountAdmin(app: Hono, deps: Deps): void {
     return c.body(null, 204);
   });
 
-  // Ban blocks login/sessions but leaves keys verifying, so also delete the
-  // User's `apikey` rows. The `user` row stays so authored Posts stay attributed.
-  admin.post("/users/:id/ban", async (c) => {
+  // Delete a User — the single, irreversible off-switch (CONTEXT.md; ADR 0008).
+  // 1) Revoke every API key the User holds (agents acting as them stop at once).
+  // 2) Remove the Membership row BEFORE the user row — `team_membership.user_id`
+  //    FK-references `user(id)` with no cascade, so it must go first.
+  // 3) Remove the better-auth `user` row (cascades `session`/`account`) so login
+  //    stops and the email frees up for reuse.
+  // The User's authored Posts and Confirm/Flag events live in the team corpus and
+  // are NOT touched — trust math is unchanged; the author now renders "unknown".
+  admin.delete("/users/:id", async (c) => {
     const userId = c.req.param("id");
+    const adapter = await keyAdapter(auth);
+    const keysRevoked = await adapter.deleteAllFor(userId);
+    deps.controlPlane.removeMembership(userId);
     try {
-      await auth.api.banUser({
+      await auth.api.removeUser({
         body: { userId },
         headers: c.req.raw.headers,
       });
     } catch (err) {
-      return c.json({ error: messageOf(err, "Could not ban the User") }, 400);
+      return c.json({ error: messageOf(err, "Could not delete the User") }, 400);
     }
-    const adapter = await keyAdapter(auth);
-    const revoked = await adapter.deleteAllFor(userId);
-    return c.json({ banned: true, keysRevoked: revoked });
+    return c.json({ deleted: true, keysRevoked });
   });
 
   app.route("/api/admin", admin);
