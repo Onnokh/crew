@@ -23,6 +23,8 @@ async function bootWithAdmin(): Promise<{
     where: [{ field: "id", value: signUp.user.id }],
     update: { role: "admin" },
   });
+  // The admin must be a member of a Team for its keys to route (ADR 0008).
+  env.controlPlane.addMembership(signUp.user.id, env.teamId, 0);
   const res = await env.auth.api.signInEmail({
     body: { email: "boss@test.local", password: "password1234" },
     asResponse: true,

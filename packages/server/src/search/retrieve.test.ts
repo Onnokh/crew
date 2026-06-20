@@ -3,23 +3,26 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { NewPost } from "../core/post.js";
+import type { AuthorLookup } from "../read/hydrate.js";
 import { migrate } from "../store/migrate.js";
 import { SqliteRepository } from "../store/sqlite-repository.js";
 import { FakeClock, FakeEmbedder, FakeIdGen } from "../test/fakes.js";
-import { seedUser } from "../test/seed-user.js";
 import { retrieve } from "./retrieve.js";
 
 let raw: Database.Database;
 let clock: FakeClock;
 let repo: SqliteRepository;
 
+// Author resolution comes from the control plane; a stub suffices here.
+const getUser: AuthorLookup = (id) =>
+  id === "user_alice" ? { id, name: "Alice", role: null } : null;
+
 beforeEach(() => {
   raw = new Database(":memory:");
   raw.pragma("foreign_keys = ON");
   sqliteVec.load(raw);
-  migrate(raw);
+  migrate(raw, "team");
   const db = drizzle(raw);
-  seedUser(raw, "user_alice", "Alice");
   clock = new FakeClock();
   repo = new SqliteRepository(db, raw, clock, new FakeIdGen(), new FakeEmbedder());
 });
@@ -43,7 +46,7 @@ async function post(overrides: Partial<NewPost> = {}): Promise<string> {
 describe("retrieve", () => {
   it("returns an empty list when nothing matches", async () => {
     await post({ situation: "kubernetes pod eviction" });
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "completely unrelated quantum entanglement",
       limit: 5,
     });
@@ -58,7 +61,7 @@ describe("retrieve", () => {
     clock.advance(1000);
     await repo.recordEvent({ postId: confirmed, verdict: "confirm", createdBy: "user_alice" });
 
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "database connection timeout",
       limit: 5,
     });
@@ -72,7 +75,7 @@ describe("retrieve", () => {
 
     await repo.recordEvent({ postId: flagged, verdict: "flag", reason: "incorrect", createdBy: "user_alice" });
 
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "database connection timeout",
       limit: 5,
     });
@@ -84,7 +87,7 @@ describe("retrieve", () => {
     const otherRepo = await post({ situation: "database connection timeout", repo: "intranet" });
     const sameRepo = await post({ situation: "database connection timeout", repo: "webshop" });
 
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "database connection timeout",
       repo: "webshop",
       limit: 5,
@@ -103,7 +106,7 @@ describe("retrieve", () => {
       environment: "Node 22 fastembed onnxruntime",
     });
 
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "dependency install fails with native binary mismatch",
       environment: "Node 22 fastembed onnxruntime",
       limit: 5,
@@ -121,7 +124,7 @@ describe("retrieve", () => {
       await repo.recordEvent({ postId: weaker, verdict: "confirm", createdBy: "user_alice" });
     }
 
-    const [top] = await retrieve(repo, clock, {
+    const [top] = await retrieve(repo, getUser, clock, {
       situation: "typescript build fails on ci",
       limit: 1,
     });
@@ -132,7 +135,7 @@ describe("retrieve", () => {
     for (let i = 0; i < 6; i++) {
       await post({ situation: `database connection timeout variant ${i}` });
     }
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "database connection timeout",
       limit: 2,
     });
@@ -141,7 +144,7 @@ describe("retrieve", () => {
 
   it("clamps an out-of-range limit", async () => {
     await post();
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "database connection timeout",
       limit: 999,
     });
@@ -155,7 +158,7 @@ describe("retrieve", () => {
     clock.advance(100);
     await repo.recordEvent({ postId: id, verdict: "flag", reason: "stale", note: "newer note", createdBy: "user_alice" });
 
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "database connection timeout",
       limit: 5,
     });

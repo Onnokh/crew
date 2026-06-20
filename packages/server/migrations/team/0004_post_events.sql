@@ -9,13 +9,16 @@
 -- ('incorrect' | 'stale' | 'duplicate') and null on confirms. `note` is an
 -- optional one-line comment anchored to the verdict.
 
+-- `created_by` is a plain user id resolved against the control plane at read
+-- time; the former `REFERENCES "user"(id)` FK is DROPPED — per-team corpus DBs
+-- carry no `user` table (ADR 0007/0008). The FK to posts(id) stays (same DB).
 CREATE TABLE IF NOT EXISTS post_events (
   id         TEXT PRIMARY KEY,
   post_id    TEXT NOT NULL REFERENCES posts(id),
   verdict    TEXT NOT NULL,
   reason     TEXT,
   note       TEXT,
-  created_by TEXT NOT NULL REFERENCES "user"(id),
+  created_by TEXT NOT NULL,
   created_at INTEGER NOT NULL
 );
 

@@ -1,11 +1,13 @@
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 /**
- * Drizzle TABLE definitions for `posts` and `post_events`. drizzle-kit reads
- * this file to generate migrations, so it must stay inside `packages/server`.
- * The FTS5/vec0 virtual tables and better-auth's `user` table are deliberately
- * absent (kept in hand-written migrations so drizzle-kit doesn't manage them);
- * `created_by`'s FK into `user(id)` is declared in SQL, not via `.references()`.
+ * Drizzle TABLE definitions for `posts` and `post_events` — the PER-TEAM corpus
+ * schema (ADR 0007). drizzle-kit reads this file to generate migrations, so it
+ * must stay inside `packages/server`. The FTS5/vec0 virtual tables are
+ * deliberately absent (kept in hand-written migrations so drizzle-kit doesn't
+ * manage them). `created_by` is a plain user id resolved against the control
+ * plane at read time: the corpus DB carries no `user` table, so the former FK
+ * into `user(id)` is dropped (it has no target here).
  */
 
 /** One stored item of shared agent knowledge. */
@@ -24,7 +26,7 @@ export const posts = sqliteTable("posts", {
   repo: text("repo").notNull(),
   /** active | retired. */
   status: text("status").notNull().default("active"),
-  /** Owning User's id (FK to better-auth's `user(id)`, enforced in SQL). */
+  /** Owning User's id; resolved against the control plane at read time (no FK here). */
   createdBy: text("created_by").notNull(),
   /** Creation timestamp, unix ms. */
   createdAt: integer("created_at").notNull(),
@@ -49,7 +51,7 @@ export const postEvents = sqliteTable("post_events", {
   reason: text("reason"),
   /** Optional one-line Note anchored to the verdict. */
   note: text("note"),
-  /** Acting User's id (FK to better-auth's `user(id)`, enforced in SQL). */
+  /** Acting User's id; resolved against the control plane at read time (no FK here). */
   createdBy: text("created_by").notNull(),
   /** When the event was recorded, unix ms. */
   createdAt: integer("created_at").notNull(),

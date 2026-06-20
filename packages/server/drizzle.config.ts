@@ -6,5 +6,7 @@ import { defineConfig } from "drizzle-kit";
 export default defineConfig({
   dialect: "sqlite",
   schema: "./src/store/schema.ts",
-  out: "./migrations",
+  // posts/post_events live in the per-team corpus DB (ADR 0007), so schema.ts
+  // mirrors the hand-written migrations under migrations/team.
+  out: "./migrations/team",
 });

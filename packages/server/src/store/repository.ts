@@ -1,6 +1,5 @@
 import type { PostEvent, NewPostEvent } from "../core/post-event.js";
 import type { NewPost, Post } from "../core/post.js";
-import type { User } from "../core/user.js";
 import type { Candidate, VecCandidate } from "./queries.js";
 
 /**
@@ -77,7 +76,4 @@ export type PostRepository = {
 
   /** Set a Post's status back to `active`. The inverse of {@link retirePost}; a no-op if absent. */
   restorePost(id: string): Promise<void>;
-
-  /** Look up a User by id in better-auth's `user` table, or null. Read-only name lookup. */
-  getUser(id: string): Promise<User | null>;
 };

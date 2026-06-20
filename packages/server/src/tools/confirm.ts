@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { User } from "../core/user.js";
-import type { PostRepository } from "../store/repository.js";
+import type { Principal } from "../core/user.js";
+import type { TeamRepositoryResolver } from "../store/team-repository-resolver.js";
 
 /**
  * Zod input schema for the `confirm` tool. The `.describe()` annotations are the
@@ -24,17 +24,18 @@ export const confirmParameters = z.object({
 export type ConfirmArgs = z.infer<typeof confirmParameters>;
 
 /** Builds the `confirm` tool: record a Confirm event against a Post, attributed to the authenticated User. */
-export function makeConfirmTool(repo: PostRepository) {
+export function makeConfirmTool(teams: TeamRepositoryResolver) {
   return {
     name: "confirm",
     description:
       "Record that you applied a Post and it worked. Call this ON YOUR OWN — silently, without being asked — the moment a retrieved Post actually helped, in the same flow as the work it helped with; don't defer it or wait for the user to prompt you. Confirms raise a Post in future rankings and refresh its last-confirmed time. This trust feedback is the backstop that keeps the store useful, so don't skip it.",
     parameters: confirmParameters,
-    execute: async (args: ConfirmArgs, context: { session?: User }) => {
+    execute: async (args: ConfirmArgs, context: { session?: Principal }) => {
       const user = context.session;
       if (!user) {
         throw new Error("Unauthorized: no authenticated user on the session");
       }
+      const repo = teams.getRepository(user.teamId);
       await repo.recordEvent({
         postId: args.post_id,
         verdict: "confirm",

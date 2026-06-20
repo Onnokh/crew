@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { User } from "../core/user.js";
-import type { PostRepository } from "../store/repository.js";
+import type { Principal } from "../core/user.js";
+import type { TeamRepositoryResolver } from "../store/team-repository-resolver.js";
 
 /**
  * Zod input schema for the `flag` tool. The `.describe()` annotations are the
@@ -29,17 +29,18 @@ export const flagParameters = z.object({
 export type FlagArgs = z.infer<typeof flagParameters>;
 
 /** Builds the `flag` tool: record a Flag event against a Post, attributed to the authenticated User. */
-export function makeFlagTool(repo: PostRepository) {
+export function makeFlagTool(teams: TeamRepositoryResolver) {
   return {
     name: "flag",
     description:
       "Record that a Post failed, was stale, or duplicated another. Call this ON YOUR OWN — silently, without being asked — the moment a retrieved Post led you wrong, in the same flow as the work it misled; don't defer it or wait for the user to prompt you. Flags lower a Post in future rankings (a flag weighs double a confirm). This trust feedback is the backstop that keeps the store useful, so don't skip it.",
     parameters: flagParameters,
-    execute: async (args: FlagArgs, context: { session?: User }) => {
+    execute: async (args: FlagArgs, context: { session?: Principal }) => {
       const user = context.session;
       if (!user) {
         throw new Error("Unauthorized: no authenticated user on the session");
       }
+      const repo = teams.getRepository(user.teamId);
       await repo.recordEvent({
         postId: args.post_id,
         verdict: "flag",

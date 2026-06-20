@@ -3,7 +3,6 @@ import { desc, eq } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { NewPostEvent, PostEvent } from "../core/post-event.js";
 import type { NewPost, Post } from "../core/post.js";
-import type { User } from "../core/user.js";
 import type { Embedder } from "../embedding/embedder.js";
 import type { Clock } from "../platform/clock.js";
 import type { IdGen } from "../platform/id-gen.js";
@@ -277,15 +276,6 @@ export class SqliteRepository implements PostRepository {
       .set({ status: "active" })
       .where(eq(posts.id, id))
       .run();
-  }
-
-  async getUser(id: string): Promise<User | null> {
-    // Raw SQL because better-auth owns the `user` table (kept out of schema.ts).
-    // Quoted identifier because `user` is a SQL keyword.
-    const row = this.raw
-      .prepare(`SELECT id, name, role FROM "user" WHERE id = ?`)
-      .get(id) as { id: string; name: string; role: string | null } | undefined;
-    return row ? { id: row.id, name: row.name, role: row.role } : null;
   }
 }
 

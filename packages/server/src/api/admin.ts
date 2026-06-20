@@ -58,6 +58,12 @@ export function mountAdmin(app: Hono, deps: Deps): void {
         body: { email, password, name: email },
         headers: c.req.raw.headers,
       });
+      // A User must belong to exactly one Team for its keys to route (ADR 0008).
+      // PLO-54 assigns the default Team; PLO-56 adds the team picker.
+      const team = deps.controlPlane.firstTeam();
+      if (team !== null) {
+        deps.controlPlane.addMembership(user.id, team.id, deps.clock.now());
+      }
       return c.json({ user: { id: user.id, email: user.email }, password }, 201);
     } catch (err) {
       return c.json({ error: messageOf(err, "Could not create the User") }, 400);

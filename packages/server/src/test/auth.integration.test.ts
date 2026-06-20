@@ -1,13 +1,13 @@
 import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
 import type { IncomingMessage } from "node:http";
 import * as sqliteVec from "sqlite-vec";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { BetterAuthAuthenticator } from "../auth/better-auth-authenticator.js";
 import { createAuth, type Auth } from "../auth/better-auth.js";
+import { ensureDefaultOrgAndTeam } from "../store/bootstrap.js";
+import { ControlPlaneRepository } from "../store/control-plane-repository.js";
 import { migrate } from "../store/migrate.js";
-import { SqliteRepository } from "../store/sqlite-repository.js";
-import { FakeClock, FakeEmbedder, FakeIdGen } from "./fakes.js";
+import { FakeClock, FakeIdGen } from "./fakes.js";
 import { connect, startTestServer, type RunningServer } from "./harness.js";
 
 /** A request the seam can read, carrying just the headers under test. */
@@ -21,30 +21,31 @@ describe("BetterAuthAuthenticator resolves both caller shapes", () => {
   let adminId: string;
   let apiKey: string;
 
+  let controlPlane: ControlPlaneRepository;
+  let teamId: string;
+
   beforeAll(async () => {
+    // The control-plane DB: identity + org/team/membership (no corpus tables).
     const raw = new Database(":memory:");
     raw.pragma("foreign_keys = ON");
     sqliteVec.load(raw);
-    migrate(raw);
-    const repo = new SqliteRepository(
-      drizzle(raw),
-      raw,
-      new FakeClock(),
-      new FakeIdGen(),
-      new FakeEmbedder(),
-    );
+    migrate(raw, "control-plane");
+    controlPlane = new ControlPlaneRepository(raw);
+    teamId = ensureDefaultOrgAndTeam(controlPlane, new FakeIdGen(), new FakeClock());
+
     auth = createAuth(raw, {
       secret: "test-secret-test-secret-test-secret",
       baseURL: "http://localhost",
     });
-    authn = new BetterAuthAuthenticator(auth, repo);
+    authn = new BetterAuthAuthenticator(auth, controlPlane);
 
-    // Seed a first admin: sign up, then promote the row directly.
+    // Seed a first admin: sign up, promote the row, make it a Team member.
     const signUp = await auth.api.signUpEmail({
       body: { email: "boss@test.local", password: "password1234", name: "Boss" },
     });
     adminId = signUp.user.id;
     raw.prepare(`UPDATE "user" SET role = 'admin' WHERE id = ?`).run(adminId);
+    controlPlane.addMembership(adminId, teamId, 0);
 
     apiKey = (await auth.api.createApiKey({ body: { name: "k", userId: adminId } }))
       .key;
@@ -71,10 +72,31 @@ describe("BetterAuthAuthenticator resolves both caller shapes", () => {
     expect(user?.role).toBe("admin");
   });
 
+  it("resolves the caller's Team onto the Principal", async () => {
+    const user = await authn.authenticate(
+      reqWith({ authorization: `Bearer ${apiKey}` }),
+    );
+    expect(user?.teamId).toBe(teamId);
+  });
+
   it("rejects a missing credential and a bogus Bearer key", async () => {
     expect(await authn.authenticate(reqWith({}))).toBeNull();
     expect(
       await authn.authenticate(reqWith({ authorization: "Bearer nope" })),
+    ).toBeNull();
+  });
+
+  it("rejects a valid key whose User belongs to no Team (401)", async () => {
+    // A User with no membership resolves to no Team — the credential routes
+    // nowhere and authenticate returns null.
+    const teamless = await auth.api.signUpEmail({
+      body: { email: "teamless@test.local", password: "password1234", name: "Teamless" },
+    });
+    const key = (
+      await auth.api.createApiKey({ body: { name: "k2", userId: teamless.user.id } })
+    ).key;
+    expect(
+      await authn.authenticate(reqWith({ authorization: `Bearer ${key}` })),
     ).toBeNull();
   });
 });
