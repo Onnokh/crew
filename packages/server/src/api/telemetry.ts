@@ -11,6 +11,7 @@ import { DEFAULT_ATTRIBUTION_WINDOW_MS } from "../store/queries.js";
  * Routes:
  *   GET /api/telemetry/recent      → { retrievals: RetrievalRow[] }   most recent queries
  *   GET /api/telemetry/conversion  → ConversionPanelData               Query→Confirm rate + trend
+ *   GET /api/telemetry/coverage    → CoveragePanelData                 zero-result rate + query volume, with a per-day trend
  */
 export function mountTelemetry(app: Hono, deps: Deps): void {
   const telemetry = new Hono();
@@ -68,6 +69,40 @@ export function mountTelemetry(app: Hono, deps: Deps): void {
     return c.json(data);
   });
 
+  // Coverage & volume: the zero-result rate (the coverage gap, tracked apart
+  // from conversion) and the query volume, both over the range, plus a per-day
+  // trend. Every figure is `coverageStats` over the raw `retrievals` rows — one
+  // call over the whole range for the headline, one per day-wide bucket for the
+  // trend. No pre-aggregated counter; the rate is `zeroResults / total`.
+  telemetry.get("/coverage", async (c) => {
+    const to = deps.clock.now();
+    const from = to - TREND_DAYS * DAY_MS;
+
+    const headline = await deps.repo.coverageStats({ from, to });
+    const trend: CoveragePoint[] = [];
+    for (const bucket of dayBuckets(from, to)) {
+      const stats = await deps.repo.coverageStats({
+        from: bucket.from,
+        to: bucket.to,
+      });
+      trend.push({
+        from: bucket.from,
+        to: bucket.to,
+        total: stats.total,
+        zeroResults: stats.zeroResults,
+      });
+    }
+
+    const data: CoveragePanelData = {
+      from,
+      to,
+      total: headline.total,
+      zeroResults: headline.zeroResults,
+      trend,
+    };
+    return c.json(data);
+  });
+
   app.route("/api/telemetry", telemetry);
 }
 
@@ -118,6 +153,34 @@ export type ConversionPanelData = {
   converted: number;
   /** Per-day points across the range, oldest first. */
   trend: ConversionPoint[];
+};
+
+/** One point on the coverage/volume trend: a day's total + zero-result counts. */
+export type CoveragePoint = {
+  from: number;
+  to: number;
+  /** Retrievals that day, regardless of result count (the query volume). */
+  total: number;
+  /** Of those, how many returned zero Posts. */
+  zeroResults: number;
+};
+
+/**
+ * What the coverage & volume panels render: the headline counts over the range
+ * plus a per-day trend. The zero-result rate is `zeroResults / total`; `total`
+ * alone is the query volume. Both panels read this one payload.
+ */
+export type CoveragePanelData = {
+  /** Range start (inclusive), unix ms. */
+  from: number;
+  /** Range end (exclusive), unix ms — the server clock at request time. */
+  to: number;
+  /** Retrievals over the whole range (the volume; the rate's denominator). */
+  total: number;
+  /** Of those, how many returned zero Posts (the rate's numerator). */
+  zeroResults: number;
+  /** Per-day points across the range, oldest first. */
+  trend: CoveragePoint[];
 };
 
 /** A Retrieval flattened to what the dashboard's recent-Retrievals panel renders. */

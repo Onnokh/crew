@@ -11,6 +11,8 @@ import type {
   Candidate,
   ConversionStats,
   ConversionWindow,
+  CoverageStats,
+  CoverageWindow,
   NewRetrieval,
   PostEventRow,
   RecentRetrievalRow,
@@ -18,6 +20,7 @@ import type {
 } from "./queries.js";
 import {
   conversionStats,
+  coverageStats,
   environmentVectorSearch,
   eventsForPosts,
   insertEmbeddings,
@@ -313,6 +316,10 @@ export class SqliteRepository implements PostRepository {
 
   async conversionStats(window: ConversionWindow): Promise<ConversionStats> {
     return conversionStats(this.raw, window);
+  }
+
+  async coverageStats(window: CoverageWindow): Promise<CoverageStats> {
+    return coverageStats(this.raw, window);
   }
 
   async getUser(id: string): Promise<User | null> {

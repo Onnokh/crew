@@ -230,6 +230,51 @@ export type ConversionStats = {
 };
 
 /**
+ * A half-open `[from, to)` range over a retrieval's `created_at`, unix ms. The
+ * read-time window for {@link coverageStats} — no stored range, no migration.
+ */
+export type CoverageWindow = {
+  from: number;
+  to: number;
+};
+
+/**
+ * Coverage counts over the raw `retrievals` rows in `[from, to)`: how many
+ * queries ran in total and how many returned nothing (`result_count = 0`). The
+ * zero-result rate is `zeroResults / total` — the coverage gap, read straight
+ * from the log with no pre-aggregated counter. `total` is also the query volume
+ * over the range, so this one read backs both the coverage and volume figures.
+ */
+export type CoverageStats = {
+  /** Retrievals in `[from, to)`, regardless of result count (the query volume). */
+  total: number;
+  /** Of those, how many returned zero Posts (`result_count = 0`). */
+  zeroResults: number;
+};
+
+/**
+ * Count total Retrievals and zero-result Retrievals in `[from, to)` over the raw
+ * rows in one pass. `zeroResults` filters on `result_count = 0`; `total` counts
+ * every row. Both come from a single scan so a per-day series (one call per
+ * bucket) stays cheap. No materialized counter — read directly from the log.
+ */
+export function coverageStats(
+  raw: Database,
+  window: CoverageWindow,
+): CoverageStats {
+  const row = raw
+    .prepare(
+      `SELECT COUNT(*) AS total,
+              COALESCE(SUM(CASE WHEN result_count = 0 THEN 1 ELSE 0 END), 0) AS zeroResults
+         FROM retrievals
+        WHERE created_at >= ?
+          AND created_at < ?`,
+    )
+    .get(window.from, window.to) as { total: number; zeroResults: number };
+  return { total: row.total, zeroResults: row.zeroResults };
+}
+
+/**
  * Insert one Retrieval and its result rows in a single transaction. `id` and
  * `resultIds` are minted by the caller (the repo's IdGen) so this helper stays a
  * pure writer. Result rows are skipped for a zero-result query.

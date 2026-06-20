@@ -2,7 +2,9 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { authClient } from "../../auth/client";
 import { ConversionPanel } from "../../components/telemetry/conversion-panel";
+import { QueryVolumePanel } from "../../components/telemetry/query-volume-panel";
 import { RecentRetrievalsPanel } from "../../components/telemetry/recent-retrievals-panel";
+import { ZeroResultRatePanel } from "../../components/telemetry/zero-result-rate-panel";
 import styles from "../../components/telemetry/telemetry.module.scss";
 
 /**
@@ -52,7 +54,20 @@ const PANELS: Panel[] = [
       "Of retrievals that returned results, the fraction whose querier later confirmed a returned Post — with a per-day trend.",
     render: () => <ConversionPanel />,
   },
-  // PLO-50: { id: "zero-result-rate", … }, { id: "query-volume", … }
+  {
+    id: "zero-result-rate",
+    title: "Zero-result rate",
+    description:
+      "Of all retrievals, the fraction that returned nothing — the coverage gap — with a per-day trend.",
+    render: () => <ZeroResultRatePanel />,
+  },
+  {
+    id: "query-volume",
+    title: "Query volume",
+    description:
+      "How many retrievals ran over the range, with a per-day trend of the overall volume.",
+    render: () => <QueryVolumePanel />,
+  },
 ];
 
 function TelemetryPage() {

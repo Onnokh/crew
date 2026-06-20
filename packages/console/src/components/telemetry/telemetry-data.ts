@@ -4,6 +4,7 @@
 export const telemetryKeys = {
   recent: ["telemetry", "recent"] as const,
   conversion: ["telemetry", "conversion"] as const,
+  coverage: ["telemetry", "coverage"] as const,
 };
 
 /** Mirrors the server's `RetrievalRow` (api/telemetry.ts). */
@@ -31,4 +32,21 @@ export type ConversionPanelData = {
   withResults: number;
   converted: number;
   trend: ConversionPoint[];
+};
+
+/** Mirrors the server's `CoveragePoint` (api/telemetry.ts) — one day's counts. */
+export type CoveragePoint = {
+  from: number;
+  to: number;
+  total: number;
+  zeroResults: number;
+};
+
+/** Mirrors the server's `CoveragePanelData` (api/telemetry.ts). */
+export type CoveragePanelData = {
+  from: number;
+  to: number;
+  total: number;
+  zeroResults: number;
+  trend: CoveragePoint[];
 };

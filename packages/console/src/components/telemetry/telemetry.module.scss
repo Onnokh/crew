@@ -175,6 +175,20 @@
   vector-effect: non-scaling-stroke;
 }
 
+// The query-volume bars: one bar per day, scaled to the busiest day. Same quiet
+// weight as the sparkline — a single inline SVG, no charting dependency.
+.volumeBars {
+  display: block;
+  width: 100%;
+  height: 48px;
+  color: $color-text-muted;
+}
+
+.volumeBar {
+  fill: currentColor;
+  opacity: 0.5;
+}
+
 .trendCaption {
   margin: 0;
   color: $color-text-subtle;

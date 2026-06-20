@@ -5,6 +5,8 @@ import type {
   Candidate,
   ConversionStats,
   ConversionWindow,
+  CoverageStats,
+  CoverageWindow,
   NewRetrieval,
   RecentRetrievalRow,
   VecCandidate,
@@ -112,4 +114,13 @@ export type PostRepository = {
    * retrieval convert?).
    */
   conversionStats(window: ConversionWindow): Promise<ConversionStats>;
+
+  /**
+   * Coverage counts over the raw Retrievals in `[from, to)`: the total query
+   * volume and how many returned zero Posts. The zero-result rate is
+   * `zeroResults / total`. Range is read-time; nothing is stored or
+   * pre-aggregated. Consumed by PLO-50 for the zero-result-rate and
+   * query-volume panels (one call over the range, one per day for the trend).
+   */
+  coverageStats(window: CoverageWindow): Promise<CoverageStats>;
 };
