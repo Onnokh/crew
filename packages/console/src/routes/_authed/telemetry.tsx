@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { authClient } from "../../auth/client";
+import { ConversionPanel } from "../../components/telemetry/conversion-panel";
 import { RecentRetrievalsPanel } from "../../components/telemetry/recent-retrievals-panel";
 import styles from "../../components/telemetry/telemetry.module.scss";
 
@@ -44,7 +45,13 @@ const PANELS: Panel[] = [
     description: "The latest agent queries, with how many Posts each returned.",
     render: () => <RecentRetrievalsPanel />,
   },
-  // PLO-49: { id: "conversion-rate", title: "Conversion rate", … }
+  {
+    id: "conversion-rate",
+    title: "Query→Confirm conversion",
+    description:
+      "Of retrievals that returned results, the fraction whose querier later confirmed a returned Post — with a per-day trend.",
+    render: () => <ConversionPanel />,
+  },
   // PLO-50: { id: "zero-result-rate", … }, { id: "query-volume", … }
 ];
 

@@ -125,6 +125,62 @@
   color: $color-text-subtle;
 }
 
+// The conversion panel: a big headline rate, its supporting fraction, then a
+// lightweight per-day sparkline. Plain elements + a single inline SVG — no
+// charting dependency, matching the dashboard's quiet visual weight.
+.conversion {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.headline {
+  display: flex;
+  align-items: baseline;
+  gap: $space-sm;
+}
+
+.rate {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.fraction {
+  color: $color-text-muted;
+  font-size: $text-sm;
+  font-variant-numeric: tabular-nums;
+}
+
+.sparkline {
+  display: block;
+  width: 100%;
+  height: 48px;
+  color: $color-text-muted;
+}
+
+.sparkArea {
+  fill: currentColor;
+  opacity: 0.12;
+}
+
+.sparkLine {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.trendCaption {
+  margin: 0;
+  color: $color-text-subtle;
+  font-size: $text-xs;
+}
+
 .muted {
   margin: 0;
   color: $color-text-muted;
