@@ -72,7 +72,7 @@ export function mountReview(app: Hono, deps: Deps): void {
       situation: q,
       limit: MAX_LIMIT,
     });
-    return c.json({ posts: results.map(toReviewRow) });
+    return c.json({ posts: results.map((r) => toReviewRow(r.result)) });
   });
 
   // Idempotent no-ops for an unknown id (the repository swallows it).

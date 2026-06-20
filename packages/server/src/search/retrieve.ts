@@ -6,7 +6,7 @@ import { hydratePosts } from "../read/hydrate.js";
 import type { PostRepository } from "../store/repository.js";
 import { trustFromCounts } from "../trust/aggregate.js";
 import { reciprocalRankFusion } from "./rrf.js";
-import { finalScore } from "./score.js";
+import { recency, repoBoost } from "./score.js";
 
 /** Default number of Posts returned when the agent doesn't ask for a limit. */
 export const DEFAULT_LIMIT = 5;
@@ -25,12 +25,37 @@ export type RetrieveInput = {
   limit: number;
 };
 
-/** Run the retrieval pipeline and return the ranked results, ready for `renderResults()`. */
+/**
+ * The per-result score breakdown ranking computes: the RRF input, the multipliers
+ * applied, and their product `final`. Thrown away by ranking before PLO-48, now
+ * captured for retrieval telemetry (and a future tuning view).
+ */
+export type ScoreBreakdown = {
+  rrfScore: number;
+  trust: number;
+  recency: number;
+  repoBoost: number;
+  final: number;
+};
+
+/** One ranked result: the renderable Post plus its 1-based rank and score breakdown. */
+export type RankedResult = {
+  result: RenderResult;
+  /** 1-based position in the returned list. */
+  rank: number;
+  breakdown: ScoreBreakdown;
+};
+
+/**
+ * Run the retrieval pipeline and return the ranked results. Each result carries
+ * its {@link RenderResult} (for rendering/recording views) plus the rank and
+ * score breakdown telemetry captures; map to `result` for `renderResults()`.
+ */
 export async function retrieve(
   repo: PostRepository,
   clock: Clock,
   input: RetrieveInput,
-): Promise<RenderResult[]> {
+): Promise<RankedResult[]> {
   const limit = clampLimit(input.limit);
   const now = clock.now();
 
@@ -59,15 +84,15 @@ export async function retrieve(
   const hydrated = await hydratePosts(repo, posts);
 
   const scored = hydrated.map((h) => {
-    const final = finalScore(
-      {
-        rrfScore: fusedById.get(h.post.id) ?? 0,
-        trust: trustFromCounts(h.confirms, h.flags),
-        recencyAnchor: h.post.lastConfirmed ?? h.post.createdAt,
-        sameRepo: input.repo !== undefined && h.post.repo === input.repo,
-      },
-      now,
+    // Compute each multiplier explicitly so the breakdown survives, then take
+    // their product as `final` (== finalScore's `rrf · trust · recency · boost`).
+    const rrfScore = fusedById.get(h.post.id) ?? 0;
+    const trust = trustFromCounts(h.confirms, h.flags);
+    const recencyValue = recency(h.post.lastConfirmed ?? h.post.createdAt, now);
+    const repoBoostValue = repoBoost(
+      input.repo !== undefined && h.post.repo === input.repo,
     );
+    const final = rrfScore * trust * recencyValue * repoBoostValue;
     const result: RenderResult = {
       post: h.post,
       authorName: h.authorName,
@@ -76,12 +101,21 @@ export async function retrieve(
       views: h.post.views,
       notes: recentNotes(h.events),
     };
-    return { result, final };
+    const breakdown: ScoreBreakdown = {
+      rrfScore,
+      trust,
+      recency: recencyValue,
+      repoBoost: repoBoostValue,
+      final,
+    };
+    return { result, breakdown };
   });
 
-  // Re-rank by final score; ties hold their fused order.
-  scored.sort((a, b) => b.final - a.final);
-  return scored.slice(0, limit).map((s) => s.result);
+  // Re-rank by final score; ties hold their fused order. Stamp the 1-based rank.
+  scored.sort((a, b) => b.breakdown.final - a.breakdown.final);
+  return scored
+    .slice(0, limit)
+    .map((s, index) => ({ result: s.result, rank: index + 1, breakdown: s.breakdown }));
 }
 
 /** Clamp a possibly-out-of-range limit into [1, MAX_LIMIT]. */

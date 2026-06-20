@@ -56,9 +56,14 @@ export function AppChrome({ children }: { children: ReactNode }) {
                     </div>
                     <DropdownMenu.Separator className={styles.menuSeparator} />
                     {isAdmin ? (
-                      <DropdownMenu.Item className={styles.menuItem} asChild>
-                        <Link to="/admin">User management</Link>
-                      </DropdownMenu.Item>
+                      <>
+                        <DropdownMenu.Item className={styles.menuItem} asChild>
+                          <Link to="/admin">User management</Link>
+                        </DropdownMenu.Item>
+                        <DropdownMenu.Item className={styles.menuItem} asChild>
+                          <Link to="/telemetry">Retrieval telemetry</Link>
+                        </DropdownMenu.Item>
+                      </>
                     ) : null}
                     <DropdownMenu.Item className={styles.menuItem} onSelect={onSignOut}>
                       Sign out

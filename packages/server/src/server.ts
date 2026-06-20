@@ -4,6 +4,7 @@ import { mountAdmin } from "./api/admin.js";
 import { mountAuth } from "./api/auth.js";
 import { mountConsole } from "./api/console.js";
 import { mountReview } from "./api/review.js";
+import { mountTelemetry } from "./api/telemetry.js";
 import type { User } from "./core/user.js";
 import type { Deps } from "./deps.js";
 import { registerTools } from "./mcp/register.js";
@@ -33,6 +34,7 @@ export function buildServer(deps: Deps): FastMCP<User> {
   // catch-all never shadows them.
   mountAdmin(server.getApp(), deps);
   mountReview(server.getApp(), deps);
+  mountTelemetry(server.getApp(), deps);
 
   // The built console SPA, served statically with a client-route fallback.
   // Mounted LAST so its catch-all only sees what `/api/auth/*` and `/mcp` left

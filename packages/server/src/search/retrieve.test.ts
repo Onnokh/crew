@@ -62,7 +62,7 @@ describe("retrieve", () => {
       situation: "database connection timeout",
       limit: 5,
     });
-    const order = results.map((r) => r.post.id);
+    const order = results.map((r) => r.result.post.id);
     expect(order.indexOf(confirmed)).toBeLessThan(order.indexOf(plain));
   });
 
@@ -76,7 +76,7 @@ describe("retrieve", () => {
       situation: "database connection timeout",
       limit: 5,
     });
-    const order = results.map((r) => r.post.id);
+    const order = results.map((r) => r.result.post.id);
     expect(order.indexOf(clean)).toBeLessThan(order.indexOf(flagged));
   });
 
@@ -89,7 +89,7 @@ describe("retrieve", () => {
       repo: "webshop",
       limit: 5,
     });
-    const order = results.map((r) => r.post.id);
+    const order = results.map((r) => r.result.post.id);
     expect(order.indexOf(sameRepo)).toBeLessThan(order.indexOf(otherRepo));
   });
 
@@ -108,7 +108,7 @@ describe("retrieve", () => {
       environment: "Node 22 fastembed onnxruntime",
       limit: 5,
     });
-    const order = results.map((r) => r.post.id);
+    const order = results.map((r) => r.result.post.id);
     expect(order.indexOf(node)).toBeLessThan(order.indexOf(k8s));
   });
 
@@ -125,7 +125,7 @@ describe("retrieve", () => {
       situation: "typescript build fails on ci",
       limit: 1,
     });
-    expect(top!.post.id).toBe(weaker);
+    expect(top!.result.post.id).toBe(weaker);
   });
 
   it("never returns more than the requested limit", async () => {
@@ -159,7 +159,7 @@ describe("retrieve", () => {
       situation: "database connection timeout",
       limit: 5,
     });
-    const hit = results.find((r) => r.post.id === id)!;
+    const hit = results.find((r) => r.result.post.id === id)!.result;
     expect(hit.notes[0]!.text).toBe("newer note");
     expect(hit.notes[1]!.text).toBe("older note");
     expect(hit.confirms).toBe(1);

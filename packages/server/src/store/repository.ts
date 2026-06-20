@@ -1,7 +1,14 @@
 import type { PostEvent, NewPostEvent } from "../core/post-event.js";
 import type { NewPost, Post } from "../core/post.js";
 import type { User } from "../core/user.js";
-import type { Candidate, VecCandidate } from "./queries.js";
+import type {
+  Candidate,
+  ConversionStats,
+  ConversionWindow,
+  NewRetrieval,
+  RecentRetrievalRow,
+  VecCandidate,
+} from "./queries.js";
 
 /**
  * The persistence seam for Posts and Users. Search methods return raw candidates
@@ -80,4 +87,29 @@ export type PostRepository = {
 
   /** Look up a User by id in better-auth's `user` table, or null. Read-only name lookup. */
   getUser(id: string): Promise<User | null>;
+
+  /**
+   * Persist one retrieval (a `query` call) plus its per-result score breakdown,
+   * minting ids and writing the retrieval row and its result rows in one
+   * transaction. Records EVERY query, including zero-result ones (no result
+   * rows). Telemetry-only and additive — callers wrap it so a failure can't fail
+   * the query (see tools/query.ts).
+   */
+  recordRetrieval(input: NewRetrieval): void;
+
+  /**
+   * The most recent Retrievals for the telemetry dashboard, newest first, capped
+   * at `limit`. One row per `query`, carrying situation/result count/time.
+   */
+  listRecentRetrievals(limit: number): Promise<RecentRetrievalRow[]>;
+
+  /**
+   * Conversion attribution over Retrievals-with-results in `[from, to)`: classify
+   * each as converted iff the same User who queried later recorded a Confirm on
+   * one of its returned Posts, after the retrieval and within the attribution
+   * window (last-touch). Window/range are read-time parameters; nothing is
+   * stored. Consumed by PLO-49 (a rate over the range) and PLO-51 (did THIS
+   * retrieval convert?).
+   */
+  conversionStats(window: ConversionWindow): Promise<ConversionStats>;
 };

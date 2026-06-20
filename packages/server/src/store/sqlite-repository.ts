@@ -7,12 +7,23 @@ import type { User } from "../core/user.js";
 import type { Embedder } from "../embedding/embedder.js";
 import type { Clock } from "../platform/clock.js";
 import type { IdGen } from "../platform/id-gen.js";
-import type { Candidate, PostEventRow, VecCandidate } from "./queries.js";
+import type {
+  Candidate,
+  ConversionStats,
+  ConversionWindow,
+  NewRetrieval,
+  PostEventRow,
+  RecentRetrievalRow,
+  VecCandidate,
+} from "./queries.js";
 import {
+  conversionStats,
   environmentVectorSearch,
   eventsForPosts,
   insertEmbeddings,
+  insertRetrieval,
   keywordSearch,
+  recentRetrievals,
   vectorSearch,
 } from "./queries.js";
 import type { PostRepository, PostSort } from "./repository.js";
@@ -277,6 +288,31 @@ export class SqliteRepository implements PostRepository {
       .set({ status: "active" })
       .where(eq(posts.id, id))
       .run();
+  }
+
+  recordRetrieval(input: NewRetrieval): void {
+    // Mint ids here (the IdGen seam) so the query helper stays a pure writer.
+    insertRetrieval(
+      this.raw,
+      {
+        id: this.idGen.next("ret"),
+        userId: input.userId,
+        repo: input.repo,
+        situation: input.situation,
+        environment: input.environment,
+        limit: input.limit,
+        createdAt: this.clock.now(),
+      },
+      input.results.map((r) => ({ id: this.idGen.next("rr"), ...r })),
+    );
+  }
+
+  async listRecentRetrievals(limit: number): Promise<RecentRetrievalRow[]> {
+    return recentRetrievals(this.raw, limit);
+  }
+
+  async conversionStats(window: ConversionWindow): Promise<ConversionStats> {
+    return conversionStats(this.raw, window);
   }
 
   async getUser(id: string): Promise<User | null> {
