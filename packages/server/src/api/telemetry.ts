@@ -14,7 +14,7 @@ import { DEFAULT_ATTRIBUTION_WINDOW_MS } from "../store/queries.js";
  *   GET /api/telemetry/coverage    → CoveragePanelData                 zero-result rate + query volume, with a per-day trend
  */
 export function mountTelemetry(app: Hono, deps: Deps): void {
-  const telemetry = new Hono();
+  const telemetry = new Hono<{ Variables: { teamId: string } }>();
 
   // Role gate: no session → 401, non-admin → 403 (mirrors api/admin.ts).
   telemetry.use("*", async (c, next) => {
@@ -25,6 +25,11 @@ export function mountTelemetry(app: Hono, deps: Deps): void {
     if (session.user.role !== "admin") {
       return c.json({ error: "Admin role required" }, 403);
     }
+    const team = deps.controlPlane.getTeamForUser(session.user.id);
+    if (team === null) {
+      return c.json({ error: "Admin has no Team" }, 403);
+    }
+    c.set("teamId", team.id);
     await next();
   });
 
@@ -37,13 +42,14 @@ export function mountTelemetry(app: Hono, deps: Deps): void {
   // window; retrievals with zero results never appear in `byRetrieval` and stay
   // converted: false.
   telemetry.get("/recent", async (c) => {
-    const details = await deps.repo.listRecentRetrievalsDetailed(LIST_LIMIT);
+    const repo = teamRepoForSession(deps, c.get("teamId"));
+    const details = await repo.listRecentRetrievalsDetailed(LIST_LIMIT);
 
     const verdicts = new Map<string, boolean>();
     if (details.length > 0) {
       const to = deps.clock.now();
       const oldest = Math.min(...details.map((d) => d.createdAt));
-      const stats = await deps.repo.conversionStats({
+      const stats = await repo.conversionStats({
         from: oldest,
         to,
         windowMs: DEFAULT_ATTRIBUTION_WINDOW_MS,
@@ -61,14 +67,15 @@ export function mountTelemetry(app: Hono, deps: Deps): void {
   // headline is one call over the whole range, each trend point one call over a
   // day-wide sub-range. This route is presentation glue, not its own join.
   telemetry.get("/conversion", async (c) => {
+    const repo = teamRepoForSession(deps, c.get("teamId"));
     const to = deps.clock.now();
     const from = to - TREND_DAYS * DAY_MS;
     const windowMs = DEFAULT_ATTRIBUTION_WINDOW_MS;
 
-    const headlineStats = await deps.repo.conversionStats({ from, to, windowMs });
+    const headlineStats = await repo.conversionStats({ from, to, windowMs });
     const trend: ConversionPoint[] = [];
     for (const bucket of dayBuckets(from, to)) {
-      const stats = await deps.repo.conversionStats({
+      const stats = await repo.conversionStats({
         from: bucket.from,
         to: bucket.to,
         windowMs,
@@ -98,13 +105,14 @@ export function mountTelemetry(app: Hono, deps: Deps): void {
   // call over the whole range for the headline, one per day-wide bucket for the
   // trend. No pre-aggregated counter; the rate is `zeroResults / total`.
   telemetry.get("/coverage", async (c) => {
+    const repo = teamRepoForSession(deps, c.get("teamId"));
     const to = deps.clock.now();
     const from = to - TREND_DAYS * DAY_MS;
 
-    const headline = await deps.repo.coverageStats({ from, to });
+    const headline = await repo.coverageStats({ from, to });
     const trend: CoveragePoint[] = [];
     for (const bucket of dayBuckets(from, to)) {
-      const stats = await deps.repo.coverageStats({
+      const stats = await repo.coverageStats({
         from: bucket.from,
         to: bucket.to,
       });
@@ -127,6 +135,13 @@ export function mountTelemetry(app: Hono, deps: Deps): void {
   });
 
   app.route("/api/telemetry", telemetry);
+}
+
+function teamRepoForSession(deps: Deps, teamId: unknown) {
+  if (typeof teamId !== "string" || teamId.length === 0) {
+    throw new Error("Authenticated admin has no Team");
+  }
+  return deps.teams.getRepository(teamId);
 }
 
 const LIST_LIMIT = 50;

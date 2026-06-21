@@ -13,7 +13,7 @@
 
 CREATE TABLE IF NOT EXISTS retrievals (
   id           TEXT PRIMARY KEY,
-  user_id      TEXT NOT NULL REFERENCES "user"(id),
+  user_id      TEXT NOT NULL,
   repo         TEXT,
   situation    TEXT NOT NULL,
   environment  TEXT,

@@ -4,12 +4,21 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * Applies the hand-written SQL migrations in `packages/server/migrations` in
+ * Which set of hand-written migrations to apply. The store splits into two
+ * physically separate databases (ADR 0007/0008): the `"control-plane"` DB holds
+ * better-auth's identity tables plus org/team/membership; each `"team"` corpus
+ * DB holds only posts/post_events/meta. Each set lives in its own subdirectory
+ * of `packages/server/migrations`.
+ */
+export type MigrationSet = "control-plane" | "team";
+
+/**
+ * Applies the hand-written SQL migrations for the given {@link MigrationSet} in
  * filename order. Files are idempotent (`CREATE TABLE IF NOT EXISTS`), so
  * re-running on an existing DB is safe.
  */
-export function migrate(db: Database.Database): void {
-  const dir = migrationsDir();
+export function migrate(db: Database.Database, set: MigrationSet): void {
+  const dir = migrationsDir(set);
   const files = readdirSync(dir)
     .filter((f) => f.endsWith(".sql"))
     .sort();
@@ -30,7 +39,7 @@ export function migrate(db: Database.Database): void {
   }
 }
 
-function migrationsDir(): string {
+function migrationsDir(set: MigrationSet): string {
   const here = dirname(fileURLToPath(import.meta.url));
-  return join(here, "..", "..", "migrations");
+  return join(here, "..", "..", "migrations", set);
 }

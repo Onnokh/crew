@@ -1,7 +1,15 @@
 import type { PostEvent } from "../core/post-event.js";
 import type { Post } from "../core/post.js";
+import type { User } from "../core/user.js";
 import type { PostRepository } from "../store/repository.js";
 import { aggregateEvents } from "../trust/aggregate.js";
+
+/**
+ * Resolves a User id to their identity for author display. Backed by the
+ * control-plane DB (per-team corpus DBs carry no `user` table); returns `null`
+ * for a missing/deleted id, which renders as `"unknown"`.
+ */
+export type AuthorLookup = (id: string) => User | null;
 
 /**
  * A Post enriched for display: its resolved author name, derived confirm/flag
@@ -26,7 +34,8 @@ export type HydratedPost = {
  * order. A Post whose author can't be resolved renders as `"unknown"`.
  */
 export async function hydratePosts(
-  repo: Pick<PostRepository, "getEventsForPosts" | "getUser">,
+  repo: Pick<PostRepository, "getEventsForPosts">,
+  getUser: AuthorLookup,
   posts: Post[],
 ): Promise<HydratedPost[]> {
   if (posts.length === 0) return [];
@@ -43,7 +52,7 @@ export async function hydratePosts(
   for (const post of posts) {
     const events = eventsByPost.get(post.id) ?? [];
     const agg = aggregateEvents(events);
-    const author = await repo.getUser(post.createdBy);
+    const author = getUser(post.createdBy);
     hydrated.push({
       post,
       authorName: author?.name ?? "unknown",

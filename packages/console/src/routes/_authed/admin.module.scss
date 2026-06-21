@@ -1,14 +1,8 @@
 @use "../../styles/tokens" as *;
 
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xl;
-}
-
-.head {
-  display: flex;
-  flex-direction: column;
+.pageFull {
+  min-height: 100vh;
+  background: $color-bg;
 }
 
 .eyebrow {
@@ -20,39 +14,26 @@
   text-transform: uppercase;
 }
 
-.heading {
-  margin: 0 0 $space-sm;
-  font-size: 1.75rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.subtitle {
-  margin: 0;
-  max-width: 52ch;
-  color: $color-text-muted;
-  font-size: 0.9375rem;
-  line-height: 1.7;
-}
-
 .error {
-  margin: 0;
+  margin: 0 0 $space-md;
   color: $color-danger;
   font-size: 0.875rem;
 }
 
-.create {
+.inlineForm {
   display: flex;
+  flex-wrap: wrap;
   gap: $space-sm;
 }
 
 .input {
   flex: 1;
+  min-width: min(100%, 12rem);
   max-width: 22rem;
-  padding: $space-sm $space-md;
-  border: 1px solid $color-border-strong;
-  border-radius: $radius-md;
-  background: $color-bg;
+  padding: 0.875rem $space-md;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: #f4f4f4;
   color: $color-text;
   font-size: 0.9375rem;
 
@@ -63,9 +44,10 @@
 }
 
 .primary {
+  min-height: 3rem;
   padding: $space-sm $space-lg;
   border: none;
-  border-radius: $radius-md;
+  border-radius: 14px;
   background: $color-accent;
   color: $color-accent-contrast;
   font-size: 0.9375rem;
@@ -83,37 +65,12 @@
 }
 
 .listLabel {
-  width: 100%;
   margin: 0;
-  padding-bottom: $space-sm;
-  border-bottom: 1px dashed $color-border-strong;
   color: $color-text-subtle;
   font-size: 0.6875rem;
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-}
-
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: $space-lg;
-  padding: $space-sm 0 0;
-  margin: 0;
-  list-style: none;
-}
-
-// Stacks the identity line above any show-once secret for this User.
-.row {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-}
-
-.rowMain {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
 }
 
 .identity {
@@ -131,65 +88,12 @@
   color: $color-text-muted;
 }
 
-.banned {
-  margin-left: $space-sm;
-  padding: 1px $space-xs;
-  border: 1px solid $color-danger;
-  border-radius: $radius-sm;
-  color: $color-danger;
-  font-size: 0.625rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  vertical-align: 1px;
-}
-
 .keys {
   flex-shrink: 0;
   color: $color-text-muted;
   font-family: $font-mono;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
-}
-
-.rowActions {
-  display: flex;
-  flex-shrink: 0;
-  gap: $space-lg;
-}
-
-.keyList {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px dashed $color-border;
-}
-
-.keyRow {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  padding: $space-xs 0;
-
-  & + & {
-    border-top: 1px solid $color-border;
-  }
-}
-
-.keyName {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: $space-sm;
-  overflow: hidden;
-  color: $color-text;
-  font-family: $font-mono;
-  font-size: 0.8125rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .keyStart {
@@ -224,4 +128,709 @@
 
 .actionDanger {
   color: $color-danger;
+}
+
+.sidebarLink,
+.sidebarButton,
+.sidebarButtonActive {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  width: 100%;
+  min-height: 3rem;
+  padding: $space-sm $space-md;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: $color-text;
+  font: inherit;
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebarLink span,
+.sidebarButton span,
+.sidebarButtonActive span,
+.appGroup span,
+.appGroupActive span {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-md;
+  min-width: 0;
+}
+
+.sidebarLink svg,
+.sidebarButton svg,
+.sidebarButtonActive svg,
+.appGroup svg,
+.appGroupActive svg {
+  color: $color-text-subtle;
+}
+
+.sidebarLink small,
+.sidebarButton small,
+.sidebarButtonActive small {
+  color: $color-text-muted;
+  font-family: $font-mono;
+  font-size: $text-xs;
+  white-space: nowrap;
+}
+
+.sidebarLink:hover,
+.sidebarButton:hover {
+  background: #f4f4f4;
+}
+
+.sidebarButtonActive {
+  border-color: transparent;
+  background: #f4f4f4;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 4%);
+}
+
+.adminShell {
+  display: grid;
+  grid-template-columns: minmax(14rem, 16rem) minmax(0, 1fr) minmax(18rem, 20rem);
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: $color-bg;
+}
+
+.appSidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc($space-xl * 1.25);
+  min-height: 100vh;
+  padding: $space-xl $space-lg;
+  border-right: 1px solid $color-border;
+  background: #fbfbfb;
+}
+
+.appSidebarHeader {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.appSidebarHeader div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.appSidebarHeader strong {
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+}
+
+.appSidebarHeader small {
+  color: $color-text-muted;
+  font-size: $text-xs;
+}
+
+.appMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 13px;
+  background: $color-accent;
+  color: $color-accent-contrast;
+  font-size: $text-sm;
+  font-weight: 700;
+}
+
+.appNav {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.appNavGroup {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  padding: $space-xs 0;
+}
+
+.appGroup,
+.appGroupActive {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-sm;
+  width: 100%;
+  min-height: 3rem;
+  padding: $space-sm $space-md;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: $color-text;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.appGroup small,
+.appGroupActive small {
+  color: $color-text-muted;
+  font-family: $font-mono;
+  font-size: $text-xs;
+}
+
+.appGroupActive,
+.appGroup:hover {
+  background: #f4f4f4;
+  border-color: transparent;
+}
+
+.teamTree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 2.25rem;
+}
+
+.teamTreeItem,
+.teamTreeItemActive {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-sm;
+  width: 100%;
+  min-height: 2.125rem;
+  padding: $space-xs $space-sm;
+  border: 0;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $color-text-muted;
+  font: inherit;
+  font-size: $text-sm;
+  text-align: left;
+  cursor: pointer;
+}
+
+.teamTreeItem span,
+.teamTreeItemActive span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teamTreeItem small,
+.teamTreeItemActive small {
+  font-family: $font-mono;
+  font-size: $text-xs;
+}
+
+.teamTreeItem:hover,
+.teamTreeItemActive {
+  background: #f4f4f4;
+  color: $color-text;
+}
+
+.appContent {
+  min-width: 0;
+  min-height: 100vh;
+  padding: $space-xl;
+  background: $color-bg;
+}
+
+.contentHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-lg;
+  padding-bottom: $space-xl;
+  border-bottom: 1px solid $color-border;
+}
+
+.contentHeader h1 {
+  margin: 0 0 $space-sm;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.contentHeader p:last-child {
+  margin: 0;
+  color: $color-text-muted;
+  font-size: 1.125rem;
+}
+
+.datePill {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-sm;
+  flex-shrink: 0;
+  padding: $space-sm $space-md;
+  border-radius: 999px;
+  background: #f4f4f4;
+  color: $color-text;
+  font-size: $text-sm;
+}
+
+.dashboardPanel {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
+}
+
+.dashboardMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid $color-border;
+  border-bottom: 1px solid $color-border;
+}
+
+.dashboardMetric {
+  display: flex;
+  align-items: center;
+  gap: $space-lg;
+  min-width: 0;
+  padding: $space-lg $space-xl $space-lg 0;
+}
+
+.dashboardMetric + .dashboardMetric {
+  padding-left: $space-xl;
+  border-left: 1px solid $color-border-strong;
+}
+
+.dashboardMetricIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: #f4f4f4;
+  color: $color-text;
+}
+
+.dashboardMetric div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dashboardMetric span:not(.dashboardMetricIcon) {
+  color: $color-text;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.dashboardMetric strong {
+  color: $color-text;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.dashboardMetric small {
+  color: $color-text-muted;
+  font-size: $text-sm;
+  white-space: nowrap;
+}
+
+.dashboardPlaceholders {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-lg;
+}
+
+.dashboardPlaceholders section {
+  min-height: 9rem;
+  padding: $space-lg;
+  border: 1px solid $color-border;
+  border-radius: 22px;
+  background: #f7f7f7;
+}
+
+.dashboardPlaceholders p {
+  margin: $space-lg 0 0;
+  color: $color-text-muted;
+}
+
+.appPanel {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
+  min-width: 0;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $space-lg;
+}
+
+.metric {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  min-height: 5.5rem;
+  padding: $space-md $space-lg;
+  border: 0;
+  border-radius: 22px;
+  background: #f7f7f7;
+}
+
+.metric span {
+  color: $color-text-muted;
+  font-size: $text-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.metric strong {
+  display: block;
+  margin-top: $space-xs;
+  font-size: 1.625rem;
+  line-height: 1.1;
+}
+
+.metricIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: #ffffff;
+  color: $color-text;
+  box-shadow: inset 0 0 0 1px $color-border;
+}
+
+.usageTelemetryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: $space-lg;
+  min-width: 0;
+}
+
+.usageTelemetryCard,
+.usageTelemetryCardWide {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  min-width: 0;
+  padding: $space-lg;
+  border: 1px solid $color-border;
+  border-radius: 22px;
+  background: #f7f7f7;
+}
+
+.usageTelemetryCardWide {
+  grid-column: 1 / -1;
+}
+
+.usageTelemetryCard h2,
+.usageTelemetryCardWide h2 {
+  margin: 0;
+  font-size: $text-base;
+  font-weight: 600;
+  line-height: $lh-base;
+}
+
+.settingsList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.settingsList div {
+  display: flex;
+  justify-content: space-between;
+  gap: $space-lg;
+  padding: $space-md 0;
+  border-bottom: 1px solid $color-border;
+}
+
+.settingsList span {
+  color: $color-text-muted;
+}
+
+.adminSection {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  min-width: 0;
+  padding-top: $space-xl;
+  border-top: 1px solid $color-border;
+}
+
+.denseSection {
+  gap: $space-lg;
+}
+
+.sectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: $space-md;
+}
+
+.sectionMeta {
+  flex-shrink: 0;
+  color: $color-text-muted;
+  font-family: $font-mono;
+  font-size: $text-xs;
+}
+
+.sectionList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entityRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: $space-md;
+  min-width: 0;
+  min-height: 4rem;
+  padding: $space-sm 0;
+  border-bottom: 1px solid $color-border;
+}
+
+.entityRow:last-child {
+  border-bottom: 0;
+}
+
+.renameForm {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-sm;
+}
+
+.secretSlot {
+  grid-column: 1 / -1;
+}
+
+.emptyRow {
+  color: $color-text-muted;
+  font-size: $text-sm;
+}
+
+.activityRail {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
+  min-width: 0;
+  padding: $space-lg;
+  border-left: 1px solid $color-border;
+  background: #fbfbfb;
+}
+
+.profileCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-xl $space-lg;
+  border-radius: 24px;
+  background: #f0f0f0;
+  text-align: center;
+}
+
+.profileCard strong {
+  font-size: 1.125rem;
+}
+
+.profileCard > span:not(.profileAvatar) {
+  color: $color-text-muted;
+  font-size: $text-sm;
+}
+
+.profileAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.75rem;
+  height: 4.75rem;
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  background: $color-accent;
+  color: $color-accent-contrast;
+  font-weight: 700;
+}
+
+.profileActions {
+  display: flex;
+  gap: $space-md;
+  margin-top: $space-md;
+}
+
+.profileActions span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: #ffffff;
+  color: $color-text;
+}
+
+.railSection {
+  min-width: 0;
+}
+
+.activityList,
+.teamSummaryList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  margin: $space-lg 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activityList li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: $space-md;
+  align-items: start;
+}
+
+.activityList strong,
+.activityList span,
+.teamSummaryList span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activityList strong {
+  display: block;
+  font-size: $text-sm;
+}
+
+.activityList div span {
+  display: block;
+  color: $color-text-muted;
+  font-size: $text-sm;
+}
+
+.activityAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: #e8eef6;
+  color: $color-text;
+  font-size: $text-xs;
+  font-weight: 700;
+}
+
+.teamSummaryList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  padding: $space-md;
+  border-radius: 16px;
+  background: #f4f4f4;
+}
+
+.teamSummaryList strong {
+  font-family: $font-mono;
+}
+
+@media (max-width: 900px) {
+  .adminShell {
+    grid-template-columns: 1fr;
+  }
+
+  .appSidebar {
+    position: static;
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid $color-border;
+  }
+
+  .activityRail {
+    border-top: 1px solid $color-border;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .inlineForm {
+    flex-direction: column;
+  }
+
+  .input,
+  .primary {
+    width: 100%;
+    max-width: none;
+  }
+
+  .entityRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: $space-sm;
+  }
+
+  .entityRow .action,
+  .entityRow .actionDanger {
+    justify-self: start;
+  }
+
+  .role,
+  .keyStart {
+    overflow-wrap: anywhere;
+  }
+
+  .appContent,
+  .appSidebar,
+  .activityRail {
+    padding: $space-lg;
+  }
+
+  .contentHeader {
+    flex-direction: column;
+    padding-bottom: $space-lg;
+  }
+
+  .metricGrid {
+    grid-template-columns: 1fr;
+    gap: $space-md;
+  }
+
+  .dashboardMetrics,
+  .dashboardPlaceholders {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboardMetric,
+  .dashboardMetric + .dashboardMetric {
+    padding: $space-lg 0;
+    border-left: 0;
+  }
+
+  .dashboardMetric + .dashboardMetric {
+    border-top: 1px solid $color-border;
+  }
+
+  .settingsList div {
+    flex-direction: column;
+    gap: $space-xs;
+  }
 }

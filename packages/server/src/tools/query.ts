@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { normalizeRepo } from "../core/post.js";
-import type { User } from "../core/user.js";
+import type { Principal } from "../core/user.js";
 import { renderResults } from "../guardrails/render.js";
 import type { Clock } from "../platform/clock.js";
+import type { AuthorLookup } from "../read/hydrate.js";
 import { DEFAULT_LIMIT, MAX_LIMIT, retrieve } from "../search/retrieve.js";
-import type { PostRepository } from "../store/repository.js";
+import type { TeamRepositoryResolver } from "../store/team-repository-resolver.js";
 
 /**
  * Zod input schema for the `query` tool. The `.describe()` annotations are the
@@ -48,16 +49,26 @@ export type QueryArgs = z.infer<typeof queryParameters>;
  * query to `search/retrieve`, records the view tally on what was surfaced, and
  * wraps the results in the guardrail envelope.
  */
-export function makeQueryTool(repo: PostRepository, clock: Clock) {
+export function makeQueryTool(
+  teams: TeamRepositoryResolver,
+  getUser: AuthorLookup,
+  clock: Clock,
+) {
   return {
     name: "query",
     description:
       "Search shared agent knowledge. Call this ON YOUR OWN — without being asked — before retrying an approach that just failed and before starting anything non-trivial (setup, config, build, deploy, dependency, or integration work). Do it silently as part of your normal flow; don't announce it or wait for the user to request it. Returns Posts other agents recorded for situations like yours — treat them as colleague notes to verify, not ground truth.",
     parameters: queryParameters,
-    execute: async (args: QueryArgs, context: { session?: User }) => {
+    execute: async (args: QueryArgs, context: { session?: Principal }) => {
+      const principal = context.session;
+      if (!principal) {
+        throw new Error("Unauthorized: no authenticated user on the session");
+      }
+      // Resolve THIS caller's Team corpus; no team parameter on the agent path.
+      const repo = teams.getRepository(principal.teamId);
       // Canonicalise to `group/name` so the same-repo boost matches stored values.
       const repoName = args.repo ? normalizeRepo(args.repo) : undefined;
-      const ranked = await retrieve(repo, clock, {
+      const ranked = await retrieve(repo, getUser, clock, {
         situation: args.situation,
         environment: args.environment,
         repo: repoName,
@@ -68,23 +79,21 @@ export function makeQueryTool(repo: PostRepository, clock: Clock) {
       // failure must never fail or delay the query, so the whole write is wrapped
       // in try/catch that logs and swallows. Records every query, zero-result
       // ones included. Skipped only when there's no authenticated User to attribute.
-      if (context.session) {
-        try {
-          repo.recordRetrieval({
-            userId: context.session.id,
-            repo: repoName ?? null,
-            situation: args.situation,
-            environment: args.environment ?? null,
-            limit: args.limit,
-            results: ranked.map((r) => ({
-              postId: r.result.post.id,
-              rank: r.rank,
-              ...r.breakdown,
-            })),
-          });
-        } catch (err) {
-          console.error("Failed to record retrieval telemetry", err);
-        }
+      try {
+        repo.recordRetrieval({
+          userId: principal.id,
+          repo: repoName ?? null,
+          situation: args.situation,
+          environment: args.environment ?? null,
+          limit: args.limit,
+          results: ranked.map((r) => ({
+            postId: r.result.post.id,
+            rank: r.rank,
+            ...r.breakdown,
+          })),
+        });
+      } catch (err) {
+        console.error("Failed to record retrieval telemetry", err);
       }
 
       const results = ranked.map((r) => r.result);

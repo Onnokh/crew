@@ -2,7 +2,7 @@ import type { PostEvent } from "../core/post-event.js";
 import type { RenderNote, RenderResult } from "../guardrails/render.js";
 import { MAX_NOTES } from "../guardrails/render.js";
 import type { Clock } from "../platform/clock.js";
-import { hydratePosts } from "../read/hydrate.js";
+import { hydratePosts, type AuthorLookup } from "../read/hydrate.js";
 import type { PostRepository } from "../store/repository.js";
 import { trustFromCounts } from "../trust/aggregate.js";
 import { reciprocalRankFusion } from "./rrf.js";
@@ -27,8 +27,8 @@ export type RetrieveInput = {
 
 /**
  * The per-result score breakdown ranking computes: the RRF input, the multipliers
- * applied, and their product `final`. Thrown away by ranking before PLO-48, now
- * captured for retrieval telemetry (and a future tuning view).
+ * applied, and their product `final`. Captured for retrieval telemetry and the
+ * tuning view.
  */
 export type ScoreBreakdown = {
   rrfScore: number;
@@ -48,11 +48,12 @@ export type RankedResult = {
 
 /**
  * Run the retrieval pipeline and return the ranked results. Each result carries
- * its {@link RenderResult} (for rendering/recording views) plus the rank and
- * score breakdown telemetry captures; map to `result` for `renderResults()`.
+ * its {@link RenderResult} plus rank/score telemetry. `getUser` resolves author
+ * names from the control plane; the per-team corpus DB has no `user` table.
  */
 export async function retrieve(
   repo: PostRepository,
+  getUser: AuthorLookup,
   clock: Clock,
   input: RetrieveInput,
 ): Promise<RankedResult[]> {
@@ -81,7 +82,7 @@ export async function retrieve(
   const posts = (
     await Promise.all(fused.map((f) => repo.getPost(f.id)))
   ).filter((p): p is NonNullable<typeof p> => p !== null);
-  const hydrated = await hydratePosts(repo, posts);
+  const hydrated = await hydratePosts(repo, getUser, posts);
 
   const scored = hydrated.map((h) => {
     // Compute each multiplier explicitly so the breakdown survives, then take

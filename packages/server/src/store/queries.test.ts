@@ -3,7 +3,6 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { FakeClock, FakeEmbedder, FakeIdGen } from "../test/fakes.js";
-import { seedUser } from "../test/seed-user.js";
 import { migrate } from "./migrate.js";
 import { SqliteRepository } from "./sqlite-repository.js";
 
@@ -14,9 +13,8 @@ beforeEach(() => {
   raw = new Database(":memory:");
   raw.pragma("foreign_keys = ON");
   sqliteVec.load(raw);
-  migrate(raw);
+  migrate(raw, "team");
   const db = drizzle(raw);
-  seedUser(raw, "user_alice", "Alice");
   repo = new SqliteRepository(
     db,
     raw,
