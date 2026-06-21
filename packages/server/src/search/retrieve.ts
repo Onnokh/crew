@@ -1,9 +1,8 @@
-import type { PostEvent } from "../core/post-event.js";
+import type { PostEvent } from "../core/post.js";
 import type { RenderNote, RenderResult } from "../guardrails/render.js";
 import { MAX_NOTES } from "../guardrails/render.js";
-import type { Clock } from "../platform/clock.js";
 import { hydratePosts } from "../read/hydrate.js";
-import type { PostRepository } from "../store/repository.js";
+import type { SqliteRepository } from "../store/sqlite-repository.js";
 import { trustFromCounts } from "../trust/aggregate.js";
 import { reciprocalRankFusion } from "./rrf.js";
 import { finalScore } from "./score.js";
@@ -27,12 +26,11 @@ export type RetrieveInput = {
 
 /** Run the retrieval pipeline and return the ranked results, ready for `renderResults()`. */
 export async function retrieve(
-  repo: PostRepository,
-  clock: Clock,
+  repo: SqliteRepository,
+  now: number,
   input: RetrieveInput,
 ): Promise<RenderResult[]> {
   const limit = clampLimit(input.limit);
-  const now = clock.now();
 
   const fetch = Math.min(MAX_LIMIT, limit * CANDIDATE_OVERFETCH);
   const environment = input.environment?.trim();

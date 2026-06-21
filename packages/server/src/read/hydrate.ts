@@ -1,6 +1,6 @@
-import type { PostEvent } from "../core/post-event.js";
+import type { PostEvent } from "../core/post.js";
 import type { Post } from "../core/post.js";
-import type { PostRepository } from "../store/repository.js";
+import type { SqliteRepository } from "../store/sqlite-repository.js";
 import { aggregateEvents } from "../trust/aggregate.js";
 
 /**
@@ -26,7 +26,7 @@ export type HydratedPost = {
  * order. A Post whose author can't be resolved renders as `"unknown"`.
  */
 export async function hydratePosts(
-  repo: Pick<PostRepository, "getEventsForPosts" | "getUser">,
+  repo: Pick<SqliteRepository, "getEventsForPosts" | "getUser">,
   posts: Post[],
 ): Promise<HydratedPost[]> {
   if (posts.length === 0) return [];

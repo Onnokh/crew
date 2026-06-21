@@ -1,13 +1,13 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
-import { beforeEach, describe, expect, it } from "vitest";
-import { FakeClock, FakeEmbedder, FakeIdGen } from "../test/fakes.js";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { FakeEmbedder, FrozenTime } from "../test/fakes.js";
 import { seedUser } from "../test/seed-user.js";
 import { migrate } from "./migrate.js";
 import { SqliteRepository } from "./sqlite-repository.js";
 
-function freshRepo(clock: FakeClock, idGen: FakeIdGen): {
+function freshRepo(): {
   repo: SqliteRepository;
   raw: Database.Database;
 } {
@@ -16,22 +16,25 @@ function freshRepo(clock: FakeClock, idGen: FakeIdGen): {
   sqliteVec.load(raw);
   migrate(raw);
   return {
-    repo: new SqliteRepository(drizzle(raw), raw, clock, idGen, new FakeEmbedder()),
+    repo: new SqliteRepository(drizzle(raw), raw, new FakeEmbedder()),
     raw,
   };
 }
 
 describe("SqliteRepository (real store, in-memory SQLite)", () => {
-  let clock: FakeClock;
-  let idGen: FakeIdGen;
+  let time: FrozenTime;
   let repo: SqliteRepository;
   let raw: Database.Database;
 
   beforeEach(() => {
-    clock = new FakeClock(1_700_000_000_000);
-    idGen = new FakeIdGen();
-    ({ repo, raw } = freshRepo(clock, idGen));
+    time = new FrozenTime(1_700_000_000_000);
+    ({ repo, raw } = freshRepo());
     seedUser(raw, "user_alice", "Alice");
+  });
+
+  afterEach(() => {
+    time.restore();
+    raw.close();
   });
 
   it("persists a Post with a prefixed id, timestamp, and active status", async () => {
@@ -42,12 +45,12 @@ describe("SqliteRepository (real store, in-memory SQLite)", () => {
       repo: "r",
       createdBy: "user_alice",
     });
-    expect(post.id).toBe("post_1");
+    expect(post.id).toMatch(/^post_[\w-]+$/);
     expect(post.createdAt).toBe(1_700_000_000_000);
     expect(post.status).toBe("active");
     expect(post.lastConfirmed).toBeNull();
 
-    const fetched = await repo.getPost("post_1");
+    const fetched = await repo.getPost(post.id);
     expect(fetched).toEqual(post);
     expect(fetched?.createdBy).toBe("user_alice");
   });

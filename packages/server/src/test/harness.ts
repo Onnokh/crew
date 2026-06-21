@@ -2,17 +2,21 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
+import { apiKey } from "@better-auth/api-key";
+import { betterAuth } from "better-auth";
+import { admin } from "better-auth/plugins";
 import { createServer } from "node:net";
 import type { AddressInfo } from "node:net";
 import * as sqliteVec from "sqlite-vec";
 import { BetterAuthAuthenticator } from "../auth/better-auth-authenticator.js";
-import { createAuth, type Auth } from "../auth/better-auth.js";
-import type { User } from "../core/user.js";
+import type { User } from "../auth/better-auth-authenticator.js";
+import type { Auth } from "../auth/better-auth.js";
 import type { Deps } from "../deps.js";
+import { FastEmbedder } from "../embedding/fastembed.js";
 import { buildServer } from "../server.js";
 import { migrate } from "../store/migrate.js";
 import { SqliteRepository } from "../store/sqlite-repository.js";
-import { FakeClock, FakeEmbedder, FakeIdGen } from "./fakes.js";
+import { FakeEmbedder } from "./fakes.js";
 
 /** Fixed boot config for the test better-auth instance (≥16-char secret). */
 const TEST_SECRET = "test-secret-test-secret-test-secret";
@@ -29,12 +33,33 @@ export type TestEnv = {
   apiKey: string;
 };
 
+function createTestAuth(raw: Database.Database): Auth {
+  return betterAuth({
+    database: raw,
+    secret: TEST_SECRET,
+    baseURL: TEST_BASE_URL,
+    logger: {
+      log: (
+        level: "error" | "debug" | "info" | "warn",
+        message: string,
+        ...args: unknown[]
+      ) => {
+        if (/api key/i.test(message)) return;
+        // eslint-disable-next-line no-console
+        console[level === "error" ? "error" : "log"](message, ...args);
+      },
+    },
+    emailAndPassword: { enabled: true },
+    plugins: [admin(), apiKey({ rateLimit: { enabled: false } })],
+  });
+}
+
 /**
  * Assemble a real {@link Deps} backed by real better-auth over an in-memory
- * SQLite — the same store and auth seam `main.ts` runs, with only the embedder,
- * clock, and id generator faked. No fake repository or authenticator: the
- * integration test exercises the real FTS5 + sqlite-vec path AND the real
- * api-key verification seam. Seeds one User and mints a bound agent API key.
+ * SQLite — the same store and auth seam `main.ts` runs, with only the embedder
+ * faked. No fake repository or authenticator: the integration test exercises
+ * the real FTS5 + sqlite-vec path AND the real api-key verification seam.
+ * Seeds one User and mints a bound agent API key.
  */
 export async function buildTestEnv(): Promise<TestEnv> {
   const raw = new Database(":memory:");
@@ -45,11 +70,9 @@ export async function buildTestEnv(): Promise<TestEnv> {
   const repo = new SqliteRepository(
     drizzle(raw),
     raw,
-    new FakeClock(),
-    new FakeIdGen(),
     new FakeEmbedder(),
   );
-  const auth = createAuth(raw, { secret: TEST_SECRET, baseURL: TEST_BASE_URL });
+  const auth = createTestAuth(raw);
 
   const signUp = await auth.api.signUpEmail({
     body: { email: "alice@test.local", password: "password1234", name: "Alice" },
@@ -63,7 +86,6 @@ export async function buildTestEnv(): Promise<TestEnv> {
     auth: new BetterAuthAuthenticator(auth, repo),
     authInstance: auth,
     repo,
-    clock: new FakeClock(),
   };
   return {
     deps,

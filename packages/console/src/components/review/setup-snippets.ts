@@ -11,7 +11,6 @@ Use Crew on your own initiative, silently, as part of your normal flow — never
 - **\`confirm\`** a Post the moment it helped; **\`flag\`** it the moment it misled you (wrong / stale / duplicate). This trust feedback keeps the store useful — don't skip it.
 - **\`post\`** a learning only if it is **Anchored** (named API/lib/version or this codebase's real structure, not a general principle) **AND Consequential** (getting it wrong costs real time or ships a bug) **AND (Surprising** — defies a default assumption — **OR Foundational** — not knowing it makes you build wrong and unwind). Capture the surprising/load-bearing *shape*, not the architecture. "Novula API returns errors as HTTP 200" ✅; "repo is on GitHub not GitLab" ❌. When unsure, hold. English only; no secrets.`;
 
-/** Everything the setup tabs render, built once from the live MCP endpoint. */
 export type SetupContent = {
   manualManualInstructions: ManualInstruction[];
   manualInstallPrompt: string;
@@ -45,7 +44,6 @@ export function buildSetupContent(mcpEndpoint: string): SetupContent {
   ${mcpEndpoint} \\
   --header "Authorization: Bearer <YOUR_TOKEN>"`;
 
-  // OpenCode reads an `opencode.json` with an `mcp` block; a remote server uses `type: "remote"`.
   const openCodeSnippet = `{
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
@@ -58,50 +56,63 @@ export function buildSetupContent(mcpEndpoint: string): SetupContent {
   }
 }`;
 
-  const claudeManualInstructions = [
-    { label: "Add the Crew plugin marketplace.", code: "claude plugin marketplace add Onnokh/crew" },
-    { label: "Install the Crew plugin.", code: "claude plugin install crew@crew" },
-    { label: "Register Crew as a user-scoped MCP server.", code: mcpAddCommand },
-    { label: "Append this block to your global ~/.claude/CLAUDE.md (create it if missing).", code: crewPriming },
-  ];
-
-  const codexManualInstructions = [
-    { label: "Add the Crew plugin marketplace.", code: "codex plugin marketplace add Onnokh/crew" },
-    { label: "Install the Crew plugin.", code: "codex plugin add crew@crew" },
-    { label: "Add this MCP server config.", code: mcpConfigSnippet },
-    { label: "Append this block to your global ~/.codex/AGENTS.md (create it if missing).", code: crewPriming },
-  ];
-
-  const cursorManualInstructions = [
-    { label: "Install the Crew skills for Cursor.", code: "npx skills add Onnokh/crew --agent cursor --global --skill crew --skill ask-crew --skill reflect --skill introduce" },
-    { label: "Add this Cursor MCP config.", code: `{
+  const cursorMcpSnippet = `{
   "mcpServers": {
     "crew": {
       "url": "${mcpEndpoint}",
       "headers": { "Authorization": "Bearer <YOUR_TOKEN>" }
     }
   }
-}` },
+}`;
+
+  const skillsCommand = (agent?: "cursor" | "opencode") =>
+    `npx skills add Onnokh/crew ${agent ? `--agent ${agent} ` : ""}--global --skill crew --skill ask-crew --skill reflect --skill introduce`;
+
+  const primingStep = (file: string): ManualInstruction => ({
+    label: `Append this block to your global ${file} (create it if missing).`,
+    code: crewPriming,
+  });
+
+  const claudeManualInstructions: ManualInstruction[] = [
+    { label: "Add the Crew plugin marketplace.", code: "claude plugin marketplace add Onnokh/crew" },
+    { label: "Install the Crew plugin.", code: "claude plugin install crew@crew" },
+    { label: "Register Crew as a user-scoped MCP server.", code: mcpAddCommand },
+    primingStep("~/.claude/CLAUDE.md"),
+  ];
+
+  const codexManualInstructions: ManualInstruction[] = [
+    { label: "Add the Crew plugin marketplace.", code: "codex plugin marketplace add Onnokh/crew" },
+    { label: "Install the Crew plugin.", code: "codex plugin add crew@crew" },
+    { label: "Add this MCP server config.", code: mcpConfigSnippet },
+    primingStep("~/.codex/AGENTS.md"),
+  ];
+
+  const cursorManualInstructions: ManualInstruction[] = [
+    { label: "Install the Crew skills for Cursor.", code: skillsCommand("cursor") },
+    { label: "Add this Cursor MCP config.", code: cursorMcpSnippet },
     { label: "Paste this block into Cursor Settings → Rules → User Rules.", code: crewPriming },
   ];
 
-  const openCodeManualInstructions = [
-    { label: "Install the Crew skills for OpenCode.", code: "npx skills add Onnokh/crew --agent opencode --global --skill crew --skill ask-crew --skill reflect --skill introduce" },
+  const openCodeManualInstructions: ManualInstruction[] = [
+    { label: "Install the Crew skills for OpenCode.", code: skillsCommand("opencode") },
     { label: "Add this OpenCode MCP config.", code: openCodeSnippet },
-    { label: "Append this block to your global ~/.config/opencode/AGENTS.md (create it if missing).", code: crewPriming },
+    primingStep("~/.config/opencode/AGENTS.md"),
   ];
 
-  const manualManualInstructions = [
-    { label: "Install the Crew skills.", code: "npx skills add Onnokh/crew --global --skill crew --skill ask-crew --skill reflect --skill introduce" },
+  const manualManualInstructions: ManualInstruction[] = [
+    { label: "Install the Crew skills.", code: skillsCommand() },
     { label: "Add this global MCP config.", code: mcpConfigSnippet },
-    { label: "Append this block to your global agent instructions file (~/.claude/CLAUDE.md, ~/.codex/AGENTS.md, ~/.config/opencode/AGENTS.md, or Cursor User Rules).", code: crewPriming },
+    {
+      label: "Append this block to your global agent instructions file (~/.claude/CLAUDE.md, ~/.codex/AGENTS.md, ~/.config/opencode/AGENTS.md, or Cursor User Rules).",
+      code: crewPriming,
+    },
   ];
 
   const manualInstallPrompt = `Set up Crew manually:
 
 1. Install the Crew skills from the Crew GitHub repository:
 
-npx skills add Onnokh/crew --global --skill crew --skill ask-crew --skill reflect --skill introduce
+${skillsCommand()}
 
 2. Add Crew as a global MCP server named "crew":
 
@@ -130,9 +141,7 @@ claude plugin install crew@crew
 
 3. Register Crew as a user-scoped MCP server:
 
-claude mcp add --scope user --transport http crew \\
-  ${mcpEndpoint} \\
-  --header "Authorization: Bearer <YOUR_TOKEN>"
+${mcpAddCommand}
 
 Replace <YOUR_TOKEN> with the API key I'll give you (minted on the Crew admin page).
 
@@ -166,18 +175,11 @@ ${crewPriming}`;
 
 1. Install the Crew skills from the Crew GitHub repository:
 
-npx skills add Onnokh/crew --agent cursor --global --skill crew --skill ask-crew --skill reflect --skill introduce
+${skillsCommand("cursor")}
 
 2. Add Crew to my global Cursor MCP config at ~/.cursor/mcp.json (create the file or merge into its "mcpServers" object):
 
-{
-  "mcpServers": {
-    "crew": {
-      "url": "${mcpEndpoint}",
-      "headers": { "Authorization": "Bearer <YOUR_TOKEN>" }
-    }
-  }
-}
+${cursorMcpSnippet}
 
 Replace <YOUR_TOKEN> with the API key I'll give you (minted on the Crew admin page).
 
@@ -189,21 +191,11 @@ ${crewPriming}`;
 
 1. Install the Crew skills from the Crew GitHub repository:
 
-npx skills add Onnokh/crew --agent opencode --global --skill crew --skill ask-crew --skill reflect --skill introduce
+${skillsCommand("opencode")}
 
 2. Add Crew to my global OpenCode config at ~/.config/opencode/opencode.json (create the file or merge into its "mcp" object):
 
-{
-  "$schema": "https://opencode.ai/config.json",
-  "mcp": {
-    "crew": {
-      "type": "remote",
-      "url": "${mcpEndpoint}",
-      "enabled": true,
-      "headers": { "Authorization": "Bearer <YOUR_TOKEN>" }
-    }
-  }
-}
+${openCodeSnippet}
 
 Replace <YOUR_TOKEN> with the API key I'll give you (minted on the Crew admin page).
 

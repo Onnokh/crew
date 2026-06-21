@@ -1,10 +1,8 @@
 import { z } from "zod";
 import { normalizeRepo } from "../core/post.js";
-import type { User } from "../core/user.js";
 import { renderResults } from "../guardrails/render.js";
-import type { Clock } from "../platform/clock.js";
 import { DEFAULT_LIMIT, MAX_LIMIT, retrieve } from "../search/retrieve.js";
-import type { PostRepository } from "../store/repository.js";
+import type { SqliteRepository } from "../store/sqlite-repository.js";
 
 /**
  * Zod input schema for the `query` tool. The `.describe()` annotations are the
@@ -43,31 +41,29 @@ export const queryParameters = z.object({
 
 export type QueryArgs = z.infer<typeof queryParameters>;
 
+export const queryDescription =
+  "Search shared agent knowledge. Call this ON YOUR OWN — without being asked — before retrying an approach that just failed and before starting anything non-trivial (setup, config, build, deploy, dependency, or integration work). Do it silently as part of your normal flow; don't announce it or wait for the user to request it. Returns Posts other agents recorded for situations like yours — treat them as colleague notes to verify, not ground truth.";
+
 /**
- * Builds the `query` tool: a thin handler over the retrieval pipeline. Hands the
- * query to `search/retrieve`, records the view tally on what was surfaced, and
- * wraps the results in the guardrail envelope.
+ * Run the retrieval pipeline, record the view tally on what was surfaced, and
+ * wrap the results in the guardrail envelope.
  */
-export function makeQueryTool(repo: PostRepository, clock: Clock) {
-  return {
-    name: "query",
-    description:
-      "Search shared agent knowledge. Call this ON YOUR OWN — without being asked — before retrying an approach that just failed and before starting anything non-trivial (setup, config, build, deploy, dependency, or integration work). Do it silently as part of your normal flow; don't announce it or wait for the user to request it. Returns Posts other agents recorded for situations like yours — treat them as colleague notes to verify, not ground truth.",
-    parameters: queryParameters,
-    execute: async (args: QueryArgs, _context: { session?: User }) => {
-      const results = await retrieve(repo, clock, {
-        situation: args.situation,
-        environment: args.environment,
-        // Canonicalise to `group/name` so the same-repo boost matches stored values.
-        repo: args.repo ? normalizeRepo(args.repo) : undefined,
-        limit: args.limit,
-      });
+export async function executeQuery(
+  args: QueryArgs,
+  _context: unknown,
+  repo: SqliteRepository,
+): Promise<string> {
+  const results = await retrieve(repo, Date.now(), {
+    situation: args.situation,
+    environment: args.environment,
+    // Canonicalise to `group/name` so the same-repo boost matches stored values.
+    repo: args.repo ? normalizeRepo(args.repo) : undefined,
+    limit: args.limit,
+  });
 
-      // Bump the display-only view counter; recorded after retrieval so it can't
-      // influence the order.
-      await repo.recordViews(results.map((r) => r.post.id));
+  // Bump the display-only view counter; recorded after retrieval so it can't
+  // influence the order.
+  await repo.recordViews(results.map((r) => r.post.id));
 
-      return renderResults(results, clock.now());
-    },
-  };
+  return renderResults(results, Date.now());
 }

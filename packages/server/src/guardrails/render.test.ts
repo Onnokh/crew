@@ -46,7 +46,7 @@ describe("renderResults (guardrail envelope)", () => {
       "Pin onnxruntime-node to the version fastembed expects.",
     );
     expect(out).toContain(
-      "post_1 · posted by Alice in crew, 3d ago · 0 confirms / 0 flags / 0 views",
+      "post_1 · posted by Alice in crew, 3 days ago · 0 confirms / 0 flags / 0 views",
     );
   });
 
@@ -67,7 +67,7 @@ describe("renderResults (guardrail envelope)", () => {
       Pin onnxruntime-node to the version fastembed expects.
 
       _Environment: Node 22, fastembed bge-small-en-v1.5_
-      _post_1 · posted by Alice in crew, 3d ago · 0 confirms / 0 flags / 0 views_"
+      _post_1 · posted by Alice in crew, 3 days ago · 0 confirms / 0 flags / 0 views_"
     `);
   });
 
@@ -125,7 +125,7 @@ describe("renderResults (guardrail envelope)", () => {
       notes: [],
     };
     const out = renderResults([confirmed], NOW);
-    expect(out).toContain("3 confirms / 1 flags / 7 views · last confirmed 2d ago");
+    expect(out).toContain("3 confirms / 1 flags / 7 views · last confirmed 2 days ago");
   });
 
   it("shows the view tally in the provenance line, even with no confirms or flags", () => {
@@ -177,9 +177,9 @@ describe("renderResults (guardrail envelope)", () => {
       ],
     };
     const out = renderResults([result], NOW);
-    expect(out).toContain('✓ 2d ago: "works on Node 22"');
-    expect(out).toContain('✗ 1w ago: "key renamed in v6"');
-    expect(out).toContain('✓ 1w ago: "still fine"');
+    expect(out).toContain('✓ 2 days ago: "works on Node 22"');
+    expect(out).toContain('✗ 1 week ago: "key renamed in v6"');
+    expect(out).toContain('✓ 1 week ago: "still fine"');
     expect(out).not.toContain("dropped: too old");
   });
 });
@@ -188,12 +188,12 @@ describe("age", () => {
   it("formats coarse buckets and clamps future timestamps", () => {
     expect(age(NOW, NOW)).toBe("just now");
     expect(age(NOW - 30 * 1000, NOW)).toBe("just now");
-    expect(age(NOW - 5 * 60 * 1000, NOW)).toBe("5m ago");
-    expect(age(NOW - 3 * 60 * 60 * 1000, NOW)).toBe("3h ago");
-    expect(age(NOW - 3 * DAY, NOW)).toBe("3d ago");
-    expect(age(NOW - 14 * DAY, NOW)).toBe("2w ago");
-    expect(age(NOW - 60 * DAY, NOW)).toBe("2mo ago");
-    expect(age(NOW - 400 * DAY, NOW)).toBe("1y ago");
+    expect(age(NOW - 5 * 60 * 1000, NOW)).toBe("5 minutes ago");
+    expect(age(NOW - 3 * 60 * 60 * 1000, NOW)).toBe("3 hours ago");
+    expect(age(NOW - 3 * DAY, NOW)).toBe("3 days ago");
+    expect(age(NOW - 14 * DAY, NOW)).toBe("2 weeks ago");
+    expect(age(NOW - 60 * DAY, NOW)).toBe("2 months ago");
+    expect(age(NOW - 400 * DAY, NOW)).toBe("1 year ago");
     expect(age(NOW + 5000, NOW)).toBe("just now");
   });
 });

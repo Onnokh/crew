@@ -1,12 +1,9 @@
 import type { Database } from "better-sqlite3";
 import { desc, eq } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import type { NewPostEvent, PostEvent } from "../core/post-event.js";
-import type { NewPost, Post } from "../core/post.js";
-import type { User } from "../core/user.js";
-import type { Embedder } from "../embedding/embedder.js";
-import type { Clock } from "../platform/clock.js";
-import type { IdGen } from "../platform/id-gen.js";
+import { randomUUID } from "node:crypto";
+import type { User } from "../auth/better-auth-authenticator.js";
+import type { NewPostEvent, Post, PostEvent, NewPost } from "../core/post.js";
 import type { Candidate, PostEventRow, VecCandidate } from "./queries.js";
 import {
   environmentVectorSearch,
@@ -15,27 +12,36 @@ import {
   keywordSearch,
   vectorSearch,
 } from "./queries.js";
-import type { PostRepository, PostSort } from "./repository.js";
 import { postEvents, posts } from "./schema.js";
 import type { PostRow } from "./schema.js";
 
 /**
- * Drizzle/SQLite-backed {@link PostRepository}. Holds the Drizzle wrapper (CRUD)
- * and the raw better-sqlite3 handle (FTS5/vec0 virtual-table queries) over one
- * connection, plus the {@link Embedder} shared by write- and query-time vectors.
+ * How {@link SqliteRepository.listRecentPosts} orders the browse list. `"newest"`
+ * is creation time (default); `"views"` and `"confirms"` are popularity orders
+ * ranked across the whole corpus. Confirms are counted from the event log.
  */
-export class SqliteRepository implements PostRepository {
+export type PostSort = "newest" | "views" | "confirms";
+
+type Embedder = {
+  /** Embed text into a cosine-normalized vector. */
+  embed(text: string): Promise<number[]>;
+};
+
+/**
+ * Drizzle/SQLite-backed repository. Holds the Drizzle wrapper (CRUD)
+ * and the raw better-sqlite3 handle (FTS5/vec0 virtual-table queries) over one
+ * connection, plus the embedder shared by write- and query-time vectors.
+ */
+export class SqliteRepository {
   constructor(
     private readonly db: BetterSQLite3Database,
     private readonly raw: Database,
-    private readonly clock: Clock,
-    private readonly idGen: IdGen,
     private readonly embedder: Embedder,
   ) {}
 
   async createPost(input: NewPost): Promise<Post> {
     const post: Post = {
-      id: this.idGen.next("post"),
+      id: `post_${randomUUID()}`,
       // Falls back to situation so callers that omit title still produce a valid Post.
       title: input.title ?? input.situation,
       situation: input.situation,
@@ -44,7 +50,7 @@ export class SqliteRepository implements PostRepository {
       repo: input.repo,
       status: "active",
       createdBy: input.createdBy,
-      createdAt: this.clock.now(),
+      createdAt: Date.now(),
       lastConfirmed: null,
       views: 0,
     };
@@ -94,13 +100,13 @@ export class SqliteRepository implements PostRepository {
 
   async recordEvent(input: NewPostEvent): Promise<PostEvent> {
     const event: PostEvent = {
-      id: this.idGen.next("evt"),
+      id: `evt_${randomUUID()}`,
       postId: input.postId,
       verdict: input.verdict,
       reason: input.reason ?? null,
       note: input.note ?? null,
       createdBy: input.createdBy,
-      createdAt: this.clock.now(),
+      createdAt: Date.now(),
     };
 
     this.raw.transaction(() => {

@@ -5,12 +5,12 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Post } from "../core/post.js";
 import { migrate } from "../store/migrate.js";
 import { SqliteRepository } from "../store/sqlite-repository.js";
-import { FakeClock, FakeEmbedder, FakeIdGen } from "../test/fakes.js";
+import { FakeEmbedder, FrozenTime } from "../test/fakes.js";
 import { seedUser } from "../test/seed-user.js";
 import { hydratePosts } from "./hydrate.js";
 
 let raw: Database.Database;
-let clock: FakeClock;
+let time: FrozenTime;
 let repo: SqliteRepository;
 
 beforeEach(() => {
@@ -21,11 +21,12 @@ beforeEach(() => {
   const db = drizzle(raw);
   seedUser(raw, "user_alice", "Alice");
   seedUser(raw, "user_bob", "Bob");
-  clock = new FakeClock();
-  repo = new SqliteRepository(db, raw, clock, new FakeIdGen(), new FakeEmbedder());
+  time = new FrozenTime();
+  repo = new SqliteRepository(db, raw, new FakeEmbedder());
 });
 
 afterEach(() => {
+  time.restore();
   raw.close();
 });
 
@@ -62,7 +63,7 @@ describe("hydratePosts", () => {
       repo: "r",
       status: "active",
       createdBy: "user_ghost",
-      createdAt: clock.now(),
+      createdAt: time.now(),
       lastConfirmed: null,
       views: 0,
     };
@@ -83,9 +84,9 @@ describe("hydratePosts", () => {
 
   it("carries the Post's events along, newest first, for the caller to reuse", async () => {
     const post = await seed();
-    clock.advance(10);
+    time.advance(10);
     await repo.recordEvent({ postId: post.id, verdict: "confirm", note: "older", createdBy: "user_alice" });
-    clock.advance(10);
+    time.advance(10);
     await repo.recordEvent({ postId: post.id, verdict: "flag", reason: "incorrect", note: "newer", createdBy: "user_bob" });
 
     const [row] = await hydratePosts(repo, [post]);

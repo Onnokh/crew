@@ -1,18 +1,42 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
+import { apiKey } from "@better-auth/api-key";
+import { betterAuth } from "better-auth";
+import { admin } from "better-auth/plugins";
 import type { IncomingMessage } from "node:http";
 import * as sqliteVec from "sqlite-vec";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { BetterAuthAuthenticator } from "../auth/better-auth-authenticator.js";
-import { createAuth, type Auth } from "../auth/better-auth.js";
+import type { Auth } from "../auth/better-auth.js";
 import { migrate } from "../store/migrate.js";
 import { SqliteRepository } from "../store/sqlite-repository.js";
-import { FakeClock, FakeEmbedder, FakeIdGen } from "./fakes.js";
+import { FakeEmbedder } from "./fakes.js";
 import { connect, startTestServer, type RunningServer } from "./harness.js";
 
 /** A request the seam can read, carrying just the headers under test. */
 function reqWith(headers: Record<string, string>): IncomingMessage {
   return { headers } as unknown as IncomingMessage;
+}
+
+function createTestAuth(raw: Database.Database): Auth {
+  return betterAuth({
+    database: raw,
+    secret: "test-secret-test-secret-test-secret",
+    baseURL: "http://localhost",
+    logger: {
+      log: (
+        level: "error" | "debug" | "info" | "warn",
+        message: string,
+        ...args: unknown[]
+      ) => {
+        if (/api key/i.test(message)) return;
+        // eslint-disable-next-line no-console
+        console[level === "error" ? "error" : "log"](message, ...args);
+      },
+    },
+    emailAndPassword: { enabled: true },
+    plugins: [admin(), apiKey({ rateLimit: { enabled: false } })],
+  });
 }
 
 describe("BetterAuthAuthenticator resolves both caller shapes", () => {
@@ -29,14 +53,9 @@ describe("BetterAuthAuthenticator resolves both caller shapes", () => {
     const repo = new SqliteRepository(
       drizzle(raw),
       raw,
-      new FakeClock(),
-      new FakeIdGen(),
       new FakeEmbedder(),
     );
-    auth = createAuth(raw, {
-      secret: "test-secret-test-secret-test-secret",
-      baseURL: "http://localhost",
-    });
+    auth = createTestAuth(raw);
     authn = new BetterAuthAuthenticator(auth, repo);
 
     // Seed a first admin: sign up, then promote the row directly.

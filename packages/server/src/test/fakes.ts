@@ -1,50 +1,43 @@
-import type { Embedder } from "../embedding/embedder.js";
-import type { Clock } from "../platform/clock.js";
-import type { IdGen } from "../platform/id-gen.js";
-
-// Test doubles for the injected seams. The store and authenticator are never
+// Test doubles for the injected embedder. The store and authenticator are never
 // faked — integration tests run the real ones over `:memory:`.
 
-/** {@link Clock} double: a fixed, advanceable time so tests assert ordering. */
-export class FakeClock implements Clock {
-  constructor(private current: number = 1_700_000_000_000) {}
+/** A frozen, advanceable `Date.now()` for deterministic timestamps in tests. */
+export class FrozenTime {
+  private readonly originalNow = Date.now;
+  private current: number;
+
+  constructor(ms = 1_700_000_000_000) {
+    this.current = ms;
+    Date.now = () => this.current;
+  }
 
   now(): number {
     return this.current;
   }
 
-  /** Move the clock forward by `ms` and return the new time. */
   advance(ms: number): number {
     this.current += ms;
     return this.current;
   }
 
-  /** Pin the clock to an absolute time. */
   set(ms: number): void {
     this.current = ms;
   }
-}
 
-/** {@link IdGen} double: deterministic `post_1`, `post_2`, … per prefix. */
-export class FakeIdGen implements IdGen {
-  private counters = new Map<string, number>();
-
-  next(prefix: string): string {
-    const n = (this.counters.get(prefix) ?? 0) + 1;
-    this.counters.set(prefix, n);
-    return `${prefix}_${n}`;
+  restore(): void {
+    Date.now = this.originalNow;
   }
 }
 
 /**
- * Deterministic {@link Embedder} double — never downloads the 30 MB model. It
+ * Deterministic embedder double — never downloads the 30 MB model. It
  * hashes a text's concept tokens into a fixed-dimension bag-of-concepts vector
  * and L2-normalizes it, so the same text always yields the same vector and texts
  * sharing concepts land near each other under cosine distance. Tokens are mapped
  * through a tiny synonym table first so a paraphrase still hashes onto the same
  * dimensions. A stand-in for the real model's semantic space, not a model of it.
  */
-export class FakeEmbedder implements Embedder {
+export class FakeEmbedder {
   readonly modelName: string;
   readonly dimensions: number;
 

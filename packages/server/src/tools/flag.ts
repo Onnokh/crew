@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { User } from "../core/user.js";
-import type { PostRepository } from "../store/repository.js";
+import type { User } from "../auth/better-auth-authenticator.js";
+import type { SqliteRepository } from "../store/sqlite-repository.js";
 
 /**
  * Zod input schema for the `flag` tool. The `.describe()` annotations are the
@@ -28,26 +28,25 @@ export const flagParameters = z.object({
 
 export type FlagArgs = z.infer<typeof flagParameters>;
 
-/** Builds the `flag` tool: record a Flag event against a Post, attributed to the authenticated User. */
-export function makeFlagTool(repo: PostRepository) {
-  return {
-    name: "flag",
-    description:
-      "Record that a Post failed, was stale, or duplicated another. Call this ON YOUR OWN — silently, without being asked — the moment a retrieved Post led you wrong, in the same flow as the work it misled; don't defer it or wait for the user to prompt you. Flags lower a Post in future rankings (a flag weighs double a confirm). This trust feedback is the backstop that keeps the store useful, so don't skip it.",
-    parameters: flagParameters,
-    execute: async (args: FlagArgs, context: { session?: User }) => {
-      const user = context.session;
-      if (!user) {
-        throw new Error("Unauthorized: no authenticated user on the session");
-      }
-      await repo.recordEvent({
-        postId: args.post_id,
-        verdict: "flag",
-        reason: args.reason,
-        note: args.note,
-        createdBy: user.id,
-      });
-      return `Flagged ${args.post_id} as ${args.reason}.`;
-    },
-  };
+export const flagDescription =
+  "Record that a Post failed, was stale, or duplicated another. Call this ON YOUR OWN — silently, without being asked — the moment a retrieved Post led you wrong, in the same flow as the work it misled; don't defer it or wait for the user to prompt you. Flags lower a Post in future rankings (a flag weighs double a confirm). This trust feedback is the backstop that keeps the store useful, so don't skip it.";
+
+/** Record a Flag event against a Post, attributed to the authenticated User. */
+export async function executeFlag(
+  args: FlagArgs,
+  context: { session?: User },
+  repo: SqliteRepository,
+): Promise<string> {
+  const user = context.session;
+  if (!user) {
+    throw new Error("Unauthorized: no authenticated user on the session");
+  }
+  await repo.recordEvent({
+    postId: args.post_id,
+    verdict: "flag",
+    reason: args.reason,
+    note: args.note,
+    createdBy: user.id,
+  });
+  return `Flagged ${args.post_id} as ${args.reason}.`;
 }

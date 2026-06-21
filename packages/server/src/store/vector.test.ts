@@ -2,13 +2,14 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { FakeClock, FakeEmbedder, FakeIdGen } from "../test/fakes.js";
+import { FakeEmbedder, FrozenTime } from "../test/fakes.js";
 import { seedUser } from "../test/seed-user.js";
 import { migrate } from "./migrate.js";
 import { pinOrCheckEmbeddingModel } from "./meta.js";
 import { SqliteRepository } from "./sqlite-repository.js";
 
 let raw: Database.Database;
+let time: FrozenTime;
 let repo: SqliteRepository;
 
 function open(): Database.Database {
@@ -22,16 +23,16 @@ function open(): Database.Database {
 
 beforeEach(() => {
   raw = open();
+  time = new FrozenTime();
   repo = new SqliteRepository(
     drizzle(raw),
     raw,
-    new FakeClock(),
-    new FakeIdGen(),
     new FakeEmbedder(),
   );
 });
 
 afterEach(() => {
+  time.restore();
   raw.close();
 });
 
@@ -114,11 +115,7 @@ describe("vectorSearch (real sqlite-vec vec0)", () => {
     const boom = new SqliteRepository(
       drizzle(raw),
       raw,
-      new FakeClock(),
-      new FakeIdGen(),
       {
-        modelName: "boom",
-        dimensions: 384,
         embed: async () => {
           throw new Error("embed failed");
         },

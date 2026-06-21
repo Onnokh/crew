@@ -1,4 +1,4 @@
-import type { PostEvent } from "../core/post-event.js";
+import type { PostEvent } from "../core/post.js";
 
 /** Pure functions collapsing a Post's event log into counts and a trust multiplier. */
 

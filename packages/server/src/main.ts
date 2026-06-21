@@ -1,10 +1,11 @@
 import type { Database } from "better-sqlite3";
+import { apiKey } from "@better-auth/api-key";
+import { betterAuth } from "better-auth";
+import { admin } from "better-auth/plugins";
 import { BetterAuthAuthenticator } from "./auth/better-auth-authenticator.js";
-import { createAuth, type Auth } from "./auth/better-auth.js";
+import type { Auth } from "./auth/better-auth.js";
 import type { Deps } from "./deps.js";
 import { FastEmbedder } from "./embedding/fastembed.js";
-import { NanoidGen } from "./platform/nanoid-gen.js";
-import { SystemClock } from "./platform/system-clock.js";
 import { openDatabase } from "./store/db.js";
 import { pinOrCheckEmbeddingModel } from "./store/meta.js";
 import { SqliteRepository } from "./store/sqlite-repository.js";
@@ -13,24 +14,40 @@ import { buildServer } from "./server.js";
 async function buildRealDeps(port: number): Promise<Deps> {
   const dbPath = process.env.CREW_DB_PATH ?? "crew.db";
   const { db, raw } = openDatabase(dbPath);
-  const clock = new SystemClock();
 
   // All stored vectors must come from one model to be comparable: first boot
   // records the model name, a later boot with a different model refuses to start.
   const embedder = await FastEmbedder.create(process.env.CREW_MODEL_CACHE_DIR);
   pinOrCheckEmbeddingModel(raw, embedder.modelName);
 
-  const repo = new SqliteRepository(db, raw, clock, new NanoidGen(), embedder);
+  const repo = new SqliteRepository(db, raw, embedder);
 
   // better-auth shares the one better-sqlite3 handle, so its tables and ours
   // live in the same file and the `created_by` FKs into `user(id)` hold.
-  const authInstance = createAuth(raw, {
+  const authInstance = betterAuth({
+    database: raw,
     secret: requireSecret(),
     baseURL: process.env.CREW_BASE_URL ?? `http://localhost:${port}`,
-    // Comma-separated extra origins (e.g. the Vite dev console).
-    trustedOrigins: process.env.CREW_TRUSTED_ORIGINS?.split(",")
-      .map((o) => o.trim())
-      .filter(Boolean),
+    // Trust extra origins beyond `baseURL` (dev console on the Vite port proxies here).
+    ...(process.env.CREW_TRUSTED_ORIGINS
+      ? {
+          trustedOrigins: process.env.CREW_TRUSTED_ORIGINS.split(",")
+            .map((o) => o.trim())
+            .filter(Boolean),
+        }
+      : {}),
+    // Drop "Invalid API key" log lines — expected on bad credentials, not a fault.
+    logger: {
+      log: (level, message, ...args) => {
+        if (/api key/i.test(message)) return;
+        // eslint-disable-next-line no-console
+        console[level === "error" ? "error" : "log"](message, ...args);
+      },
+    },
+    emailAndPassword: { enabled: true },
+    // Disable per-key rate limiting: every MCP request re-verifies the key, so the
+    // default low budget would exhaust almost immediately for a normal agent loop.
+    plugins: [admin(), apiKey({ rateLimit: { enabled: false } })],
   });
   await seedFirstAdmin(authInstance, raw);
 
@@ -38,7 +55,6 @@ async function buildRealDeps(port: number): Promise<Deps> {
     auth: new BetterAuthAuthenticator(authInstance, repo),
     authInstance,
     repo,
-    clock,
   };
 }
 

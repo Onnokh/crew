@@ -1,12 +1,26 @@
 import { FastMCP } from "fastmcp";
 import type { IncomingMessage } from "node:http";
 import { mountAdmin } from "./api/admin.js";
-import { mountAuth } from "./api/auth.js";
 import { mountConsole } from "./api/console.js";
 import { mountReview } from "./api/review.js";
-import type { User } from "./core/user.js";
+import type { User } from "./auth/better-auth-authenticator.js";
 import type { Deps } from "./deps.js";
-import { registerTools } from "./mcp/register.js";
+import {
+  confirmDescription,
+  confirmParameters,
+  executeConfirm,
+} from "./tools/confirm.js";
+import {
+  executeFlag,
+  flagDescription,
+  flagParameters,
+} from "./tools/flag.js";
+import { executePost, postDescription, postParameters } from "./tools/post.js";
+import {
+  executeQuery,
+  queryDescription,
+  queryParameters,
+} from "./tools/query.js";
 
 // The composition root: wire Deps into an unstarted FastMCP server. The only
 // place that knows how the pieces fit together.
@@ -24,10 +38,38 @@ export function buildServer(deps: Deps): FastMCP<User> {
     },
   });
 
-  registerTools(server, deps);
+  // MCP tools.
+  server.addTool({
+    name: "query",
+    description: queryDescription,
+    parameters: queryParameters,
+    execute: (args, ctx) => executeQuery(args, ctx, deps.repo),
+  });
+  server.addTool({
+    name: "post",
+    description: postDescription,
+    parameters: postParameters,
+    execute: (args, ctx) => executePost(args, ctx, deps.repo),
+  });
+  server.addTool({
+    name: "confirm",
+    description: confirmDescription,
+    parameters: confirmParameters,
+    execute: (args, ctx) => executeConfirm(args, ctx, deps.repo),
+  });
+  server.addTool({
+    name: "flag",
+    description: flagDescription,
+    parameters: flagParameters,
+    execute: (args, ctx) => executeFlag(args, ctx, deps.repo),
+  });
 
   // better-auth's session/api-key/admin routes hang off the same Hono app.
-  mountAuth(server.getApp(), deps.authInstance);
+  server
+    .getApp()
+    .on(["GET", "POST"], "/api/auth/*", (c) =>
+      deps.authInstance.handler(c.req.raw),
+    );
 
   // The human JSON API. Mounts under `/api/*` BEFORE the console so its SPA
   // catch-all never shadows them.

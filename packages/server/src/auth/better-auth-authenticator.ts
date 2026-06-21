@@ -1,19 +1,25 @@
 import type { IncomingMessage } from "node:http";
-import type { User } from "../core/user.js";
-import type { PostRepository } from "../store/repository.js";
 import type { Auth } from "./better-auth.js";
-import type { Authenticator } from "./authenticator.js";
+import type { SqliteRepository } from "../store/sqlite-repository.js";
+
+/** A human team member; their agents all act under this identity. */
+export type User = {
+  id: string;
+  name: string;
+  /** From better-auth's admin plugin; `'admin'` gates the admin console. */
+  role?: string | null;
+};
 
 /**
- * The production {@link Authenticator}, backed by better-auth. Agents present
+ * The production identity resolver, backed by better-auth. Agents present
  * `Authorization: Bearer <api-key>` (verified via `verifyApiKey`); humans carry
  * a session cookie (resolved via `getSession`). Neither → `null` → 401 upstream.
  * The repository is touched only to resolve a key's owner into name/role.
  */
-export class BetterAuthAuthenticator implements Authenticator {
+export class BetterAuthAuthenticator {
   constructor(
     private readonly auth: Auth,
-    private readonly repo: PostRepository,
+    private readonly repo: SqliteRepository,
   ) {}
 
   async authenticate(request: IncomingMessage): Promise<User | null> {
@@ -39,7 +45,7 @@ export class BetterAuthAuthenticator implements Authenticator {
     return {
       id: session.user.id,
       name: session.user.name,
-      role: session.user.role ?? null,
+      role: (session.user as { role?: string | null }).role ?? null,
     };
   }
 }

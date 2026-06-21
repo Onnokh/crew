@@ -232,19 +232,34 @@ function AdminPage() {
   );
 }
 
+const rtf = new Intl.RelativeTimeFormat("en", { numeric: "always" });
+
+function relativeParts(ms: number): { value: number; unit: Intl.RelativeTimeFormatUnit } {
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 60) return { value: seconds, unit: "second" };
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return { value: minutes, unit: "minute" };
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return { value: hours, unit: "hour" };
+  const days = Math.floor(hours / 24);
+  if (days < 7) return { value: days, unit: "day" };
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return { value: weeks, unit: "week" };
+  const months = Math.floor(days / 30);
+  if (months < 12) return { value: months, unit: "month" };
+  const years = Math.floor(days / 365);
+  return { value: years, unit: "year" };
+}
+
 /** A short "last used" phrase for a key's `lastRequest` (null = never verified). */
 function lastUsed(iso: string | null): string {
   if (!iso) return "never used";
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return "never used";
-  const secs = Math.max(0, Math.round((Date.now() - then) / 1000));
-  if (secs < 60) return "used just now";
-  const mins = Math.round(secs / 60);
-  if (mins < 60) return `used ${mins}m ago`;
-  const hours = Math.round(mins / 60);
-  if (hours < 24) return `used ${hours}h ago`;
-  const days = Math.round(hours / 24);
-  return `used ${days}d ago`;
+  const ms = Math.max(0, Date.now() - then);
+  if (ms < 1000) return "used just now";
+  const { value, unit } = relativeParts(ms);
+  return `used ${rtf.format(-value, unit)}`;
 }
 
 /** Turn an {@link ApiError} (or anything thrown) into a one-line page message. */

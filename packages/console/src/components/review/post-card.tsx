@@ -17,17 +17,6 @@ function shortTime(ms: number): string {
     : `${pad(d.getDate())}-${pad(d.getMonth() + 1)}`;
 }
 
-/** Reduce a repo identifier to its `group/name` tail; falls back to the raw value. */
-function repoSlug(repo: string): string {
-  const segments = repo
-    .replace(/^[a-z]+:\/\//i, "")
-    .replace(/\/+$/, "")
-    .replace(/\.git$/i, "")
-    .split("/")
-    .filter(Boolean);
-  return segments.length >= 2 ? segments.slice(-2).join("/") : repo;
-}
-
 /** One Post entry: heading with metrics, a disclosure chevron, and (when moderating) a retire/restore control. */
 export function PostCard({
   row,
@@ -49,7 +38,7 @@ export function PostCard({
           <span className={styles.titleText}>{row.title}</span>
           <span className={styles.sep}>/</span>
           <span className={styles.project} title={row.repo}>
-            {repoSlug(row.repo)}
+            {row.repo}
           </span>
           {retired && <span className={styles.tag}>retired</span>}
           <span className={styles.metrics}>

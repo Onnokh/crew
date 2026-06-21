@@ -1,5 +1,4 @@
 import { EmbeddingModel, FlagEmbedding } from "fastembed";
-import type { Embedder } from "./embedder.js";
 
 /** The one pinned model for the whole corpus. */
 export const MODEL_NAME = "bge-small-en-v1.5";
@@ -7,11 +6,11 @@ export const MODEL_NAME = "bge-small-en-v1.5";
 export const MODEL_DIMENSIONS = 384;
 
 /**
- * Real {@link Embedder}: fastembed running bge-small-en-v1.5 in-process. Vectors
- * are cosine-normalized (sqlite-vec's `vec_distance_cosine` assumes it — do not
- * disable). Built via {@link FastEmbedder.create} because the model loads lazily.
+ * fastembed running bge-small-en-v1.5 in-process. Vectors are cosine-normalized
+ * (sqlite-vec's `vec_distance_cosine` assumes it — do not disable).
+ * Built via {@link FastEmbedder.create} because the model loads lazily.
  */
-export class FastEmbedder implements Embedder {
+export class FastEmbedder {
   readonly modelName = MODEL_NAME;
   readonly dimensions = MODEL_DIMENSIONS;
 

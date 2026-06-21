@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PostEvent } from "../core/post-event.js";
+import type { PostEvent } from "../core/post.js";
 import {
   aggregateEvents,
   FLAG_WEIGHT,

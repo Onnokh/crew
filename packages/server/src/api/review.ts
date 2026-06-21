@@ -3,7 +3,7 @@ import type { Post } from "../core/post.js";
 import type { Deps } from "../deps.js";
 import { hydratePosts } from "../read/hydrate.js";
 import { MAX_LIMIT, retrieve } from "../search/retrieve.js";
-import type { PostSort } from "../store/repository.js";
+import type { PostSort } from "../store/sqlite-repository.js";
 
 /** Coerce the `?sort=` query into a {@link PostSort}; anything else → newest. */
 function parseSort(value: string | undefined): PostSort {
@@ -68,7 +68,7 @@ export function mountReview(app: Hono, deps: Deps): void {
   app.get("/api/review/search", async (c) => {
     const q = (c.req.query("q") ?? "").trim();
     if (q === "") return c.json({ posts: [] });
-    const results = await retrieve(deps.repo, deps.clock, {
+    const results = await retrieve(deps.repo, Date.now(), {
       situation: q,
       limit: MAX_LIMIT,
     });

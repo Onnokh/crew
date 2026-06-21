@@ -1,5 +1,5 @@
+import { randomBytes } from "node:crypto";
 import { Hono } from "hono";
-import { customAlphabet } from "nanoid";
 import type { Deps } from "../deps.js";
 import type { Auth } from "../auth/better-auth.js";
 
@@ -165,13 +165,14 @@ function toIso(value: Date | string | number | null | undefined): string | null 
 }
 
 /** A URL-safe one-time password — long enough that it need never be memorised. */
-const generatePassword = customAlphabet(
-  "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789",
-  20,
-);
+function generatePassword(): string {
+  return randomBytes(15).toString("base64url").slice(0, 20);
+}
 
 /** A short suffix to keep minted key names distinct in better-auth's listing. */
-const shortId = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 6);
+function shortId(): string {
+  return randomBytes(4).toString("base64url").slice(0, 6);
+}
 
 /** Pull a human message off a better-auth APIError, falling back to `fallback`. */
 function messageOf(err: unknown, fallback: string): string {

@@ -2,13 +2,13 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { FakeClock, FakeEmbedder, FakeIdGen } from "../test/fakes.js";
+import { FakeEmbedder, FrozenTime } from "../test/fakes.js";
 import { seedUser } from "../test/seed-user.js";
 import { migrate } from "./migrate.js";
 import { SqliteRepository } from "./sqlite-repository.js";
 
 let raw: Database.Database;
-let clock: FakeClock;
+let time: FrozenTime;
 let repo: SqliteRepository;
 
 beforeEach(() => {
@@ -18,11 +18,12 @@ beforeEach(() => {
   migrate(raw);
   const db = drizzle(raw);
   seedUser(raw, "user_alice", "Alice");
-  clock = new FakeClock();
-  repo = new SqliteRepository(db, raw, clock, new FakeIdGen(), new FakeEmbedder());
+  time = new FrozenTime();
+  repo = new SqliteRepository(db, raw, new FakeEmbedder());
 });
 
 afterEach(() => {
+  time.restore();
   raw.close();
 });
 
@@ -42,8 +43,8 @@ describe("recordEvent (post_events log)", () => {
     const id = await seed();
     expect((await repo.getPost(id))!.lastConfirmed).toBeNull();
 
-    clock.advance(1000);
-    const at = clock.now();
+    time.advance(1000);
+    const at = time.now();
     const event = await repo.recordEvent({
       postId: id,
       verdict: "confirm",
@@ -88,11 +89,11 @@ describe("recordEvent (post_events log)", () => {
     const a = await seed();
     const b = await seed();
 
-    clock.advance(10);
+    time.advance(10);
     await repo.recordEvent({ postId: a, verdict: "confirm", createdBy: "user_alice" });
-    clock.advance(10);
+    time.advance(10);
     await repo.recordEvent({ postId: b, verdict: "flag", reason: "incorrect", createdBy: "user_alice" });
-    clock.advance(10);
+    time.advance(10);
     await repo.recordEvent({ postId: a, verdict: "flag", reason: "duplicate", createdBy: "user_alice" });
 
     const events = await repo.getEventsForPosts([a, b]);

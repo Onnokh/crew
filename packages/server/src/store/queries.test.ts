@@ -2,12 +2,13 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { FakeClock, FakeEmbedder, FakeIdGen } from "../test/fakes.js";
+import { FakeEmbedder, FrozenTime } from "../test/fakes.js";
 import { seedUser } from "../test/seed-user.js";
 import { migrate } from "./migrate.js";
 import { SqliteRepository } from "./sqlite-repository.js";
 
 let raw: Database.Database;
+let time: FrozenTime;
 let repo: SqliteRepository;
 
 beforeEach(() => {
@@ -17,16 +18,16 @@ beforeEach(() => {
   migrate(raw);
   const db = drizzle(raw);
   seedUser(raw, "user_alice", "Alice");
+  time = new FrozenTime();
   repo = new SqliteRepository(
     db,
     raw,
-    new FakeClock(),
-    new FakeIdGen(),
     new FakeEmbedder(),
   );
 });
 
 afterEach(() => {
+  time.restore();
   raw.close();
 });
 
