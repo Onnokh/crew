@@ -242,6 +242,8 @@ export const DEFAULT_ATTRIBUTION_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 export type RetrievalConversion = {
   retrievalId: string;
   converted: boolean;
+  /** Whether a returned Post was Flagged by the same User within the window. */
+  flagged: boolean;
 };
 
 /**
@@ -255,6 +257,8 @@ export type ConversionStats = {
   withResults: number;
   /** Of those, how many converted (last-touch Confirm by the same User in window). */
   converted: number;
+  /** Of those, how many were Flagged by the same User within the window. */
+  flagged: number;
   /** Per-retrieval verdicts, newest retrieval first. */
   byRetrieval: RetrievalConversion[];
 };
@@ -280,6 +284,8 @@ export type CoverageStats = {
   total: number;
   /** Of those, how many returned zero Posts (`result_count = 0`). */
   zeroResults: number;
+  /** Total Posts returned across all Retrievals in the range. */
+  totalResults: number;
 };
 
 /**
@@ -295,13 +301,123 @@ export function coverageStats(
   const row = raw
     .prepare(
       `SELECT COUNT(*) AS total,
-              COALESCE(SUM(CASE WHEN result_count = 0 THEN 1 ELSE 0 END), 0) AS zeroResults
+              COALESCE(SUM(CASE WHEN result_count = 0 THEN 1 ELSE 0 END), 0) AS zeroResults,
+              COALESCE(SUM(result_count), 0) AS totalResults
          FROM retrievals
         WHERE created_at >= ?
           AND created_at < ?`,
     )
-    .get(window.from, window.to) as { total: number; zeroResults: number };
-  return { total: row.total, zeroResults: row.zeroResults };
+    .get(window.from, window.to) as {
+    total: number;
+    zeroResults: number;
+    totalResults: number;
+  };
+  return {
+    total: row.total,
+    zeroResults: row.zeroResults,
+    totalResults: row.totalResults,
+  };
+}
+
+/** How many Posts were created in a `[from, to)` range — see {@link postsCreatedStats}. */
+export type PostsCreatedStats = {
+  /** Posts whose `created_at` falls in the range. */
+  created: number;
+};
+
+/**
+ * Count Posts created in `[from, to)` over the raw `posts` rows. One call over
+ * the whole range gives the headline; one per day-wide bucket builds the trend.
+ * No materialized counter — read directly from `posts.created_at`.
+ */
+export function postsCreatedStats(
+  raw: Database,
+  window: CoverageWindow,
+): PostsCreatedStats {
+  const row = raw
+    .prepare(
+      `SELECT COUNT(*) AS created
+         FROM posts
+        WHERE created_at >= ?
+          AND created_at < ?`,
+    )
+    .get(window.from, window.to) as { created: number };
+  return { created: row.created };
+}
+
+/**
+ * The earliest `created_at` across all activity logs (retrievals, posts,
+ * post_events), or null when every log is empty. Backs the "All time" range —
+ * the dashboard clamps its `from` to this so the trend starts at real data.
+ */
+export function earliestActivityAt(raw: Database): number | null {
+  const row = raw
+    .prepare(
+      `SELECT MIN(at) AS earliest FROM (
+              SELECT MIN(created_at) AS at FROM retrievals
+        UNION SELECT MIN(created_at) FROM posts
+        UNION SELECT MIN(created_at) FROM post_events
+       )`,
+    )
+    .get() as { earliest: number | null };
+  return row.earliest;
+}
+
+/** One row of the unified recent-activity feed (see {@link recentActivity}). */
+export type ActivityRow = {
+  id: string;
+  /** What happened: a search, a new Post, or a verdict against a Post. */
+  kind: "search" | "post" | "confirm" | "flag";
+  /** The Post title (for post/confirm/flag) or the search situation. */
+  subject: string;
+  /** Flag reason (incorrect | stale | duplicate); null for every other kind. */
+  reason: string | null;
+  /** Result count for a search; null for every other kind. */
+  resultCount: number | null;
+  /** The acting User's id (searcher or event author); resolved to a name at the API. */
+  userId: string;
+  /** When it happened, unix ms. */
+  createdAt: number;
+};
+
+/**
+ * The unified activity feed: recent searches, new Posts, and Confirm/Flag
+ * verdicts merged into one time-sorted list. A `UNION ALL` across `retrievals`,
+ * `posts`, and `post_events` (joined to `posts` for the title), newest first,
+ * capped at `limit`. User-id → name resolution is the API's job (the corpus DB
+ * has no `user` table). No materialized feed — read straight off the logs.
+ */
+export function recentActivity(raw: Database, limit: number): ActivityRow[] {
+  const rows = raw
+    .prepare(
+      `SELECT id, 'search' AS kind, situation AS subject,
+              NULL AS reason, result_count AS resultCount,
+              user_id AS userId, created_at AS createdAt
+         FROM retrievals
+        UNION ALL
+       SELECT id, 'post' AS kind, COALESCE(title, situation) AS subject,
+              NULL AS reason, NULL AS resultCount,
+              created_by AS userId, created_at AS createdAt
+         FROM posts
+        UNION ALL
+       SELECT pe.id, pe.verdict AS kind, COALESCE(p.title, p.situation) AS subject,
+              pe.reason AS reason, NULL AS resultCount,
+              pe.created_by AS userId, pe.created_at AS createdAt
+         FROM post_events pe
+         JOIN posts p ON p.id = pe.post_id
+        ORDER BY createdAt DESC
+        LIMIT ?`,
+    )
+    .all(limit) as Array<{
+    id: string;
+    kind: ActivityRow["kind"];
+    subject: string;
+    reason: string | null;
+    resultCount: number | null;
+    userId: string;
+    createdAt: number;
+  }>;
+  return rows;
 }
 
 /**
@@ -479,22 +595,35 @@ export function conversionStats(
                    AND pe.created_by = r.user_id
                    AND pe.created_at > r.created_at
                    AND pe.created_at <= r.created_at + ?
-              ) AS converted
+              ) AS converted,
+              EXISTS (
+                SELECT 1
+                  FROM retrieval_results rr
+                  JOIN post_events pe ON pe.post_id = rr.post_id
+                 WHERE rr.retrieval_id = r.id
+                   AND pe.verdict = 'flag'
+                   AND pe.created_by = r.user_id
+                   AND pe.created_at > r.created_at
+                   AND pe.created_at <= r.created_at + ?
+              ) AS flagged
          FROM retrievals r
         WHERE r.created_at >= ?
           AND r.created_at < ?
           AND r.result_count > 0
         ORDER BY r.created_at DESC, r.id DESC`,
     )
-    .all(window.windowMs, window.from, window.to) as Array<{
+    .all(window.windowMs, window.windowMs, window.from, window.to) as Array<{
     retrievalId: string;
     converted: number;
+    flagged: number;
   }>;
 
   const byRetrieval: RetrievalConversion[] = rows.map((row) => ({
     retrievalId: row.retrievalId,
     converted: row.converted === 1,
+    flagged: row.flagged === 1,
   }));
   const converted = byRetrieval.reduce((n, r) => n + (r.converted ? 1 : 0), 0);
-  return { withResults: byRetrieval.length, converted, byRetrieval };
+  const flagged = byRetrieval.reduce((n, r) => n + (r.flagged ? 1 : 0), 0);
+  return { withResults: byRetrieval.length, converted, flagged, byRetrieval };
 }

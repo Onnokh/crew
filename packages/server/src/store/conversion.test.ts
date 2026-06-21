@@ -114,4 +114,38 @@ describe("conversionStats", () => {
     expect(stats.withResults).toBe(1);
     expect(stats.converted).toBe(0);
   });
+
+  it("counts a Flag by the same User within the window as flagged", async () => {
+    const id = await post();
+    retrieval("user_alice", id);
+    clock.advance(60_000);
+    await repo.recordEvent({
+      postId: id,
+      verdict: "flag",
+      reason: "stale",
+      createdBy: "user_alice",
+    });
+
+    const stats = await repo.conversionStats(fullRange());
+    expect(stats.withResults).toBe(1);
+    expect(stats.flagged).toBe(1);
+    expect(stats.converted).toBe(0);
+    expect(stats.byRetrieval[0]!.flagged).toBe(true);
+  });
+
+  it("does not flag when a different User Flags", async () => {
+    const id = await post();
+    retrieval("user_alice", id);
+    clock.advance(60_000);
+    await repo.recordEvent({
+      postId: id,
+      verdict: "flag",
+      reason: "stale",
+      createdBy: "user_bob",
+    });
+
+    const stats = await repo.conversionStats(fullRange());
+    expect(stats.flagged).toBe(0);
+    expect(stats.byRetrieval[0]!.flagged).toBe(false);
+  });
 });

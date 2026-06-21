@@ -7,6 +7,7 @@ import type { Embedder } from "../embedding/embedder.js";
 import type { Clock } from "../platform/clock.js";
 import type { IdGen } from "../platform/id-gen.js";
 import type {
+  ActivityRow,
   Candidate,
   ConversionStats,
   ConversionWindow,
@@ -14,6 +15,7 @@ import type {
   CoverageWindow,
   NewRetrieval,
   PostEventRow,
+  PostsCreatedStats,
   RecentRetrievalDetail,
   RecentRetrievalRow,
   VecCandidate,
@@ -21,6 +23,9 @@ import type {
 import {
   conversionStats,
   coverageStats,
+  earliestActivityAt,
+  postsCreatedStats,
+  recentActivity,
   environmentVectorSearch,
   eventsForPosts,
   insertEmbeddings,
@@ -321,12 +326,24 @@ export class SqliteRepository implements PostRepository {
     return recentRetrievalsDetailed(this.raw, limit);
   }
 
+  async recentActivity(limit: number): Promise<ActivityRow[]> {
+    return recentActivity(this.raw, limit);
+  }
+
+  async earliestActivityAt(): Promise<number | null> {
+    return earliestActivityAt(this.raw);
+  }
+
   async conversionStats(window: ConversionWindow): Promise<ConversionStats> {
     return conversionStats(this.raw, window);
   }
 
   async coverageStats(window: CoverageWindow): Promise<CoverageStats> {
     return coverageStats(this.raw, window);
+  }
+
+  async postsCreatedStats(window: CoverageWindow): Promise<PostsCreatedStats> {
+    return postsCreatedStats(this.raw, window);
   }
 }
 

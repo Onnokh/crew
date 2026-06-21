@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, createFileRoute, redirect } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import {
-  Activity,
   BarChart3,
   Building2,
   CalendarDays,
@@ -11,32 +10,23 @@ import {
   LayoutDashboard,
   Settings,
   ShieldCheck,
-  UserPlus,
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { lazy, Suspense, useState, type FormEvent } from "react";
 import { ApiError, apiFetch } from "../../api/client";
-import { authClient } from "../../auth/client";
+import { requireAdmin } from "../../auth/require-admin";
 import { ConfirmDelete } from "../../components/confirm-delete/confirm-delete";
-import { ConversionPanel } from "../../components/telemetry/conversion-panel";
-import { QueryVolumePanel } from "../../components/telemetry/query-volume-panel";
-import { RecentRetrievalsPanel } from "../../components/telemetry/recent-retrievals-panel";
-import { ZeroResultRatePanel } from "../../components/telemetry/zero-result-rate-panel";
 import { CopyBox } from "../../components/ui/copy-box/copy-box";
 import styles from "./admin.module.scss";
 
+const UsagePanel = lazy(
+  () => import("../../components/usage-dashboard/usage-dashboard"),
+);
+
 /** Admin user-management page, backed by the role-gated `/api/admin/*` API. */
 export const Route = createFileRoute("/_authed/admin")({
-  beforeLoad: async () => {
-    const { data } = await authClient.getSession();
-    // `role` is omitted from the inferred session type, so read it through a
-    // narrow local shape. The server gates the API regardless.
-    const role = (data?.user as { role?: string | null } | undefined)?.role;
-    if (role !== "admin") {
-      throw redirect({ to: "/" });
-    }
-  },
+  beforeLoad: requireAdmin,
   component: AdminPage,
 });
 
@@ -95,6 +85,8 @@ type AdminDashboardProps = {
   users: UserRow[];
   teams: TeamRow[];
   defaultTeamId: string;
+  initialSection?: string;
+  fixedSection?: string;
   error: string | null;
   teamError: string | null;
   actions: AdminActions;
@@ -109,6 +101,16 @@ const adminKeys = {
 };
 
 function AdminPage() {
+  return <AdminRoutePage initialSection="dashboard" />;
+}
+
+export function AdminRoutePage({
+  initialSection = "dashboard",
+  fixedSection,
+}: {
+  initialSection?: string;
+  fixedSection?: string;
+}) {
   const queryClient = useQueryClient();
 
   const { data: usersData, error: usersError } = useQuery({
@@ -187,11 +189,9 @@ function AdminPage() {
   const deleteUser = useMutation({
     mutationFn: (user: UserRow) =>
       apiFetch(`/api/admin/users/${user.id}`, { method: "DELETE" }),
-    onSuccess: () => invalidateUsers(),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: adminKeys.users }),
   });
-
-  const invalidateTeams = () =>
-    queryClient.invalidateQueries({ queryKey: adminKeys.teams });
 
   const createTeam = useMutation({
     mutationFn: (newName: string) =>
@@ -199,7 +199,8 @@ function AdminPage() {
         method: "POST",
         body: JSON.stringify({ name: newName }),
       }),
-    onSuccess: () => invalidateTeams(),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: adminKeys.teams }),
   });
 
   const renameTeam = useMutation({
@@ -208,7 +209,12 @@ function AdminPage() {
         method: "PATCH",
         body: JSON.stringify({ name: vars.name }),
       }),
-    onSuccess: () => invalidateTeams(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminKeys.teams }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.users }),
+      ]);
+    },
   });
 
   // First failing operation, rendered as a single page-level message.
@@ -228,6 +234,8 @@ function AdminPage() {
       users={users}
       teams={teams}
       defaultTeamId={defaultTeamId}
+      initialSection={initialSection}
+      fixedSection={fixedSection}
       error={error}
       teamError={teamError}
       actions={{
@@ -254,7 +262,11 @@ function AdminPage() {
 }
 
 function AdminDashboard(props: AdminDashboardProps) {
-  const [section, setSection] = useState("dashboard");
+  const [localSection, setLocalSection] = useState(
+    props.fixedSection ?? props.initialSection ?? "dashboard",
+  );
+  const section = props.fixedSection ?? localSection;
+  const setSection = props.fixedSection ? undefined : setLocalSection;
   const selectedTeamId = section.startsWith("team:") ? section.slice(5) : null;
   const selectedTeam = props.teams.find((team) => team.id === selectedTeamId);
   const selectedTeamUsers = selectedTeam
@@ -273,7 +285,13 @@ function AdminDashboard(props: AdminDashboardProps) {
         </p>
       )}
 
-      <div className={styles.adminShell}>
+      <div
+        className={
+          section === "usage"
+            ? `${styles.adminShell} ${styles.adminShellNoRail}`
+            : styles.adminShell
+        }
+      >
         <aside className={styles.appSidebar}>
           <div className={styles.appSidebarHeader}>
             <span className={styles.appMark}>Cr</span>
@@ -291,26 +309,26 @@ function AdminDashboard(props: AdminDashboardProps) {
               </span>
               <small>App</small>
             </Link>
-            <SidebarButton
+            <SidebarLink
               active={section === "dashboard"}
               icon={LayoutDashboard}
               label="Dashboard"
               meta="Home"
-              onClick={() => setSection("dashboard")}
+              to="/dashboard"
             />
-            <SidebarButton
+            <SidebarLink
               active={section === "usage"}
               icon={BarChart3}
-              label="Usage"
+              label="Performance"
               meta="Global"
-              onClick={() => setSection("usage")}
+              to="/dashboard/performance"
             />
 
             <div className={styles.appNavGroup}>
               <button
               type="button"
               className={section === "teams" ? styles.appGroupActive : styles.appGroup}
-              onClick={() => setSection("teams")}
+              onClick={() => setSection?.("teams")}
             >
                 <span>
                   <Building2 size={18} aria-hidden="true" />
@@ -330,7 +348,7 @@ function AdminDashboard(props: AdminDashboardProps) {
                           ? styles.teamTreeItemActive
                           : styles.teamTreeItem
                       }
-                      onClick={() => setSection(`team:${team.id}`)}
+                      onClick={() => setSection?.(`team:${team.id}`)}
                     >
                       <span>{team.name}</span>
                       <small>{members.length}</small>
@@ -345,33 +363,37 @@ function AdminDashboard(props: AdminDashboardProps) {
               icon={Users}
               label="Users"
               meta={`${props.users.length}`}
-              onClick={() => setSection("users")}
+              onClick={() => setSection?.("users")}
             />
             <SidebarButton
               active={section === "settings"}
               icon={Settings}
               label="Settings"
               meta="Org"
-              onClick={() => setSection("settings")}
+              onClick={() => setSection?.("settings")}
             />
           </nav>
         </aside>
 
         <main className={styles.appContent}>
-          <header className={styles.contentHeader}>
-            <div>
-              <p className={styles.eyebrow}>Admin</p>
-              <h1>{currentTitle}</h1>
-              <p>{currentSubtitle}</p>
-            </div>
-            <span className={styles.datePill}>
-              Today
-              <CalendarDays size={18} aria-hidden="true" />
-            </span>
-          </header>
+          {section !== "usage" && (
+            <header className={styles.contentHeader}>
+              <div>
+                <p className={styles.eyebrow}>Admin</p>
+                <h1>{currentTitle}</h1>
+                <p>{currentSubtitle}</p>
+              </div>
+              <span className={styles.datePill}>
+                Today
+                <CalendarDays size={18} aria-hidden="true" />
+              </span>
+            </header>
+          )}
           {section === "dashboard" && <DashboardPanel {...props} />}
           {section === "usage" && (
-            <UsagePanel users={props.users} teams={props.teams} />
+            <Suspense fallback={<p className={styles.emptyRow}>Loading...</p>}>
+              <UsagePanel />
+            </Suspense>
           )}
           {section === "teams" && <TeamSection {...props} mode="wide" />}
           {section === "users" && <UserSection {...props} mode="dense" />}
@@ -385,7 +407,9 @@ function AdminDashboard(props: AdminDashboardProps) {
           )}
         </main>
 
-        <ActivityRail users={props.users} teams={props.teams} />
+        {section !== "usage" && (
+          <ActivityRail users={props.users} teams={props.teams} />
+        )}
       </div>
     </section>
   );
@@ -425,69 +449,6 @@ function DashboardPanel(props: AdminDashboardProps) {
           <p>Team and API key usage trends will appear here.</p>
         </section>
       </div>
-    </section>
-  );
-}
-
-function UsagePanel({ users, teams }: { users: UserRow[]; teams: TeamRow[] }) {
-  return (
-    <section className={styles.appPanel}>
-      <div className={styles.metricGrid}>
-        <Metric icon={Activity} label="Active Teams" value={teams.length} />
-        <Metric icon={UserPlus} label="Provisioned Users" value={users.length} />
-        <Metric icon={KeyRound} label="Minted Keys" value={keyCount(users)} />
-      </div>
-      <SectionHead label="Team usage" meta={`${teams.length} teams`} />
-      <ul className={styles.sectionList}>
-        {teams.map((team) => {
-          const members = users.filter((user) => user.teamId === team.id);
-          return (
-            <li key={team.id} className={styles.entityRow}>
-              <EntityLabel title={team.name} detail={`${members.length} members`} />
-              <span className={styles.keys}>
-                {keyCount(members)} {keyCount(members) === 1 ? "key" : "keys"}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-
-      <SectionHead label="Retrieval usage" meta="Current Team" />
-      <div className={styles.usageTelemetryGrid}>
-        <TelemetryCard title="Query volume">
-          <QueryVolumePanel />
-        </TelemetryCard>
-        <TelemetryCard title="Zero-result rate">
-          <ZeroResultRatePanel />
-        </TelemetryCard>
-        <TelemetryCard title="Query→Confirm">
-          <ConversionPanel />
-        </TelemetryCard>
-        <TelemetryCard title="Recent retrievals" wide>
-          <RecentRetrievalsPanel />
-        </TelemetryCard>
-      </div>
-    </section>
-  );
-}
-
-function TelemetryCard({
-  title,
-  children,
-  wide = false,
-}: {
-  title: string;
-  children: ReactNode;
-  wide?: boolean;
-}) {
-  return (
-    <section
-      className={
-        wide ? styles.usageTelemetryCardWide : styles.usageTelemetryCard
-      }
-    >
-      <h2>{title}</h2>
-      {children}
     </section>
   );
 }
@@ -614,6 +575,30 @@ function SidebarButton({
   );
 }
 
+function SidebarLink({
+  active,
+  icon: Icon,
+  label,
+  meta,
+  to,
+}: {
+  active: boolean;
+  icon: LucideIcon;
+  label: string;
+  meta: string;
+  to: "/dashboard" | "/dashboard/performance";
+}) {
+  return (
+    <Link to={to} className={active ? styles.sidebarButtonActive : styles.sidebarButton}>
+      <span>
+        <Icon size={18} aria-hidden="true" />
+        {label}
+      </span>
+      <small>{meta}</small>
+    </Link>
+  );
+}
+
 function TeamSection(props: AdminDashboardProps & { mode: "wide" }) {
   const [name, setName] = useState("");
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
@@ -671,7 +656,6 @@ function TeamSection(props: AdminDashboardProps & { mode: "wide" }) {
                   type="text"
                   aria-label={`Rename ${team.name}`}
                   required
-                  autoFocus
                   value={editing.name}
                   onChange={(e) => setEditing({ id: team.id, name: e.target.value })}
                 />
@@ -943,7 +927,7 @@ function initials(email: string): string {
 function titleForSection(section: string): string {
   switch (section) {
     case "usage":
-      return "Usage";
+      return "Performance";
     case "teams":
       return "Teams";
     case "users":
@@ -958,7 +942,7 @@ function titleForSection(section: string): string {
 function subtitleForSection(section: string): string {
   switch (section) {
     case "usage":
-      return "Global usage signals across teams, users, and API keys.";
+      return "Retrieval volume, coverage, and conversion.";
     case "teams":
       return "Create teams and keep each team’s corpus isolated.";
     case "users":

@@ -14,6 +14,20 @@ export const DEFAULT_LIMIT = 5;
 export const MAX_LIMIT = 20;
 /** Candidates scored per requested result, so trust can lift a lower-relevance Post. Clamped to MAX_LIMIT. */
 export const CANDIDATE_OVERFETCH = 4;
+/**
+ * Relevance floor for the vector legs: a candidate whose cosine distance to the
+ * query exceeds this is dropped before fusion. Without it, sqlite-vec KNN always
+ * returns the nearest `k` rows no matter how far, so any non-empty corpus would
+ * answer every query — even gibberish — and the zero-result metric could never
+ * fire. RRF scores are rank-based and carry no absolute relevance, so this floor
+ * is the ONLY place "not relevant enough" is decided.
+ *
+ * Cosine distance is `1 − cosine_similarity` (0 = identical, 1 = orthogonal). The
+ * value is empirical and model-dependent — calibrate it against the pinned
+ * embedding model, not the test FakeEmbedder (whose unrelated texts sit at ~1.0,
+ * a wider spread than the real model's). Tune via {@link RetrieveInput.maxVectorDistance}.
+ */
+export const DEFAULT_MAX_VECTOR_DISTANCE = 0.65;
 
 export type RetrieveInput = {
   situation: string;
@@ -23,6 +37,12 @@ export type RetrieveInput = {
   repo?: string;
   /** Requested result count; clamped to [1, MAX_LIMIT] internally. */
   limit: number;
+  /**
+   * Cosine-distance ceiling for the vector legs; candidates farther than this are
+   * dropped before fusion. Defaults to {@link DEFAULT_MAX_VECTOR_DISTANCE}. Exposed
+   * mainly so tests can pin it independently of the production default.
+   */
+  maxVectorDistance?: number;
 };
 
 /**
@@ -61,6 +81,7 @@ export async function retrieve(
   const now = clock.now();
 
   const fetch = Math.min(MAX_LIMIT, limit * CANDIDATE_OVERFETCH);
+  const maxDistance = input.maxVectorDistance ?? DEFAULT_MAX_VECTOR_DISTANCE;
   const environment = input.environment?.trim();
   const [keyword, vector, environmentVector] = await Promise.all([
     repo.searchByKeyword(input.situation, fetch),
@@ -70,10 +91,14 @@ export async function retrieve(
       : Promise.resolve([]),
   ]);
 
+  // Apply the relevance floor to the vector legs only: keyword hits are genuine
+  // lexical matches, but KNN returns the nearest rows regardless of distance, so
+  // those are the ones that manufacture matches out of an unrelated query. When
+  // every leg comes back empty the query is a true zero-result (see telemetry).
   const fused = reciprocalRankFusion([
     keyword.map((c) => c.postId),
-    vector.map((c) => c.postId),
-    environmentVector.map((c) => c.postId),
+    vector.filter((c) => c.distance <= maxDistance).map((c) => c.postId),
+    environmentVector.filter((c) => c.distance <= maxDistance).map((c) => c.postId),
   ]);
   if (fused.length === 0) return [];
 

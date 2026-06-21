@@ -1,12 +1,14 @@
 import type { PostEvent, NewPostEvent } from "../core/post-event.js";
 import type { NewPost, Post } from "../core/post.js";
 import type {
+  ActivityRow,
   Candidate,
   ConversionStats,
   ConversionWindow,
   CoverageStats,
   CoverageWindow,
   NewRetrieval,
+  PostsCreatedStats,
   RecentRetrievalDetail,
   RecentRetrievalRow,
   VecCandidate,
@@ -111,6 +113,19 @@ export type PostRepository = {
   listRecentRetrievalsDetailed(limit: number): Promise<RecentRetrievalDetail[]>;
 
   /**
+   * The unified activity feed, newest first, capped at `limit`: recent searches,
+   * new Posts, and Confirm/Flag verdicts merged into one time-sorted list. User
+   * ids are returned raw — resolve them to names at the API.
+   */
+  recentActivity(limit: number): Promise<ActivityRow[]>;
+
+  /**
+   * The earliest activity timestamp across searches, Posts, and verdicts, or
+   * null when there is none. Backs the dashboard's "All time" range.
+   */
+  earliestActivityAt(): Promise<number | null>;
+
+  /**
    * Conversion attribution over Retrievals-with-results in `[from, to)`: classify
    * each as converted iff the same User who queried later recorded a Confirm on
    * one of its returned Posts, after the retrieval and within the attribution
@@ -128,4 +143,11 @@ export type PostRepository = {
    * query-volume panels (one call over the range, one per day for the trend).
    */
   coverageStats(window: CoverageWindow): Promise<CoverageStats>;
+
+  /**
+   * How many Posts were created in `[from, to)`, over the raw `posts` rows.
+   * Range is read-time; nothing is stored or pre-aggregated. One call over the
+   * range for the headline, one per day-wide bucket for the created-per-day trend.
+   */
+  postsCreatedStats(window: CoverageWindow): Promise<PostsCreatedStats>;
 };

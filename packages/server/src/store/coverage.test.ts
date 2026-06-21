@@ -82,11 +82,12 @@ describe("coverageStats", () => {
     const stats = await repo.coverageStats(fullRange());
     expect(stats.total).toBe(3);
     expect(stats.zeroResults).toBe(1);
+    expect(stats.totalResults).toBe(2);
   });
 
   it("reports zero counts for an empty log", async () => {
     const stats = await repo.coverageStats(fullRange());
-    expect(stats).toEqual({ total: 0, zeroResults: 0 });
+    expect(stats).toEqual({ total: 0, zeroResults: 0, totalResults: 0 });
   });
 
   it("counts every retrieval as zero-result when none returned a Post", async () => {
@@ -96,6 +97,7 @@ describe("coverageStats", () => {
     const stats = await repo.coverageStats(fullRange());
     expect(stats.total).toBe(2);
     expect(stats.zeroResults).toBe(2);
+    expect(stats.totalResults).toBe(0);
   });
 
   it("honours the half-open range: includes `from`, excludes `to`", async () => {
@@ -111,5 +113,6 @@ describe("coverageStats", () => {
     const stats = await repo.coverageStats({ from: 1000, to: 3000 });
     expect(stats.total).toBe(2);
     expect(stats.zeroResults).toBe(1);
+    expect(stats.totalResults).toBe(1);
   });
 });

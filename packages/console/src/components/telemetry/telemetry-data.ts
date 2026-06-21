@@ -5,6 +5,19 @@ export const telemetryKeys = {
   recent: ["telemetry", "recent"] as const,
   conversion: ["telemetry", "conversion"] as const,
   coverage: ["telemetry", "coverage"] as const,
+  posts: ["telemetry", "posts"] as const,
+  activity: ["telemetry", "activity"] as const,
+};
+
+/** Mirrors the server's `ActivityItem` (api/telemetry.ts) — one feed row. */
+export type ActivityItem = {
+  id: string;
+  kind: "search" | "post" | "confirm" | "flag";
+  subject: string;
+  reason: string | null;
+  resultCount: number | null;
+  user: string | null;
+  createdAt: number;
 };
 
 /** Mirrors the server's `RetrievalResultRow` (api/telemetry.ts). */
@@ -26,6 +39,7 @@ export type RetrievalRow = {
   repo: string | null;
   resultCount: number;
   createdAt: number;
+  user: string | null;
   converted: boolean;
   results: RetrievalResultRow[];
 };
@@ -45,6 +59,9 @@ export type ConversionPanelData = {
   windowMs: number;
   withResults: number;
   converted: number;
+  flagged: number;
+  previousConverted: number;
+  previousWithResults: number;
   trend: ConversionPoint[];
 };
 
@@ -54,6 +71,7 @@ export type CoveragePoint = {
   to: number;
   total: number;
   zeroResults: number;
+  totalResults: number;
 };
 
 /** Mirrors the server's `CoveragePanelData` (api/telemetry.ts). */
@@ -62,5 +80,24 @@ export type CoveragePanelData = {
   to: number;
   total: number;
   zeroResults: number;
+  totalResults: number;
+  previousTotal: number;
+  previousZeroResults: number;
   trend: CoveragePoint[];
+};
+
+/** Mirrors the server's `PostsCreatedPoint` (api/telemetry.ts) — one day's count. */
+export type PostsCreatedPoint = {
+  from: number;
+  to: number;
+  created: number;
+};
+
+/** Mirrors the server's `PostsCreatedPanelData` (api/telemetry.ts). */
+export type PostsCreatedPanelData = {
+  from: number;
+  to: number;
+  total: number;
+  previousCreated: number;
+  trend: PostsCreatedPoint[];
 };

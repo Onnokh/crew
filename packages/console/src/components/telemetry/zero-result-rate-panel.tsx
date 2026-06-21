@@ -65,6 +65,11 @@ function formatRate(zeroResults: number, total: number): string {
   return `${Math.round((zeroResults / total) * 100)}%`;
 }
 
+// Rate is in [0, 1]; invert for SVG's top-left origin so a higher rate sits higher.
+function sparkY(rate: number): number {
+  return (1 - rate) * 100;
+}
+
 /**
  * A minimal inline-SVG sparkline of the per-day zero-result rate. Days with no
  * retrievals (rate null) break the line into segments so a gap reads as "no
@@ -76,8 +81,6 @@ function Sparkline({ points }: { points: CoveragePoint[] }) {
 
   const lastIndex = points.length - 1;
   const x = (i: number) => (i / lastIndex) * 100;
-  // Rate is in [0, 1]; invert for SVG's top-left origin so a higher rate sits higher.
-  const y = (rate: number) => (1 - rate) * 100;
 
   const segments: string[] = [];
   let current: string[] = [];
@@ -90,7 +93,7 @@ function Sparkline({ points }: { points: CoveragePoint[] }) {
       }
       return;
     }
-    current.push(`${x(i).toFixed(2)},${y(rate).toFixed(2)}`);
+    current.push(`${x(i).toFixed(2)},${sparkY(rate).toFixed(2)}`);
   });
   if (current.length > 0) segments.push(current.join(" "));
 

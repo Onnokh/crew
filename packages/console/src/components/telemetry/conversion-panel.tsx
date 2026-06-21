@@ -67,6 +67,11 @@ function formatRate(converted: number, withResults: number): string {
   return `${Math.round((converted / withResults) * 100)}%`;
 }
 
+// Rate is in [0, 1]; invert for SVG's top-left origin so higher rate sits higher.
+function sparkY(rate: number): number {
+  return (1 - rate) * 100;
+}
+
 /**
  * A minimal inline-SVG sparkline of the per-day conversion rate. Days with no
  * retrievals-with-results (rate null) break the line into segments so a gap
@@ -78,8 +83,6 @@ function Sparkline({ points }: { points: ConversionPoint[] }) {
 
   const lastIndex = points.length - 1;
   const x = (i: number) => (i / lastIndex) * 100;
-  // Rate is in [0, 1]; invert for SVG's top-left origin so higher rate sits higher.
-  const y = (rate: number) => (1 - rate) * 100;
 
   // Build line segments, breaking on null (no-data) days.
   const segments: string[] = [];
@@ -93,7 +96,7 @@ function Sparkline({ points }: { points: ConversionPoint[] }) {
       }
       return;
     }
-    current.push(`${x(i).toFixed(2)},${y(rate).toFixed(2)}`);
+    current.push(`${x(i).toFixed(2)},${sparkY(rate).toFixed(2)}`);
   });
   if (current.length > 0) segments.push(current.join(" "));
 

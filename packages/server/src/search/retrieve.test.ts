@@ -44,14 +44,40 @@ async function post(overrides: Partial<NewPost> = {}): Promise<string> {
 }
 
 describe("retrieve", () => {
-  it("returns an empty list when nothing matches", async () => {
+  it("returns an empty list when nothing clears the relevance floor", async () => {
     await post({ situation: "kubernetes pod eviction" });
     const results = await retrieve(repo, getUser, clock, {
       situation: "completely unrelated quantum entanglement",
       limit: 5,
     });
-    // Vector neighbours may surface the one Post, so assert shape not emptiness.
-    expect(Array.isArray(results)).toBe(true);
+    // The KNN leg still surfaces the lone Post as a nearest neighbour, but its
+    // cosine distance exceeds the floor, so it is dropped: a true zero-result.
+    expect(results).toEqual([]);
+  });
+
+  it("keeps a related Post that sits within the relevance floor", async () => {
+    const id = await post({ situation: "database connection pool exhausted" });
+    const results = await retrieve(repo, getUser, clock, {
+      situation: "database connection timeout",
+      limit: 5,
+    });
+    expect(results.map((r) => r.result.post.id)).toContain(id);
+  });
+
+  it("a looser maxVectorDistance lets a far Post back in", async () => {
+    await post({ situation: "kubernetes pod eviction" });
+    const floored = await retrieve(repo, getUser, clock, {
+      situation: "completely unrelated quantum entanglement",
+      limit: 5,
+    });
+    expect(floored).toEqual([]);
+    // Raising the ceiling past orthogonal distance (~1.0) admits the neighbour.
+    const loosened = await retrieve(repo, getUser, clock, {
+      situation: "completely unrelated quantum entanglement",
+      limit: 5,
+      maxVectorDistance: 2,
+    });
+    expect(loosened.length).toBeGreaterThan(0);
   });
 
   it("a confirmed Post outranks an equally-relevant unconfirmed one", async () => {
