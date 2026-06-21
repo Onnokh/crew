@@ -170,7 +170,12 @@ export function mountAdmin(app: Hono, deps: Deps): void {
   admin.delete("/users/:id", async (c) => {
     const userId = c.req.param("id");
     const adapter = await keyAdapter(auth);
-    const keysRevoked = await adapter.deleteAllFor(userId);
+    const team = deps.controlPlane.getTeamForUser(userId);
+    const keysBeforeDelete = await adapter.list(userId);
+
+    // Membership must be removed before the user row because the FK has no
+    // cascade, but restore it if better-auth refuses the delete. Otherwise a
+    // failed delete would strand a still-existing User with no routable Team.
     deps.controlPlane.removeMembership(userId);
     try {
       await auth.api.removeUser({
@@ -178,9 +183,13 @@ export function mountAdmin(app: Hono, deps: Deps): void {
         headers: c.req.raw.headers,
       });
     } catch (err) {
+      if (team !== null) {
+        deps.controlPlane.addMembership(userId, team.id, deps.clock.now());
+      }
       return c.json({ error: messageOf(err, "Could not delete the User") }, 400);
     }
-    return c.json({ deleted: true, keysRevoked });
+    await adapter.deleteAllFor(userId);
+    return c.json({ deleted: true, keysRevoked: keysBeforeDelete.length });
   });
 
   app.route("/api/admin", admin);

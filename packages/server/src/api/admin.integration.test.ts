@@ -475,6 +475,49 @@ describe("delete is the single off-switch: kills login + keys, frees the email, 
     const newId = ((await recreated.json()) as { user: { id: string } }).user.id;
     expect(newId).not.toBe(carolId);
   });
+
+  it("keeps membership and keys when better-auth refuses the user delete", async () => {
+    const created = await adminFetch(srv, cookie, "/users", {
+      method: "POST",
+      body: JSON.stringify({ email: "failed-delete@test.local" }),
+    });
+    const userId = ((await created.json()) as { user: { id: string } }).user.id;
+    const teamBefore = srv.env.controlPlane.getTeamForUser(userId);
+    expect(teamBefore).not.toBeNull();
+
+    const minted = await adminFetch(srv, cookie, `/users/${userId}/keys`, {
+      method: "POST",
+    });
+    const { key } = (await minted.json()) as { key: string };
+
+    const authApi = srv.env.auth.api as unknown as {
+      removeUser: (...args: unknown[]) => Promise<unknown>;
+    };
+    const originalRemoveUser = authApi.removeUser;
+    authApi.removeUser = async () => {
+      throw new Error("synthetic removeUser failure");
+    };
+    try {
+      const failed = await adminFetch(srv, cookie, `/users/${userId}`, {
+        method: "DELETE",
+      });
+      expect(failed.status).toBe(400);
+    } finally {
+      authApi.removeUser = originalRemoveUser;
+    }
+
+    expect(srv.env.controlPlane.getUser(userId)).not.toBeNull();
+    expect(srv.env.controlPlane.getTeamForUser(userId)?.id).toBe(teamBefore!.id);
+
+    const list = await adminFetch(srv, cookie, "/users");
+    const row = (
+      (await list.json()) as { users: Array<{ id: string; keys: unknown[] }> }
+    ).users.find((u) => u.id === userId);
+    expect(row?.keys).toHaveLength(1);
+
+    const client = await connect(srv.port, key);
+    await client.close();
+  });
 });
 
 describe("the ban endpoint is gone", () => {

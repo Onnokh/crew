@@ -1,5 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { Link, createFileRoute, redirect } from "@tanstack/react-router";
+import {
+  Activity,
+  BarChart3,
+  Building2,
+  CalendarDays,
+  Database,
+  Home,
+  KeyRound,
+  LayoutDashboard,
+  Settings,
+  ShieldCheck,
+  UserPlus,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { ApiError, apiFetch } from "../../api/client";
 import { authClient } from "../../auth/client";
@@ -49,6 +64,40 @@ type TeamRow = {
   createdAt: number;
 };
 
+type AdminActions = {
+  createUser: (vars: { email: string; teamId: string }) => void;
+  mintKey: (user: UserRow) => void;
+  revokeKey: (key: ApiKey) => void;
+  deleteUser: (user: UserRow) => void;
+  createTeam: (name: string) => void;
+  renameTeam: (vars: { id: string; name: string }) => void;
+};
+
+type AdminMutationState = {
+  creatingUser: boolean;
+  mintingKey: boolean;
+  revokingKey: boolean;
+  deletingUser: boolean;
+  creatingTeam: boolean;
+  renamingTeam: boolean;
+};
+
+type AdminSecrets = {
+  newPassword: { userId: string; email: string; password: string } | null;
+  mintedKey: { userId: string; key: string } | null;
+};
+
+type AdminDashboardProps = {
+  users: UserRow[];
+  teams: TeamRow[];
+  defaultTeamId: string;
+  error: string | null;
+  teamError: string | null;
+  actions: AdminActions;
+  pending: AdminMutationState;
+  secrets: AdminSecrets;
+};
+
 /** Centralized query keys, reused by every mutation's invalidate. */
 const adminKeys = {
   users: ["admin", "users"] as const,
@@ -65,9 +114,7 @@ function AdminPage() {
   });
   const users = usersData ?? [];
 
-  // The create-User form's Team picker. Shares the `teams` query key with the
-  // Teams section below, so the two stay in sync from one fetch.
-  const { data: teamsData } = useQuery({
+  const { data: teamsData, error: teamsError } = useQuery({
     queryKey: adminKeys.teams,
     queryFn: () =>
       apiFetch<{ teams: TeamRow[] }>("/api/admin/teams").then((r) => r.teams),
@@ -87,10 +134,6 @@ function AdminPage() {
     userId: string;
     key: string;
   } | null>(null);
-
-  const [email, setEmail] = useState("");
-  // The picked Team for the next created User; "" means "use the default Team".
-  const [teamId, setTeamId] = useState("");
 
   const invalidateUsers = () =>
     queryClient.invalidateQueries({ queryKey: adminKeys.users });
@@ -115,8 +158,6 @@ function AdminPage() {
         password: created.password,
       });
       setMintedKey(null);
-      setEmail("");
-      setTeamId("");
       await invalidateUsers();
     },
   });
@@ -145,158 +186,6 @@ function AdminPage() {
     onSuccess: () => invalidateUsers(),
   });
 
-  // First failing operation, rendered as a single page-level message.
-  const failure =
-    usersError ??
-    createUser.error ??
-    mintKey.error ??
-    revokeKey.error ??
-    deleteUser.error ??
-    null;
-  const error = failure ? describe(failure) : null;
-
-  const busy = createUser.isPending;
-
-  function onCreate(event: FormEvent) {
-    event.preventDefault();
-    // An empty teamId falls back to the default Team server-side.
-    createUser.mutate({ email, teamId });
-  }
-
-  return (
-    <section className={styles.page}>
-      <header className={styles.head}>
-        <p className={styles.eyebrow}>User management</p>
-        <h1 className={styles.heading}>Admin</h1>
-        <p className={styles.subtitle}>
-          Manage Users and the API keys their agents authenticate with.
-        </p>
-      </header>
-
-      {error && (
-        <p className={styles.error} role="alert">
-          {error}
-        </p>
-      )}
-
-      <form className={styles.create} onSubmit={onCreate}>
-        <input
-          className={styles.input}
-          type="email"
-          placeholder="new.user@team.local"
-          aria-label="New User email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <select
-          className={styles.input}
-          aria-label="Team"
-          value={teamId || defaultTeamId}
-          onChange={(e) => setTeamId(e.target.value)}
-        >
-          {teams.map((team) => (
-            <option key={team.id} value={team.id}>
-              {team.name}
-            </option>
-          ))}
-        </select>
-        <button className={styles.primary} type="submit" disabled={busy}>
-          {busy ? "Creating…" : "Create User"}
-        </button>
-      </form>
-
-      <Teams />
-
-      <p className={styles.listLabel}>Users</p>
-      <ul className={styles.list}>
-        {users.map((user) => (
-          <li key={user.id} className={styles.row}>
-            <div className={styles.rowMain}>
-              <div className={styles.identity}>
-                <span className={styles.email}>{user.email}</span>
-                <span className={styles.role}>/ {user.role ?? "user"}</span>
-                {user.teamName && (
-                  <span className={styles.team}>{user.teamName}</span>
-                )}
-              </div>
-              <span className={styles.keys}>
-                {user.keys.length} {user.keys.length === 1 ? "key" : "keys"}
-              </span>
-              <div className={styles.rowActions}>
-                <button
-                  type="button"
-                  className={styles.action}
-                  onClick={() => mintKey.mutate(user)}
-                  disabled={mintKey.isPending}
-                >
-                  Add key
-                </button>
-                <ConfirmDelete
-                  email={user.email}
-                  onConfirm={() => deleteUser.mutate(user)}
-                >
-                  <button type="button" className={styles.actionDanger}>
-                    Delete
-                  </button>
-                </ConfirmDelete>
-              </div>
-            </div>
-            {newPassword?.userId === user.id && (
-              <CopyBox label="Password" secret={newPassword.password} />
-            )}
-            {mintedKey?.userId === user.id && (
-              <CopyBox label="API key" secret={mintedKey.key} />
-            )}
-            {user.keys.length > 0 && (
-              <ul className={styles.keyList}>
-                {user.keys.map((key) => (
-                  <li key={key.id} className={styles.keyRow}>
-                    <code className={styles.keyName}>
-                      {key.name ?? "key"}
-                      {key.start && (
-                        <span className={styles.keyStart}>{key.start}…</span>
-                      )}
-                    </code>
-                    <span className={styles.keyUsage}>{lastUsed(key.lastRequest)}</span>
-                    <button
-                      type="button"
-                      className={styles.actionDanger}
-                      onClick={() => revokeKey.mutate(key)}
-                      disabled={revokeKey.isPending}
-                    >
-                      Delete
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-/**
- * Team management: list every Team (incl. the auto-created default), create a new
- * Team (which provisions its own corpus server-side), and rename a Team inline.
- * A rename is display-only — the corpus and routing are keyed by the opaque id.
- * There is no delete: Teams own physically-isolated corpora and are never removed.
- */
-function Teams() {
-  const queryClient = useQueryClient();
-
-  const { data: teamsData, error: teamsError } = useQuery({
-    queryKey: adminKeys.teams,
-    queryFn: () =>
-      apiFetch<{ teams: TeamRow[] }>("/api/admin/teams").then((r) => r.teams),
-  });
-  const teams = teamsData ?? [];
-
-  const [name, setName] = useState("");
-  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
-
   const invalidateTeams = () =>
     queryClient.invalidateQueries({ queryKey: adminKeys.teams });
 
@@ -306,10 +195,7 @@ function Teams() {
         method: "POST",
         body: JSON.stringify({ name: newName }),
       }),
-    onSuccess: async () => {
-      setName("");
-      await invalidateTeams();
-    },
+    onSuccess: () => invalidateTeams(),
   });
 
   const renameTeam = useMutation({
@@ -318,36 +204,405 @@ function Teams() {
         method: "PATCH",
         body: JSON.stringify({ name: vars.name }),
       }),
-    onSuccess: async () => {
-      setEditing(null);
-      await invalidateTeams();
-    },
+    onSuccess: () => invalidateTeams(),
   });
 
-  const failure = teamsError ?? createTeam.error ?? renameTeam.error ?? null;
+  // First failing operation, rendered as a single page-level message.
+  const failure =
+    usersError ??
+    createUser.error ??
+    mintKey.error ??
+    revokeKey.error ??
+    deleteUser.error ??
+    null;
   const error = failure ? describe(failure) : null;
+  const teamFailure = teamsError ?? createTeam.error ?? renameTeam.error ?? null;
+  const teamError = teamFailure ? describe(teamFailure) : null;
+
+  return (
+    <AdminDashboard
+      users={users}
+      teams={teams}
+      defaultTeamId={defaultTeamId}
+      error={error}
+      teamError={teamError}
+      actions={{
+        createUser: (vars) => {
+          createUser.mutate(vars);
+        },
+        mintKey: (user) => mintKey.mutate(user),
+        revokeKey: (key) => revokeKey.mutate(key),
+        deleteUser: (user) => deleteUser.mutate(user),
+        createTeam: (name) => createTeam.mutate(name),
+        renameTeam: (vars) => renameTeam.mutate(vars),
+      }}
+      pending={{
+        creatingUser: createUser.isPending,
+        mintingKey: mintKey.isPending,
+        revokingKey: revokeKey.isPending,
+        deletingUser: deleteUser.isPending,
+        creatingTeam: createTeam.isPending,
+        renamingTeam: renameTeam.isPending,
+      }}
+      secrets={{ newPassword, mintedKey }}
+    />
+  );
+}
+
+function AdminDashboard(props: AdminDashboardProps) {
+  const [section, setSection] = useState("dashboard");
+  const selectedTeamId = section.startsWith("team:") ? section.slice(5) : null;
+  const selectedTeam = props.teams.find((team) => team.id === selectedTeamId);
+  const selectedTeamUsers = selectedTeam
+    ? props.users.filter((user) => user.teamId === selectedTeam.id)
+    : [];
+  const currentTitle = selectedTeam?.name ?? titleForSection(section);
+  const currentSubtitle = selectedTeam
+    ? "Members, usage, and API keys for this Team."
+    : subtitleForSection(section);
+
+  return (
+    <section className={styles.pageFull}>
+      {props.error && (
+        <p className={styles.error} role="alert">
+          {props.error}
+        </p>
+      )}
+
+      <div className={styles.adminShell}>
+        <aside className={styles.appSidebar}>
+          <div className={styles.appSidebarHeader}>
+            <span className={styles.appMark}>Cr</span>
+            <div>
+              <strong>Crew Admin</strong>
+              <small>Control plane</small>
+            </div>
+          </div>
+
+          <nav className={styles.appNav} aria-label="Admin navigation">
+            <Link to="/" className={styles.sidebarLink}>
+              <span>
+                <Home size={18} aria-hidden="true" />
+                Home
+              </span>
+              <small>App</small>
+            </Link>
+            <SidebarButton
+              active={section === "dashboard"}
+              icon={LayoutDashboard}
+              label="Dashboard"
+              meta="Home"
+              onClick={() => setSection("dashboard")}
+            />
+            <SidebarButton
+              active={section === "usage"}
+              icon={BarChart3}
+              label="Usage"
+              meta="Global"
+              onClick={() => setSection("usage")}
+            />
+
+            <div className={styles.appNavGroup}>
+              <button
+              type="button"
+              className={section === "teams" ? styles.appGroupActive : styles.appGroup}
+              onClick={() => setSection("teams")}
+            >
+                <span>
+                  <Building2 size={18} aria-hidden="true" />
+                  Teams
+                </span>
+                <small>Create</small>
+              </button>
+              <div className={styles.teamTree}>
+                {props.teams.map((team) => {
+                  const members = props.users.filter((user) => user.teamId === team.id);
+                  return (
+                    <button
+                      key={team.id}
+                      type="button"
+                      className={
+                        selectedTeam?.id === team.id
+                          ? styles.teamTreeItemActive
+                          : styles.teamTreeItem
+                      }
+                      onClick={() => setSection(`team:${team.id}`)}
+                    >
+                      <span>{team.name}</span>
+                      <small>{members.length}</small>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <SidebarButton
+              active={section === "users"}
+              icon={Users}
+              label="Users"
+              meta={`${props.users.length}`}
+              onClick={() => setSection("users")}
+            />
+            <SidebarButton
+              active={section === "settings"}
+              icon={Settings}
+              label="Settings"
+              meta="Org"
+              onClick={() => setSection("settings")}
+            />
+          </nav>
+        </aside>
+
+        <main className={styles.appContent}>
+          <header className={styles.contentHeader}>
+            <div>
+              <p className={styles.eyebrow}>Admin</p>
+              <h1>{currentTitle}</h1>
+              <p>{currentSubtitle}</p>
+            </div>
+            <span className={styles.datePill}>
+              Today
+              <CalendarDays size={18} aria-hidden="true" />
+            </span>
+          </header>
+          {section === "dashboard" && <DashboardPanel {...props} />}
+          {section === "usage" && (
+            <UsagePanel users={props.users} teams={props.teams} />
+          )}
+          {section === "teams" && <TeamSection {...props} mode="wide" />}
+          {section === "users" && <UserSection {...props} mode="dense" />}
+          {section === "settings" && <SettingsPanel />}
+          {selectedTeam && (
+            <TeamDetailPanel
+              {...props}
+              team={selectedTeam}
+              users={selectedTeamUsers}
+            />
+          )}
+        </main>
+
+        <ActivityRail users={props.users} teams={props.teams} />
+      </div>
+    </section>
+  );
+}
+
+function DashboardPanel(props: AdminDashboardProps) {
+  return (
+    <section className={styles.dashboardPanel}>
+      <div className={styles.dashboardMetrics}>
+        <DashboardMetric
+          icon={Building2}
+          label="Teams"
+          value={props.teams.length}
+          note="Ready for events"
+        />
+        <DashboardMetric
+          icon={Users}
+          label="Users"
+          value={props.users.length}
+          note="Provisioned"
+        />
+        <DashboardMetric
+          icon={KeyRound}
+          label="API keys"
+          value={keyCount(props.users)}
+          note="Usage coming soon"
+        />
+      </div>
+
+      <div className={styles.dashboardPlaceholders}>
+        <section>
+          <SectionHead label="Events" meta="Coming soon" />
+          <p>Recent workspace events will appear here.</p>
+        </section>
+        <section>
+          <SectionHead label="Usage" meta="Coming soon" />
+          <p>Team and API key usage trends will appear here.</p>
+        </section>
+      </div>
+    </section>
+  );
+}
+
+function UsagePanel({ users, teams }: { users: UserRow[]; teams: TeamRow[] }) {
+  return (
+    <section className={styles.appPanel}>
+      <div className={styles.metricGrid}>
+        <Metric icon={Activity} label="Active Teams" value={teams.length} />
+        <Metric icon={UserPlus} label="Provisioned Users" value={users.length} />
+        <Metric icon={KeyRound} label="Minted Keys" value={keyCount(users)} />
+      </div>
+      <SectionHead label="Team usage" meta={`${teams.length} teams`} />
+      <ul className={styles.sectionList}>
+        {teams.map((team) => {
+          const members = users.filter((user) => user.teamId === team.id);
+          return (
+            <li key={team.id} className={styles.entityRow}>
+              <EntityLabel title={team.name} detail={`${members.length} members`} />
+              <span className={styles.keys}>
+                {keyCount(members)} {keyCount(members) === 1 ? "key" : "keys"}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function TeamDetailPanel(
+  props: AdminDashboardProps & { team: TeamRow; users: UserRow[] },
+) {
+  return (
+    <section className={styles.appPanel}>
+      <div className={styles.metricGrid}>
+        <Metric icon={Users} label="Members" value={props.users.length} />
+        <Metric icon={KeyRound} label="API keys" value={keyCount(props.users)} />
+        <Metric icon={BarChart3} label="Usage" value="Global" />
+      </div>
+      <UserSection
+        {...props}
+        defaultTeamId={props.team.id}
+        users={props.users}
+        mode="dense"
+      />
+      <KeySection
+        users={props.users}
+        actions={props.actions}
+        pending={props.pending}
+      />
+    </section>
+  );
+}
+
+function SettingsPanel() {
+  return (
+    <section className={styles.appPanel}>
+      <SectionHead label="Settings" meta="Org" />
+      <div className={styles.settingsList}>
+        <div>
+          <strong>Authentication</strong>
+          <span>Email/password sessions and API keys</span>
+        </div>
+        <div>
+          <strong>Default Team</strong>
+          <span>Fallback for newly provisioned users</span>
+        </div>
+        <div>
+          <strong>Data Routing</strong>
+          <span>Each team routes to an isolated corpus database</span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Metric({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: number | string;
+}) {
+  return (
+    <div className={styles.metric}>
+      <span className={styles.metricIcon}>
+        <Icon size={20} aria-hidden="true" />
+      </span>
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
+    </div>
+  );
+}
+
+function DashboardMetric({
+  icon: Icon,
+  label,
+  value,
+  note,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: number | string;
+  note: string;
+}) {
+  return (
+    <div className={styles.dashboardMetric}>
+      <span className={styles.dashboardMetricIcon}>
+        <Icon size={22} aria-hidden="true" />
+      </span>
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+        <small>{note}</small>
+      </div>
+    </div>
+  );
+}
+
+function SidebarButton({
+  active,
+  icon: Icon,
+  label,
+  meta,
+  onClick,
+}: {
+  active: boolean;
+  icon: LucideIcon;
+  label: string;
+  meta: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={active ? styles.sidebarButtonActive : styles.sidebarButton}
+      onClick={onClick}
+    >
+      <span>
+        <Icon size={18} aria-hidden="true" />
+        {label}
+      </span>
+      <small>{meta}</small>
+    </button>
+  );
+}
+
+function TeamSection(props: AdminDashboardProps & { mode: "wide" }) {
+  const [name, setName] = useState("");
+  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
 
   function onCreate(event: FormEvent) {
     event.preventDefault();
-    createTeam.mutate(name);
+    if (!name.trim()) return;
+    props.actions.createTeam(name);
+    setName("");
   }
 
   function onRename(event: FormEvent) {
     event.preventDefault();
-    if (editing && editing.name.trim()) renameTeam.mutate(editing);
+    if (!editing?.name.trim()) return;
+    props.actions.renameTeam(editing);
+    setEditing(null);
   }
 
   return (
-    <>
-      <p className={styles.listLabel}>Teams</p>
-
-      {error && (
+    <section className={sectionClass(props.mode)}>
+      <SectionHead
+        label="Teams"
+        meta={`${props.teams.length} ${props.teams.length === 1 ? "team" : "teams"}`}
+      />
+      {props.teamError && (
         <p className={styles.error} role="alert">
-          {error}
+          {props.teamError}
         </p>
       )}
-
-      <form className={styles.create} onSubmit={onCreate}>
+      <form className={styles.inlineForm} onSubmit={onCreate}>
         <input
           className={styles.input}
           type="text"
@@ -360,67 +615,318 @@ function Teams() {
         <button
           className={styles.primary}
           type="submit"
-          disabled={createTeam.isPending}
+          disabled={props.pending.creatingTeam}
         >
-          {createTeam.isPending ? "Creating…" : "Create Team"}
+          {props.pending.creatingTeam ? "Creating…" : "Create"}
         </button>
       </form>
-
-      <ul className={styles.list}>
-        {teams.map((team) => (
-          <li key={team.id} className={styles.row}>
-            <div className={styles.rowMain}>
-              {editing?.id === team.id ? (
-                <form className={styles.create} onSubmit={onRename}>
-                  <input
-                    className={styles.input}
-                    type="text"
-                    aria-label={`Rename ${team.name}`}
-                    required
-                    autoFocus
-                    value={editing.name}
-                    onChange={(e) =>
-                      setEditing({ id: team.id, name: e.target.value })
-                    }
-                  />
-                  <button
-                    className={styles.action}
-                    type="submit"
-                    disabled={renameTeam.isPending}
-                  >
-                    Save
-                  </button>
-                  <button
-                    className={styles.action}
-                    type="button"
-                    onClick={() => setEditing(null)}
-                  >
-                    Cancel
-                  </button>
-                </form>
-              ) : (
-                <>
-                  <div className={styles.identity}>
-                    <span className={styles.email}>{team.name}</span>
-                    <span className={styles.role}>/ {team.id}</span>
-                  </div>
-                  <div className={styles.rowActions}>
-                    <button
-                      type="button"
-                      className={styles.action}
-                      onClick={() => setEditing({ id: team.id, name: team.name })}
-                    >
-                      Rename
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+      <ul className={styles.sectionList}>
+        {props.teams.map((team) => (
+          <li key={team.id} className={styles.entityRow}>
+            {editing?.id === team.id ? (
+              <form className={styles.renameForm} onSubmit={onRename}>
+                <input
+                  className={styles.input}
+                  type="text"
+                  aria-label={`Rename ${team.name}`}
+                  required
+                  autoFocus
+                  value={editing.name}
+                  onChange={(e) => setEditing({ id: team.id, name: e.target.value })}
+                />
+                <button
+                  className={styles.action}
+                  type="submit"
+                  disabled={props.pending.renamingTeam}
+                >
+                  Save
+                </button>
+                <button
+                  className={styles.action}
+                  type="button"
+                  onClick={() => setEditing(null)}
+                >
+                  Cancel
+                </button>
+              </form>
+            ) : (
+              <>
+                <EntityLabel title={team.name} detail={team.id} />
+                <button
+                  type="button"
+                  className={styles.action}
+                  onClick={() => setEditing({ id: team.id, name: team.name })}
+                >
+                  Rename
+                </button>
+              </>
+            )}
           </li>
         ))}
       </ul>
-    </>
+    </section>
   );
+}
+
+function UserSection(props: AdminDashboardProps & { mode: "wide" | "dense" }) {
+  const [email, setEmail] = useState("");
+  const [teamId, setTeamId] = useState("");
+
+  function onCreate(event: FormEvent) {
+    event.preventDefault();
+    props.actions.createUser({ email, teamId });
+    setEmail("");
+    setTeamId("");
+  }
+
+  return (
+    <section className={sectionClass(props.mode)}>
+      <SectionHead
+        label="Users"
+        meta={`${props.users.length} ${props.users.length === 1 ? "user" : "users"}`}
+      />
+      <form className={styles.inlineForm} onSubmit={onCreate}>
+        <input
+          className={styles.input}
+          type="email"
+          placeholder="new.user@team.local"
+          aria-label="New User email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <select
+          className={styles.input}
+          aria-label="Team"
+          value={teamId || props.defaultTeamId}
+          onChange={(e) => setTeamId(e.target.value)}
+        >
+          {props.teams.map((team) => (
+            <option key={team.id} value={team.id}>
+              {team.name}
+            </option>
+          ))}
+        </select>
+        <button
+          className={styles.primary}
+          type="submit"
+          disabled={props.pending.creatingUser}
+        >
+          {props.pending.creatingUser ? "Creating…" : "Create"}
+        </button>
+      </form>
+      <ul className={styles.sectionList}>
+        {props.users.map((user) => (
+          <li key={user.id} className={styles.entityRow}>
+            <EntityLabel
+              title={user.email}
+              detail={`${user.role ?? "user"} · ${user.teamName ?? "No Team"}`}
+            />
+            <span className={styles.keys}>
+              {user.keys.length} {user.keys.length === 1 ? "key" : "keys"}
+            </span>
+            <button
+              type="button"
+              className={styles.action}
+              onClick={() => props.actions.mintKey(user)}
+              disabled={props.pending.mintingKey}
+            >
+              Add key
+            </button>
+            <ConfirmDelete
+              email={user.email}
+              onConfirm={() => props.actions.deleteUser(user)}
+            >
+              <button
+                type="button"
+                className={styles.actionDanger}
+                disabled={props.pending.deletingUser}
+              >
+                Delete
+              </button>
+            </ConfirmDelete>
+            {props.secrets.newPassword?.userId === user.id && (
+              <div className={styles.secretSlot}>
+                <CopyBox label="Password" secret={props.secrets.newPassword.password} />
+              </div>
+            )}
+            {props.secrets.mintedKey?.userId === user.id && (
+              <div className={styles.secretSlot}>
+                <CopyBox label="API key" secret={props.secrets.mintedKey.key} />
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function KeySection({
+  users,
+  actions,
+  pending,
+}: {
+  users: UserRow[];
+  actions: AdminActions;
+  pending: AdminMutationState;
+}) {
+  const keys = users.flatMap((user) =>
+    user.keys.map((key) => ({ ...key, userEmail: user.email, teamName: user.teamName })),
+  );
+  return (
+    <section className={styles.adminSection}>
+      <SectionHead
+        label="API keys"
+        meta={`${keys.length} ${keys.length === 1 ? "key" : "keys"}`}
+      />
+      <ul className={styles.sectionList}>
+        {keys.length === 0 ? (
+          <li className={styles.emptyRow}>No API keys have been minted.</li>
+        ) : (
+          keys.map((key) => (
+            <li key={key.id} className={styles.entityRow}>
+              <EntityLabel
+                title={key.name ?? "key"}
+                detail={`${key.userEmail} · ${key.teamName ?? "No Team"}`}
+              />
+              {key.start && <code className={styles.keyStart}>{key.start}…</code>}
+              <span className={styles.keyUsage}>{lastUsed(key.lastRequest)}</span>
+              <button
+                type="button"
+                className={styles.actionDanger}
+                onClick={() => actions.revokeKey(key)}
+                disabled={pending.revokingKey}
+              >
+                Delete
+              </button>
+            </li>
+          ))
+        )}
+      </ul>
+    </section>
+  );
+}
+
+function SectionHead({ label, meta }: { label: string; meta: string }) {
+  return (
+    <div className={styles.sectionHead}>
+      <p className={styles.listLabel}>{label}</p>
+      <span className={styles.sectionMeta}>{meta}</span>
+    </div>
+  );
+}
+
+function EntityLabel({ title, detail }: { title: string; detail: string }) {
+  return (
+    <div className={styles.identity}>
+      <span className={styles.email}>{title}</span>
+      <span className={styles.role}>/ {detail}</span>
+    </div>
+  );
+}
+
+function ActivityRail({ users, teams }: { users: UserRow[]; teams: TeamRow[] }) {
+  const latestUsers = users.slice(0, 3);
+  const latestTeams = teams.slice(0, 3);
+  return (
+    <aside className={styles.activityRail}>
+      <section className={styles.profileCard}>
+        <span className={styles.profileAvatar}>Cr</span>
+        <strong>Crew workspace</strong>
+        <span>{teams.length} teams managed</span>
+        <div className={styles.profileActions}>
+          <span>
+            <ShieldCheck size={18} aria-hidden="true" />
+          </span>
+          <span>
+            <Database size={18} aria-hidden="true" />
+          </span>
+          <span>
+            <KeyRound size={18} aria-hidden="true" />
+          </span>
+        </div>
+      </section>
+
+      <section className={styles.railSection}>
+        <SectionHead label="Activity" meta="Live" />
+        <ul className={styles.activityList}>
+          {latestUsers.map((user) => (
+            <li key={user.id}>
+              <span className={styles.activityAvatar}>{initials(user.email)}</span>
+              <div>
+                <strong>{user.email}</strong>
+                <span>
+                  {user.keys.length} {user.keys.length === 1 ? "key" : "keys"} in{" "}
+                  {user.teamName ?? "No Team"}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className={styles.railSection}>
+        <SectionHead label="Teams" meta={`${teams.length}`} />
+        <ul className={styles.teamSummaryList}>
+          {latestTeams.map((team) => {
+            const members = users.filter((user) => user.teamId === team.id);
+            return (
+              <li key={team.id}>
+                <span>{team.name}</span>
+                <strong>{members.length}</strong>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    </aside>
+  );
+}
+
+function sectionClass(mode: "wide" | "dense"): string {
+  const section = styles.adminSection!;
+  return mode === "dense"
+    ? `${section} ${styles.denseSection!}`
+    : section;
+}
+
+function keyCount(users: UserRow[]): number {
+  return users.reduce((sum, user) => sum + user.keys.length, 0);
+}
+
+function initials(email: string): string {
+  return email.slice(0, 2).toUpperCase();
+}
+
+function titleForSection(section: string): string {
+  switch (section) {
+    case "usage":
+      return "Usage";
+    case "teams":
+      return "Teams";
+    case "users":
+      return "Users";
+    case "settings":
+      return "Settings";
+    default:
+      return "Crew control";
+  }
+}
+
+function subtitleForSection(section: string): string {
+  switch (section) {
+    case "usage":
+      return "Global usage signals across teams, users, and API keys.";
+    case "teams":
+      return "Create teams and keep each team’s corpus isolated.";
+    case "users":
+      return "Provision users and mint API keys for their agents.";
+    case "settings":
+      return "Operational defaults for authentication and data routing.";
+    default:
+      return "Manage teams, users, and API keys from one workspace.";
+  }
 }
 
 /** A short "last used" phrase for a key's `lastRequest` (null = never verified). */
