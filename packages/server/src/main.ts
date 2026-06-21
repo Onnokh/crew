@@ -40,9 +40,9 @@ async function buildRealDeps(port: number): Promise<Deps> {
   // beside org/team/membership in one file.
   const authInstance = createAuth(raw, {
     secret: requireSecret(),
-    baseURL: process.env.CREW_BASE_URL ?? `http://localhost:${port}`,
+    baseURL: envValue("CREW_BASE_URL") ?? `http://localhost:${port}`,
     // Comma-separated extra origins (e.g. the Vite dev console).
-    trustedOrigins: process.env.CREW_TRUSTED_ORIGINS?.split(",")
+    trustedOrigins: envValue("CREW_TRUSTED_ORIGINS")?.split(",")
       .map((o) => o.trim())
       .filter(Boolean),
   });
@@ -67,7 +67,7 @@ async function buildRealDeps(port: number): Promise<Deps> {
 
 // A missing or short secret makes sessions forgeable, so refuse to boot.
 function requireSecret(): string {
-  const secret = process.env.CREW_AUTH_SECRET;
+  const secret = envValue("CREW_AUTH_SECRET");
   if (!secret || secret.length < 32) {
     throw new Error(
       "CREW_AUTH_SECRET must be set to a random string of at least 32 characters " +
@@ -75,6 +75,11 @@ function requireSecret(): string {
     );
   }
   return secret;
+}
+
+function envValue(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value ? value : undefined;
 }
 
 // Seed the first admin on a fresh database. Idempotent; the first admin can't be
@@ -87,8 +92,8 @@ async function seedFirstAdmin(
   defaultTeamId: string,
   now: number,
 ): Promise<void> {
-  const email = process.env.CREW_ADMIN_EMAIL;
-  const password = process.env.CREW_ADMIN_PASSWORD;
+  const email = envValue("CREW_ADMIN_EMAIL");
+  const password = envValue("CREW_ADMIN_PASSWORD");
   if (!email || !password) {
     // eslint-disable-next-line no-console
     console.warn(
