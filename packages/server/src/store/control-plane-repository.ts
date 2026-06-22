@@ -98,6 +98,26 @@ export class ControlPlaneRepository {
   }
 
   /**
+   * Delete a Team row by id. Callers must ensure the Team has no memberships
+   * first (`team_membership.team_id` FK-references `team(id)` with no cascade);
+   * the corpus DB file is dropped separately by the resolver. No-op if the id
+   * does not exist.
+   */
+  deleteTeam(id: string): void {
+    this.raw.prepare(`DELETE FROM team WHERE id = ?`).run(id);
+  }
+
+  /** How many Users belong to a Team (its membership count). */
+  teamMemberCount(teamId: string): number {
+    const row = this.raw
+      .prepare(
+        `SELECT COUNT(*) AS n FROM team_membership WHERE team_id = ?`,
+      )
+      .get(teamId) as { n: number };
+    return row.n;
+  }
+
+  /**
    * Bind a User to a Team (their single Membership). Idempotent: a User already
    * having a membership is left untouched (the 1:1 PRIMARY KEY on user_id).
    */

@@ -230,6 +230,8 @@ export function mountTelemetry(app: Hono, deps: Deps): void {
     const users: UserUsageItem[] = stats.map((s) => ({
       userId: s.userId,
       name: deps.controlPlane.getUser(s.userId)?.name ?? null,
+      team: deps.controlPlane.getTeamForUser(s.userId)?.name ?? null,
+      lastSeen: s.lastSeen,
       posts: s.posts,
       searches: s.searches,
       total: s.total,
@@ -431,6 +433,10 @@ export type UserUsageItem = {
   userId: string;
   /** Display name of the User, or null if it could not be resolved. */
   name: string | null;
+  /** Name of the Team this User belongs to, or null if none could be resolved. */
+  team: string | null;
+  /** When this User was last active (newest post or search), unix ms; null if never. */
+  lastSeen: number | null;
   /** Posts authored by this User. */
   posts: number;
   /** Searches run by this User. */

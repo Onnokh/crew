@@ -13,6 +13,7 @@ import {
 import { authClient, useSession } from "../../auth/client";
 import crewProfile from "../../assets/crew-profile.png";
 import type { TeamRow, UserRow } from "../../hooks/use-admin-data";
+import { avatarUrl } from "../ui/user-avatar/user-avatar";
 import styles from "./sidebar.module.scss";
 
 /**
@@ -149,6 +150,11 @@ function SidebarUser() {
     <DropdownMenu.Root>
       <DropdownMenu.Trigger className={styles.sidebarUser}>
         <Avatar.Root className={styles.sidebarUserAvatar}>
+          <Avatar.Image
+            className={styles.sidebarUserAvatarImage}
+            src={avatarUrl(user.id ?? user.email)}
+            alt=""
+          />
           <Avatar.Fallback>{initials(label)}</Avatar.Fallback>
         </Avatar.Root>
         <span className={styles.sidebarUserText}>

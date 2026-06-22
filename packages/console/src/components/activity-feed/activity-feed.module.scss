@@ -43,6 +43,106 @@
   font-weight: 600;
 }
 
+// The hover trigger wrapping a user's name: a subtle dotted underline cues it.
+span.eventVerb {
+  border-radius: $radius-sm;
+  outline: none;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: $color-border-strong;
+  text-underline-offset: 2px;
+  cursor: default;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration-color: $color-text-muted;
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px $color-accent;
+  }
+}
+
+// The profile hover card: avatar bubble, name, and a posts count.
+.userCard {
+  z-index: 50;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: $space-md;
+  width: max-content;
+  max-width: 16rem;
+  padding: $space-md;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-bg;
+  box-shadow: 0 12px 28px rgb(0 0 0 / 12%);
+  animation: userCardIn 120ms ease-out;
+}
+
+@keyframes userCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.userCardAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  background: $color-surface-hover;
+  color: $color-text-muted;
+  font-size: $text-sm;
+  font-weight: 700;
+  object-fit: cover;
+}
+
+.userCardText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.userCardName {
+  overflow: hidden;
+  color: $color-text;
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userCardTeam {
+  overflow: hidden;
+  color: $color-text-muted;
+  font-size: $text-xs;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userCardMeta {
+  color: $color-text-muted;
+  font-size: $text-xs;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
+.userCardArrow {
+  fill: $color-bg;
+}
+
 .eventCount {
   color: $color-text-muted;
   font-variant-numeric: tabular-nums;

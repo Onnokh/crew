@@ -2,7 +2,6 @@
 
 /** Query keys for the telemetry reads. */
 export const telemetryKeys = {
-  recent: ["telemetry", "recent"] as const,
   conversion: ["telemetry", "conversion"] as const,
   coverage: ["telemetry", "coverage"] as const,
   posts: ["telemetry", "posts"] as const,
@@ -14,6 +13,10 @@ export const telemetryKeys = {
 export type UserUsageItem = {
   userId: string;
   name: string | null;
+  /** Name of the team this user belongs to, or null if none. */
+  team: string | null;
+  /** When this user was last active (newest post or search), unix ms; null if never. */
+  lastSeen: number | null;
   posts: number;
   searches: number;
   total: number;
@@ -39,28 +42,12 @@ export type TeamOverviewItem = {
   posts: number;
 };
 
-/** Mirrors the server's `RetrievalResultRow` (api/telemetry.ts). */
-export type RetrievalResultRow = {
-  postId: string;
-  postTitle: string | null;
-  rank: number;
-  rrfScore: number;
-  trust: number;
-  recency: number;
-  repoBoost: number;
-  final: number;
-};
-
-/** Mirrors the server's `RetrievalRow` (api/telemetry.ts). */
-export type RetrievalRow = {
-  id: string;
-  situation: string;
-  repo: string | null;
-  resultCount: number;
-  createdAt: number;
-  user: string | null;
-  converted: boolean;
-  results: RetrievalResultRow[];
+/** Mirrors the server's `RepoPostCount` (store/queries.ts) — one project row. */
+export type ProjectPostCount = {
+  /** The git repo a Post was authored from. */
+  repo: string;
+  /** Posts in this team's corpus that carry this repo. */
+  posts: number;
 };
 
 /** Mirrors the server's `ConversionPoint` (api/telemetry.ts) — one day's counts. */

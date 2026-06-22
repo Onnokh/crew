@@ -5,11 +5,12 @@ import { apiFetch } from "../../../api/client";
 import { type TeamOverviewItem } from "../../telemetry/telemetry-data";
 import { CreateTeamDialog } from "../../dialogs/create-team-dialog/create-team-dialog";
 import { PageHeading } from "../../ui/page-heading/page-heading";
+import { AvatarStack, type StackMember } from "../../ui/avatar-stack/avatar-stack";
 import shared from "../../../styles/dashboard.module.scss";
 import styles from "./teams-dashboard.module.scss";
 
 type TeamRow = { id: string; name: string };
-type UserRow = { teamId: string | null };
+type UserRow = { id: string; name: string | null; teamId: string | null };
 
 /** Server payload for the org-wide Teams overview. */
 type TeamsOverview = { teams: TeamOverviewItem[] };
@@ -39,10 +40,12 @@ export function TeamsDashboard({
   });
 
   const postsByTeam = new Map((data?.teams ?? []).map((t) => [t.id, t.posts]));
-  const membersByTeam = new Map<string, number>();
+  const membersByTeam = new Map<string, StackMember[]>();
   for (const user of users) {
     if (user.teamId) {
-      membersByTeam.set(user.teamId, (membersByTeam.get(user.teamId) ?? 0) + 1);
+      const list = membersByTeam.get(user.teamId) ?? [];
+      list.push({ id: user.id, name: user.name });
+      membersByTeam.set(user.teamId, list);
     }
   }
 
@@ -77,9 +80,10 @@ export function TeamsDashboard({
                   <span className={shared.teamRowName}>{team.name}</span>
                   <span className={shared.teamRowMeta}>
                     {plural(postsByTeam.get(team.id), "post")} ·{" "}
-                    {plural(membersByTeam.get(team.id) ?? 0, "user")}
+                    {plural(membersByTeam.get(team.id)?.length ?? 0, "user")}
                   </span>
                 </span>
+                <AvatarStack members={membersByTeam.get(team.id) ?? []} />
                 <ChevronRight
                   size={18}
                   aria-hidden="true"

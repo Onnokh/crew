@@ -57,10 +57,21 @@ describe("userActivityStats", () => {
     searchAs("user_bob"); // bob: 1 search = 1
 
     const stats = await repo.userActivityStats(10);
+    const now = clock.now();
     expect(stats).toEqual([
-      { userId: "user_alice", posts: 2, searches: 1, total: 3 },
-      { userId: "user_bob", posts: 0, searches: 1, total: 1 },
+      { userId: "user_alice", posts: 2, searches: 1, total: 3, lastSeen: now },
+      { userId: "user_bob", posts: 0, searches: 1, total: 1, lastSeen: now },
     ]);
+  });
+
+  it("reports lastSeen as the user's newest post or search", async () => {
+    await postAs("user_alice");
+    clock.advance(60_000);
+    searchAs("user_alice"); // newer than the post
+    const newest = clock.now();
+
+    const [alice] = await repo.userActivityStats(10);
+    expect(alice?.lastSeen).toBe(newest);
   });
 
   it("honours the limit", async () => {

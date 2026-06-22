@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import { Sidebar } from "../../components/sidebar/sidebar";
 import { OverviewDashboard } from "../../components/feature/overview-dashboard/overview-dashboard";
@@ -26,12 +27,28 @@ type AdminDashboardProps = AdminData & { fixedSection?: string };
 
 /** The dashboard chrome: sidebar + the section the active route selected. */
 function AdminDashboard(props: AdminDashboardProps) {
+  const navigate = useNavigate();
   const section = props.fixedSection ?? "dashboard";
   const selectedTeamId = section.startsWith("team:") ? section.slice(5) : null;
   const selectedTeam = props.teams.find((team) => team.id === selectedTeamId);
   const selectedTeamUsers = selectedTeam
     ? props.users.filter((user) => user.teamId === selectedTeam.id)
     : [];
+
+  // A team is deletable only when it's neither the default (earliest) team nor
+  // has any members — mirrors the server's guards (ADR 0008) so the UI explains
+  // up front why the action is unavailable rather than surfacing a 4xx.
+  const defaultTeamId = props.teams.reduce<{ id: string; at: number } | null>(
+    (min, t) => (min === null || t.createdAt < min.at ? { id: t.id, at: t.createdAt } : min),
+    null,
+  )?.id;
+  const isDefaultTeam = selectedTeam?.id === defaultTeamId;
+  const canDeleteTeam = !!selectedTeam && !isDefaultTeam && selectedTeamUsers.length === 0;
+  const deleteDisabledReason = isDefaultTeam
+    ? "The default team cannot be deleted."
+    : selectedTeamUsers.length > 0
+      ? "Remove or reassign this team's members before deleting it."
+      : null;
 
   return (
     <section className={styles.pageFull}>
@@ -46,10 +63,7 @@ function AdminDashboard(props: AdminDashboardProps) {
 
         <main className={styles.appContent}>
           {section === "dashboard" && (
-            <OverviewDashboard
-              usersCount={props.users.length}
-              teamsCount={props.teams.length}
-            />
+            <OverviewDashboard usersCount={props.users.length} />
           )}
           {section === "usage" && (
             <Suspense fallback={<p className={shared.emptyRow}>Loading...</p>}>
@@ -82,6 +96,15 @@ function AdminDashboard(props: AdminDashboardProps) {
               }
               renaming={props.pending.renamingTeam}
               error={props.teamError}
+              onDelete={() =>
+                props.actions.deleteTeam(
+                  { id: selectedTeam.id },
+                  { onSuccess: () => navigate({ to: "/dashboard/teams" }) },
+                )
+              }
+              deleting={props.pending.deletingTeam}
+              canDelete={canDeleteTeam}
+              deleteDisabledReason={deleteDisabledReason}
               onAddMember={(name, email) =>
                 props.actions.createUser({
                   name,

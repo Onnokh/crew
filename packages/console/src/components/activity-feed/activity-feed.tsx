@@ -1,3 +1,4 @@
+import * as HoverCard from "@radix-ui/react-hover-card";
 import {
   CheckCircle2,
   FileText,
@@ -6,7 +7,8 @@ import {
   SearchX,
   type LucideIcon,
 } from "lucide-react";
-import type { ActivityItem } from "../telemetry/telemetry-data";
+import type { ActivityItem, UserUsageItem } from "../telemetry/telemetry-data";
+import { UserAvatar } from "../ui/user-avatar/user-avatar";
 import { relativeTime } from "../../lib/format";
 import shared from "../../styles/dashboard.module.scss";
 import styles from "./activity-feed.module.scss";
@@ -14,25 +16,41 @@ import styles from "./activity-feed.module.scss";
 /** The Events list: a time-sorted feed of searches, posts, confirms, and flags. */
 export function ActivityFeed({
   events,
+  users = [],
   loading,
   empty = "No events yet.",
 }: {
   events: ActivityItem[];
+  /** Usage rows used to enrich the per-user hover card (matched by name). */
+  users?: UserUsageItem[];
   loading?: boolean;
   empty?: string;
 }) {
   if (loading) return <p className={shared.emptyRow}>Loading...</p>;
   if (events.length === 0) return <p className={shared.emptyRow}>{empty}</p>;
+  const usageByName = new Map(
+    users.filter((u) => u.name).map((u) => [u.name as string, u]),
+  );
   return (
     <ul className={styles.usageEvents}>
       {events.map((event) => (
-        <ActivityEvent key={event.id} event={event} />
+        <ActivityEvent
+          key={event.id}
+          event={event}
+          usage={event.user ? usageByName.get(event.user) : undefined}
+        />
       ))}
     </ul>
   );
 }
 
-function ActivityEvent({ event }: { event: ActivityItem }) {
+function ActivityEvent({
+  event,
+  usage,
+}: {
+  event: ActivityItem;
+  usage?: UserUsageItem;
+}) {
   const { action, icon: Icon, tone } = eventStyle(event);
   const count =
     event.kind === "search" && event.resultCount !== null && event.resultCount > 0;
@@ -45,7 +63,7 @@ function ActivityEvent({ event }: { event: ActivityItem }) {
       <span className={styles.eventText}>
         {event.user ? (
           <>
-            <span className={styles.eventVerb}>{event.user}</span> {action} {event.subject}
+            <UserMention name={event.user} usage={usage} /> {action} {event.subject}
           </>
         ) : (
           <>
@@ -62,6 +80,38 @@ function ActivityEvent({ event }: { event: ActivityItem }) {
       </span>
       <time className={styles.eventMeta}>{relativeTime(event.createdAt)}</time>
     </li>
+  );
+}
+
+/** A user's name that reveals a small profile card (avatar, name, posts) on hover. */
+function UserMention({ name, usage }: { name: string; usage?: UserUsageItem }) {
+  return (
+    <HoverCard.Root openDelay={150} closeDelay={100}>
+      <HoverCard.Trigger asChild>
+        <span className={styles.eventVerb} tabIndex={0}>
+          {name}
+        </span>
+      </HoverCard.Trigger>
+      <HoverCard.Portal>
+        <HoverCard.Content className={styles.userCard} sideOffset={6} align="start">
+          <UserAvatar
+            seed={usage?.userId ?? name}
+            name={name}
+            className={styles.userCardAvatar}
+          />
+          <span className={styles.userCardText}>
+            <span className={styles.userCardName}>{name}</span>
+            {usage?.team && <span className={styles.userCardTeam}>{usage.team}</span>}
+            <span className={styles.userCardMeta}>
+              {usage
+                ? `${usage.posts} ${usage.posts === 1 ? "post" : "posts"}`
+                : "No posts yet"}
+            </span>
+          </span>
+          <HoverCard.Arrow className={styles.userCardArrow} />
+        </HoverCard.Content>
+      </HoverCard.Portal>
+    </HoverCard.Root>
   );
 }
 

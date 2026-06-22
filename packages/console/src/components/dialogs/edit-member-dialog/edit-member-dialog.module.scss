@@ -1,8 +1,29 @@
 @use "../../../styles/tokens" as *;
 
-// Edit-member dialog: a click-through viewport that centers the card and lets
-// the minted key float beneath it on the dark overlay. Empty areas pass clicks
-// through so outside-click still closes the dialog.
+// The row trigger: a square, icon-only gear button. Visibility (reveal on row
+// hover) is owned by the parent row via the passed-in `triggerClassName`.
+.editTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-bg;
+  color: $color-text-muted;
+  cursor: pointer;
+
+  &:hover {
+    background: $color-surface-hover;
+    color: $color-text;
+  }
+}
+
+// Click-through viewport that centers the card and lets the minted key float
+// beneath it on the dark overlay. Empty areas pass clicks through so an
+// outside-click still closes the dialog.
 .viewport {
   position: fixed;
   inset: 0;
@@ -19,67 +40,32 @@
   }
 }
 
+// The dialog card — mirrors the shared `.content` shell (rounded, no padding;
+// the inner header/body own their spacing) but flows inside the viewport rather
+// than being fixed itself.
 .card {
   display: flex;
   flex-direction: column;
-  gap: $space-md;
   width: 90vw;
-  max-width: 25rem;
-  padding: $space-lg;
+  max-width: 28rem;
+  max-height: 85vh;
   border: 1px solid $color-border-strong;
-  border-radius: $radius-lg;
+  border-radius: 16px;
   background: $color-bg;
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.12);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.16);
+  overflow: hidden;
 }
 
-// Inline editable name field at the top of the dialog.
-.nameForm {
+// Inline editable name: a labelled field with the Save button aligned to it.
+.nameRow {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: $space-sm;
 }
 
-.nameLabel {
-  flex-shrink: 0;
-  color: $color-text-muted;
-  font-size: $text-sm;
-}
-
-.nameInput {
+.nameField {
   flex: 1;
   min-width: 0;
-  padding: $space-sm $space-md;
-  border: 1px solid $color-border;
-  border-radius: $radius-md;
-  background: $color-bg;
-  color: $color-text;
-  font-size: $text-sm;
-
-  &:focus-visible {
-    outline: 2px solid $color-accent;
-    outline-offset: 1px;
-  }
-}
-
-.nameSave {
-  flex-shrink: 0;
-  padding: $space-sm $space-md;
-  border: none;
-  border-radius: $radius-md;
-  background: $color-accent;
-  color: $color-accent-contrast;
-  font-size: $text-sm;
-  font-weight: 500;
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    background: $color-accent-hover;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
 }
 
 // Email/last-activity definition list.
@@ -87,7 +73,7 @@
   display: flex;
   flex-direction: column;
   gap: $space-sm;
-  margin: 0;
+  margin: 1.25rem 0 0;
 
   div {
     display: flex;
@@ -114,7 +100,8 @@
   display: flex;
   flex-direction: column;
   gap: $space-sm;
-  padding-top: $space-md;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
   border-top: 1px solid $color-border;
 }
 
@@ -130,6 +117,31 @@
   color: $color-text;
   font-size: $text-base;
   font-weight: 600;
+}
+
+// Small ghost button for "New key" — same family as the shared buttons, sized down.
+.newKeyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 1px solid $color-border-strong;
+  border-radius: 10px;
+  background: $color-bg;
+  color: $color-text;
+  font-size: $text-sm;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: $color-surface-hover;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: progress;
+  }
 }
 
 .keysEmpty {
@@ -198,19 +210,19 @@
   }
 }
 
-// The just-minted key: a clean white pill that floats below the dialog card,
-// matching its width, with the secret + a small copy icon.
+// The just-minted key: a clean pill that floats below the dialog card, matching
+// its width, with the secret + a small copy icon.
 .minted {
   display: flex;
   align-items: center;
   gap: $space-sm;
   width: 90vw;
-  max-width: 25rem;
+  max-width: 28rem;
   padding: $space-sm $space-md;
-  border: 1px solid $color-border;
-  border-radius: $radius-md;
+  border: 1px solid $color-border-strong;
+  border-radius: 12px;
   background: $color-bg;
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.12);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.16);
 }
 
 .mintedValue {

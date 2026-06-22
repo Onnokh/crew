@@ -205,7 +205,7 @@ describe("mint and revoke keys; an agent posts with a minted key", () => {
   });
 });
 
-describe("team management: create, list, rename — role-gated, no delete", () => {
+describe("team management: create, list, rename, delete — role-gated", () => {
   let srv: RunningServer;
   let cookie: string;
   beforeAll(async () => {
@@ -301,8 +301,57 @@ describe("team management: create, list, rename — role-gated, no delete", () =
     expect(missing.status).toBe(404);
   });
 
-  it("exposes no team-deletion route", async () => {
+  it("deletes an empty, non-default Team and drops its corpus", async () => {
+    const created = await adminFetch(srv, cookie, "/teams", {
+      method: "POST",
+      body: JSON.stringify({ name: "Disposable" }),
+    });
+    const { team } = (await created.json()) as { team: { id: string } };
+    // Touch the corpus so a real file exists to be dropped.
+    expect(srv.env.teams.getRepository(team.id)).toBeTruthy();
+
+    const res = await adminFetch(srv, cookie, `/teams/${team.id}`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()) as { deleted: boolean }).toMatchObject({
+      deleted: true,
+    });
+    // The control-plane row is gone and the Team no longer lists.
+    expect(srv.env.controlPlane.getTeam(team.id)).toBeNull();
+    const list = await adminFetch(srv, cookie, "/teams");
+    const { teams } = (await list.json()) as { teams: Array<{ id: string }> };
+    expect(teams.some((t) => t.id === team.id)).toBe(false);
+  });
+
+  it("refuses to delete the default Team (400)", async () => {
     const res = await adminFetch(srv, cookie, `/teams/${srv.env.teamId}`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("refuses to delete a Team that still has members (409)", async () => {
+    const created = await adminFetch(srv, cookie, "/teams", {
+      method: "POST",
+      body: JSON.stringify({ name: "Staffed" }),
+    });
+    const { team } = (await created.json()) as { team: { id: string } };
+    const su = await srv.env.auth.api.signUpEmail({
+      body: { email: "mia@staffed.local", password: "password1234", name: "Mia" },
+    });
+    srv.env.controlPlane.addMembership(su.user.id, team.id, 0);
+
+    const res = await adminFetch(srv, cookie, `/teams/${team.id}`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(409);
+    // The Team survives the refused delete.
+    expect(srv.env.controlPlane.getTeam(team.id)).not.toBeNull();
+  });
+
+  it("returns 404 deleting an unknown Team id", async () => {
+    const res = await adminFetch(srv, cookie, "/teams/team_nope", {
       method: "DELETE",
     });
     expect(res.status).toBe(404);

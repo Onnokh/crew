@@ -4,6 +4,7 @@ import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { authClient, useSession } from "../../auth/client";
 import { ThemeToggle } from "../ui/theme-toggle/theme-toggle";
+import { avatarUrl } from "../ui/user-avatar/user-avatar";
 import styles from "./app-chrome.module.scss";
 
 /** App chrome wrapping both the public home page and signed-in pages, adapting to the session. */
@@ -40,6 +41,11 @@ export function AppChrome({ children }: { children: ReactNode }) {
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger className={styles.userButton}>
                   <Avatar.Root className={styles.avatar}>
+                    <Avatar.Image
+                      className={styles.avatarImage}
+                      src={avatarUrl(user.id ?? user.email)}
+                      alt=""
+                    />
                     <Avatar.Fallback className={styles.avatarFallback}>
                       {initials(user.name ?? user.email)}
                     </Avatar.Fallback>
@@ -56,14 +62,9 @@ export function AppChrome({ children }: { children: ReactNode }) {
                     </div>
                     <DropdownMenu.Separator className={styles.menuSeparator} />
                     {isAdmin ? (
-                      <>
-                        <DropdownMenu.Item className={styles.menuItem} asChild>
-                          <Link to="/dashboard">Dashboard</Link>
-                        </DropdownMenu.Item>
-                        <DropdownMenu.Item className={styles.menuItem} asChild>
-                          <Link to="/telemetry">Retrieval telemetry</Link>
-                        </DropdownMenu.Item>
-                      </>
+                      <DropdownMenu.Item className={styles.menuItem} asChild>
+                        <Link to="/dashboard">Dashboard</Link>
+                      </DropdownMenu.Item>
                     ) : null}
                     <DropdownMenu.Item className={styles.menuItem} onSelect={onSignOut}>
                       Sign out

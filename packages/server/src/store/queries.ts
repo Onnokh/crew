@@ -345,6 +345,30 @@ export function postsCreatedStats(
   return { created: row.created };
 }
 
+/** One repo's Post tally (see {@link postsByRepo}). */
+export type RepoPostCount = {
+  /** The git repo a Post was authored from (`posts.repo`). */
+  repo: string;
+  /** Posts in the corpus that carry this repo. */
+  posts: number;
+};
+
+/**
+ * Posts grouped by their originating `repo`, busiest first. A plain
+ * `GROUP BY repo` over every Post in the corpus — no time window, no status
+ * filter — backing the team detail page's per-project breakdown.
+ */
+export function postsByRepo(raw: Database): RepoPostCount[] {
+  return raw
+    .prepare(
+      `SELECT repo, COUNT(*) AS posts
+         FROM posts
+        GROUP BY repo
+        ORDER BY posts DESC, repo`,
+    )
+    .all() as RepoPostCount[];
+}
+
 /**
  * The earliest `created_at` across all activity logs (retrievals, posts,
  * post_events), or null when every log is empty. Backs the "All time" range —
@@ -373,6 +397,8 @@ export type UserActivityStat = {
   searches: number;
   /** Combined activity (`posts + searches`), the ranking key. */
   total: number;
+  /** When this User was last active (newest post or search), unix ms. */
+  lastSeen: number;
 };
 
 /**
@@ -390,22 +416,29 @@ export function userActivityStats(
     .prepare(
       `SELECT userId,
               COALESCE(SUM(isPost), 0) AS posts,
-              COALESCE(SUM(isSearch), 0) AS searches
+              COALESCE(SUM(isSearch), 0) AS searches,
+              MAX(ts) AS lastSeen
          FROM (
-                SELECT created_by AS userId, 1 AS isPost, 0 AS isSearch FROM posts
+                SELECT created_by AS userId, 1 AS isPost, 0 AS isSearch, created_at AS ts FROM posts
           UNION ALL
-                SELECT user_id AS userId, 0 AS isPost, 1 AS isSearch FROM retrievals
+                SELECT user_id AS userId, 0 AS isPost, 1 AS isSearch, created_at AS ts FROM retrievals
          )
         GROUP BY userId
         ORDER BY posts + searches DESC, userId
         LIMIT ?`,
     )
-    .all(limit) as Array<{ userId: string; posts: number; searches: number }>;
+    .all(limit) as Array<{
+    userId: string;
+    posts: number;
+    searches: number;
+    lastSeen: number;
+  }>;
   return rows.map((r) => ({
     userId: r.userId,
     posts: r.posts,
     searches: r.searches,
     total: r.posts + r.searches,
+    lastSeen: r.lastSeen,
   }));
 }
 

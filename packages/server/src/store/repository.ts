@@ -11,6 +11,7 @@ import type {
   PostsCreatedStats,
   RecentRetrievalDetail,
   RecentRetrievalRow,
+  RepoPostCount,
   UserActivityStat,
   VecCandidate,
 } from "./queries.js";
@@ -158,4 +159,10 @@ export type PostRepository = {
    * range for the headline, one per day-wide bucket for the created-per-day trend.
    */
   postsCreatedStats(window: CoverageWindow): Promise<PostsCreatedStats>;
+
+  /**
+   * Posts grouped by their originating `repo`, busiest first, over every Post
+   * in the corpus. Backs the team detail page's per-project breakdown.
+   */
+  postsByRepo(): Promise<RepoPostCount[]>;
 };

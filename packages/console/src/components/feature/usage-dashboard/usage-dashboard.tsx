@@ -27,6 +27,7 @@ import {
   type ConversionPanelData,
   type CoveragePanelData,
   type PostsCreatedPanelData,
+  type UserUsageItem,
 } from "../../telemetry/telemetry-data";
 import { ActivityFeed } from "../../activity-feed/activity-feed";
 import { PageHeading } from "../../ui/page-heading/page-heading";
@@ -73,6 +74,14 @@ export default function UsageDashboard() {
     queryFn: () =>
       apiFetch<{ activity: ActivityItem[] }>("/api/telemetry/activity").then(
         (r) => r.activity,
+      ),
+  });
+
+  const { data: usersData } = useQuery({
+    queryKey: telemetryKeys.users,
+    queryFn: () =>
+      apiFetch<{ users: UserUsageItem[] }>("/api/telemetry/users").then(
+        (r) => r.users,
       ),
   });
 
@@ -217,8 +226,12 @@ export default function UsageDashboard() {
       </UsageSection>
       </div>
 
-      <UsageSection title="Events">
-        <ActivityFeed events={events} loading={activityLoading} />
+      <UsageSection title="Activity">
+        <ActivityFeed
+          events={events}
+          users={usersData ?? []}
+          loading={activityLoading}
+        />
       </UsageSection>
     </section>
   );

@@ -61,6 +61,12 @@
   color: $color-text;
 }
 
+.statCardValueSuffix {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: $color-text-muted;
+}
+
 // Lively positive / negative for the delta pill.
 $delta-up: #10b981;
 $delta-down: #f5453a;

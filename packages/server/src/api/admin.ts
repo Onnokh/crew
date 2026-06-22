@@ -165,7 +165,8 @@ export function mountAdmin(app: Hono, deps: Deps): void {
   // dashboard's "top users" + activity feed, scoped to one corpus.
   admin.get("/teams/:id/overview", async (c) => {
     const id = c.req.param("id");
-    if (deps.controlPlane.getTeam(id) === null) {
+    const team = deps.controlPlane.getTeam(id);
+    if (team === null) {
       return c.json({ error: "No such Team" }, 404);
     }
     const repo = deps.teams.getRepository(id);
@@ -180,6 +181,8 @@ export function mountAdmin(app: Hono, deps: Deps): void {
     const users = stats.map((s) => ({
       userId: s.userId,
       name: resolveUser(s.userId),
+      team: team.name,
+      lastSeen: s.lastSeen,
       posts: s.posts,
       searches: s.searches,
       total: s.total,
@@ -196,12 +199,18 @@ export function mountAdmin(app: Hono, deps: Deps): void {
       createdAt: r.createdAt,
     }));
 
-    return c.json({ users, activity });
+    // Per-project breakdown: every Post in the corpus grouped by its repo.
+    const projects = await repo.postsByRepo();
+
+    // On-disk size of this team's corpus DB, surfaced in the Filesystem panel.
+    const dbSizeBytes = deps.teams.dbSizeBytes(id);
+
+    return c.json({ users, activity, projects, dbSizeBytes });
   });
 
   // Create a Team: mint an opaque id, persist it under the default Org, then warm
   // its corpus DB through the resolver so it is provisioned and immediately
-  // routable (ADR 0007/0008). No delete path is exposed (by design).
+  // routable (ADR 0007/0008). Deletion is the matching off-switch below.
   admin.post("/teams", async (c) => {
     const body: { name?: unknown } = await c.req
       .json()
@@ -236,6 +245,32 @@ export function mountAdmin(app: Hono, deps: Deps): void {
     }
     deps.controlPlane.renameTeam(id, name);
     return c.json({ team: { id, name } });
+  });
+
+  // Delete a Team — irreversible, and guarded so it can never strand a User or
+  // remove the new-user fallback (ADR 0008): the default (first) Team can't be
+  // deleted, and a Team with members must be emptied first (reassign or delete
+  // them). When clear, the control-plane row goes and the corpus DB is dropped.
+  admin.delete("/teams/:id", (c) => {
+    const id = c.req.param("id");
+    if (deps.controlPlane.getTeam(id) === null) {
+      return c.json({ error: "No such Team" }, 404);
+    }
+    if (deps.controlPlane.firstTeam()?.id === id) {
+      return c.json({ error: "The default Team cannot be deleted" }, 400);
+    }
+    const members = deps.controlPlane.teamMemberCount(id);
+    if (members > 0) {
+      return c.json(
+        {
+          error: `This Team still has ${members} ${members === 1 ? "member" : "members"}. Reassign or remove them first.`,
+        },
+        409,
+      );
+    }
+    deps.controlPlane.deleteTeam(id);
+    deps.teams.dropRepository(id);
+    return c.json({ deleted: true });
   });
 
   // Revoke a single key by id, through the adapter so an admin can revoke ANY key.

@@ -1,3 +1,4 @@
+import { rmSync } from "node:fs";
 import { join } from "node:path";
 import type { Embedder } from "../embedding/embedder.js";
 import type { Clock } from "../platform/clock.js";
@@ -20,6 +21,14 @@ import { SqliteRepository } from "./sqlite-repository.js";
 export type TeamRepositoryResolver = {
   /** Open-or-reuse the corpus repository for a Team id. */
   getRepository(teamId: string): PostRepository;
+  /** On-disk size of the Team's corpus DB in bytes (`page_count * page_size`). */
+  dbSizeBytes(teamId: string): number;
+  /**
+   * Close and forget the Team's cached connection, then delete its corpus DB
+   * file (and the `-wal`/`-shm` sidecars). Used when a Team is deleted; the
+   * control-plane row is removed separately by the caller.
+   */
+  dropRepository(teamId: string): void;
   /** Close every cached connection (test teardown / shutdown). */
   closeAll(): void;
 };
@@ -64,6 +73,26 @@ export function createTeamRepositoryResolver(opts: {
       const repo = new SqliteRepository(db, raw, clock, idGen, embedder);
       cache.set(teamId, { repo, raw });
       return repo;
+    },
+    dbSizeBytes(teamId: string): number {
+      this.getRepository(teamId); // ensure the connection is open and cached
+      const raw = cache.get(teamId)!.raw;
+      const pageCount = raw.pragma("page_count", { simple: true }) as number;
+      const pageSize = raw.pragma("page_size", { simple: true }) as number;
+      return pageCount * pageSize;
+    },
+    dropRepository(teamId: string): void {
+      const existing = cache.get(teamId);
+      if (existing) {
+        existing.raw.close();
+        cache.delete(teamId);
+      }
+      // Remove the corpus file and its WAL/SHM sidecars. `force` makes this a
+      // no-op when a file is absent (e.g. an in-memory test opener never wrote one).
+      const path = teamFilePath(opts.teamsDir, teamId);
+      for (const suffix of ["", "-wal", "-shm"]) {
+        rmSync(`${path}${suffix}`, { force: true });
+      }
     },
     closeAll(): void {
       for (const { raw } of cache.values()) raw.close();

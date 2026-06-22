@@ -1,0 +1,155 @@
+@use "../../styles/tokens" as *;
+
+.podiumWrap {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.podium {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: end;
+  gap: $space-sm;
+}
+
+.podiumCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.podiumAvatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid $color-border-strong;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: $color-surface-hover;
+  font-weight: 700;
+  color: $color-text-muted;
+}
+
+.place1 .podiumAvatar {
+  width: 4rem;
+  height: 4rem;
+  border-color: #e3b341;
+}
+.place2 .podiumAvatar {
+  border-color: #b6bcc4;
+}
+.place3 .podiumAvatar {
+  border-color: #cd8a52;
+}
+
+.podiumName {
+  font-size: $text-sm;
+  font-weight: 600;
+  color: $color-text;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.podiumStep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-xs;
+  width: 100%;
+  margin-top: $space-xs;
+  padding: $space-sm 0;
+  border-radius: $radius-md $radius-md 0 0;
+  color: $color-accent-contrast;
+  font-weight: 800;
+}
+.place1 .podiumStep {
+  min-height: 6rem;
+  background: linear-gradient(180deg, #f1cf68, #e3b341);
+}
+.place2 .podiumStep {
+  min-height: 5rem;
+  background: linear-gradient(180deg, #ccd1d7, #b6bcc4);
+}
+.place3 .podiumStep {
+  min-height: 4.25rem;
+  background: linear-gradient(180deg, #dca877, #cd8a52);
+}
+
+.podiumRank {
+  font-size: $text-xs;
+  opacity: 0.8;
+}
+
+.podiumTotal {
+  font-size: $text-lg;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: $color-accent-contrast;
+}
+
+.podiumRest {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.podiumRestRow {
+  display: grid;
+  grid-template-columns: 1.5rem auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm 0;
+
+  & + & {
+    border-top: 1px solid $color-border;
+  }
+}
+
+.podiumRestRank {
+  color: $color-text-subtle;
+  font-size: $text-sm;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.restAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  background: $color-surface-hover;
+  color: $color-text-muted;
+  font-size: $text-xs;
+  font-weight: 700;
+  object-fit: cover;
+}
+
+.restName {
+  overflow: hidden;
+  color: $color-text;
+  font-size: $text-sm;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.restTotal {
+  color: $color-text;
+  font-size: $text-base;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

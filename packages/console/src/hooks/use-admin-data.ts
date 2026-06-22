@@ -38,6 +38,8 @@ export type AdminActions = {
   revokeKey: (key: ApiKey) => void;
   createTeam: (name: string) => void;
   renameTeam: (vars: { id: string; name: string }) => void;
+  /** Delete a Team. `onSuccess` lets the caller navigate away from its page. */
+  deleteTeam: (vars: { id: string }, opts?: { onSuccess?: () => void }) => void;
 };
 
 export type AdminMutationState = {
@@ -47,6 +49,7 @@ export type AdminMutationState = {
   revokingKey: boolean;
   creatingTeam: boolean;
   renamingTeam: boolean;
+  deletingTeam: boolean;
 };
 
 export type AdminSecrets = {
@@ -185,6 +188,17 @@ export function useAdminData(): AdminData {
     },
   });
 
+  const deleteTeam = useMutation({
+    mutationFn: (vars: { id: string }) =>
+      apiFetch(`/api/admin/teams/${vars.id}`, { method: "DELETE" }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminKeys.teams }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.users }),
+      ]);
+    },
+  });
+
   // First failing operation, rendered as a single page-level message.
   const failure =
     usersError ??
@@ -194,7 +208,8 @@ export function useAdminData(): AdminData {
     revokeKey.error ??
     null;
   const error = failure ? describe(failure) : null;
-  const teamFailure = teamsError ?? createTeam.error ?? renameTeam.error ?? null;
+  const teamFailure =
+    teamsError ?? createTeam.error ?? renameTeam.error ?? deleteTeam.error ?? null;
   const teamError = teamFailure ? describe(teamFailure) : null;
 
   return {
@@ -209,6 +224,7 @@ export function useAdminData(): AdminData {
       revokeKey: (key) => revokeKey.mutate(key),
       createTeam: (name) => createTeam.mutate(name),
       renameTeam: (vars) => renameTeam.mutate(vars),
+      deleteTeam: (vars, opts) => deleteTeam.mutate(vars, opts),
     },
     pending: {
       creatingUser: createUser.isPending,
@@ -217,6 +233,7 @@ export function useAdminData(): AdminData {
       revokingKey: revokeKey.isPending,
       creatingTeam: createTeam.isPending,
       renamingTeam: renameTeam.isPending,
+      deletingTeam: deleteTeam.isPending,
     },
     secrets: { newPassword, mintedKey },
   };
@@ -226,6 +243,13 @@ export function useAdminData(): AdminData {
 function describe(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 403) return "Admin role required.";
+    // Prefer the server's own `{ error }` message when it sent one.
+    try {
+      const message = (JSON.parse(err.body) as { error?: unknown }).error;
+      if (typeof message === "string" && message) return message;
+    } catch {
+      // Non-JSON body — fall through to the generic message.
+    }
     return `Request failed (${err.status}).`;
   }
   return err instanceof Error ? err.message : "Something went wrong.";

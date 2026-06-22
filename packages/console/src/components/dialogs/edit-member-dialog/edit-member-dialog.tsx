@@ -1,6 +1,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { Check, Copy, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, Copy, Plus, Settings, Trash2, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import form from "../dialog-form.module.scss";
 import dialog from "../dialog.module.scss";
 import styles from "./edit-member-dialog.module.scss";
 
@@ -32,6 +33,7 @@ export function EditMemberDialog({
   onRevokeKey,
   revokingKey,
   mintedKey,
+  triggerClassName,
 }: {
   name: string;
   email: string;
@@ -44,6 +46,8 @@ export function EditMemberDialog({
   revokingKey: boolean;
   /** Show-once secret for a key just minted for this member, else null. */
   mintedKey: string | null;
+  /** Extra class on the trigger, e.g. to reveal it only on row hover. */
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState(name);
@@ -69,68 +73,78 @@ export function EditMemberDialog({
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Trigger className={dialog.trigger}>
-        <Pencil size={16} aria-hidden="true" />
-        Edit
+      <Dialog.Trigger
+        className={`${styles.editTrigger}${triggerClassName ? ` ${triggerClassName}` : ""}`}
+        aria-label={`Edit ${name}`}
+      >
+        <Settings size={16} aria-hidden="true" />
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className={dialog.overlay} />
         <Dialog.Content className={styles.viewport}>
           <div className={styles.card}>
-            <div className={dialog.header}>
-              <Dialog.Title className={dialog.title}>{name}</Dialog.Title>
-              <Dialog.Close className={dialog.close} aria-label="Close">
+            <div className={form.header}>
+              <div className={form.headerText}>
+                <Dialog.Title className={form.title}>{name}</Dialog.Title>
+                <Dialog.Description className={form.subtitle}>
+                  Manage this member's details and API keys.
+                </Dialog.Description>
+              </div>
+              <Dialog.Close className={form.close} aria-label="Close">
                 <X size={18} aria-hidden="true" />
               </Dialog.Close>
             </div>
 
-            <form className={styles.nameForm} onSubmit={onRenameSubmit}>
-              <label className={styles.nameLabel} htmlFor="member-name">
-                Name
-              </label>
-              <input
-                id="member-name"
-                className={styles.nameInput}
-                type="text"
-                required
-                value={nameDraft}
-                onChange={(e) => setNameDraft(e.target.value)}
-              />
-              <button
-                type="submit"
-                className={styles.nameSave}
-                disabled={
-                  renaming || !nameDraft.trim() || nameDraft.trim() === name
-                }
-              >
-                {renaming ? "Saving…" : "Save"}
-              </button>
-            </form>
-
-            <dl className={styles.detailList}>
-              <div>
-                <dt>Email</dt>
-                <dd>{email}</dd>
-              </div>
-              <div>
-                <dt>Last activity</dt>
-                <dd>{formatActivity(lastRequest)}</dd>
-              </div>
-            </dl>
-
-            <section className={styles.keysSection}>
-              <div className={styles.keysHeader}>
-                <p className={styles.keysLabel}>API keys</p>
+            <div className={form.body}>
+              <form className={styles.nameRow} onSubmit={onRenameSubmit}>
+                <div className={styles.nameField}>
+                  <label className={form.label} htmlFor="member-name">
+                    Name
+                  </label>
+                  <input
+                    id="member-name"
+                    className={form.input}
+                    type="text"
+                    required
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                  />
+                </div>
                 <button
-                  type="button"
-                  className={dialog.trigger}
-                  onClick={onMintKey}
-                  disabled={mintingKey}
+                  type="submit"
+                  className={`${form.btn} ${form.btnPrimary}`}
+                  disabled={
+                    renaming || !nameDraft.trim() || nameDraft.trim() === name
+                  }
                 >
-                  <Plus size={16} aria-hidden="true" />
-                  New key
+                  {renaming ? "Saving…" : "Save"}
                 </button>
-              </div>
+              </form>
+
+              <dl className={styles.detailList}>
+                <div>
+                  <dt>Email</dt>
+                  <dd>{email}</dd>
+                </div>
+                <div>
+                  <dt>Last activity</dt>
+                  <dd>{formatActivity(lastRequest)}</dd>
+                </div>
+              </dl>
+
+              <section className={styles.keysSection}>
+                <div className={styles.keysHeader}>
+                  <p className={styles.keysLabel}>API keys</p>
+                  <button
+                    type="button"
+                    className={styles.newKeyBtn}
+                    onClick={onMintKey}
+                    disabled={mintingKey}
+                  >
+                    <Plus size={16} aria-hidden="true" />
+                    New key
+                  </button>
+                </div>
               {keys.length === 0 ? (
                 <p className={styles.keysEmpty}>No API keys yet.</p>
               ) : (
@@ -154,7 +168,8 @@ export function EditMemberDialog({
                   ))}
                 </ul>
               )}
-            </section>
+              </section>
+            </div>
           </div>
 
           {mintedKey && <MintedKey secret={mintedKey} />}

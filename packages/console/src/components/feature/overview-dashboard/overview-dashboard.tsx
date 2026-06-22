@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Building2, FileText, Users } from "lucide-react";
+import { CheckCircle2, FileText, Users } from "lucide-react";
 import { useMemo } from "react";
 import { apiFetch } from "../../../api/client";
 import crewProfile from "../../../assets/crew-profile.png";
@@ -14,7 +14,7 @@ import {
 } from "../../telemetry/telemetry-data";
 import { ActivityFeed } from "../../activity-feed/activity-feed";
 import { StatCardGrid, type StatDatum } from "../../ui/stat-card/stat-card";
-import { UserUsageList } from "../../user-usage-list/user-usage-list";
+import { HallOfLegends } from "../../hall-of-legends/hall-of-legends";
 import shared from "../../../styles/dashboard.module.scss";
 import styles from "./overview-dashboard.module.scss";
 
@@ -22,18 +22,12 @@ const DAY = 24 * 60 * 60 * 1000;
 
 /**
  * The control-plane home (`/dashboard`): a homepage-style greeting summarising
- * the last 7 days, a Teams/Users/Posts stat row, and two columns — recent events
- * and the busiest users. Built from the same primitives as the Performance
- * dashboard ({@link StatCardGrid}, {@link ActivityFeed}). Team/user counts come
- * from the admin control-plane lists; everything else from the telemetry API.
+ * the last 7 days, a Confirmed/Users/Posts stat row, and two columns — recent
+ * events and the busiest users. Built from the same primitives as the Performance
+ * dashboard ({@link StatCardGrid}, {@link ActivityFeed}). The user count comes
+ * from the admin control-plane list; everything else from the telemetry API.
  */
-export function OverviewDashboard({
-  usersCount,
-  teamsCount,
-}: {
-  usersCount: number;
-  teamsCount: number;
-}) {
+export function OverviewDashboard({ usersCount }: { usersCount: number }) {
   const { data: session } = useSession();
   const firstName = session?.user?.name?.trim().split(/\s+/)[0] ?? "there";
 
@@ -60,6 +54,11 @@ export function OverviewDashboard({
     queryFn: () =>
       apiFetch<ConversionPanelData>(`/api/telemetry/conversion${weekQs}`),
   });
+  const { data: conversionAll } = useQuery({
+    queryKey: [...telemetryKeys.conversion, "all"],
+    queryFn: () =>
+      apiFetch<ConversionPanelData>(`/api/telemetry/conversion?from=0&to=${now}`),
+  });
   const { data: activityData, isLoading: activityLoading } = useQuery({
     queryKey: telemetryKeys.activity,
     queryFn: () =>
@@ -79,11 +78,12 @@ export function OverviewDashboard({
 
   const stats: StatDatum[] = [
     {
-      key: "teams",
-      label: "Teams",
-      icon: Building2,
+      key: "confirmed",
+      label: "Confirmed",
+      icon: CheckCircle2,
       tone: shared.toneBlue,
-      value: String(teamsCount),
+      value: conversionAll ? String(conversionAll.converted) : "...",
+      valueSuffix: conversionAll ? ` / ${conversionAll.withResults}` : undefined,
     },
     {
       key: "users",
@@ -135,12 +135,16 @@ export function OverviewDashboard({
 
       <div className={styles.overviewColumns}>
         <section className={shared.usageSection}>
-          <h2>Events</h2>
-          <ActivityFeed events={events} loading={activityLoading} />
+          <h2>Activity</h2>
+          <ActivityFeed
+            events={events}
+            users={topUsers ?? []}
+            loading={activityLoading}
+          />
         </section>
         <section className={shared.usageSection}>
-          <h2>Top users</h2>
-          <UserUsageList users={topUsers ?? []} loading={usersLoading} />
+          <h2>Hall of Legends</h2>
+          <HallOfLegends users={topUsers ?? []} loading={usersLoading} />
         </section>
       </div>
     </section>

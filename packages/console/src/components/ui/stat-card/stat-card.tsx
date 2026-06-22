@@ -13,6 +13,8 @@ export type StatDatum = {
   tone: string | undefined;
   /** Pre-formatted display value, e.g. "86" or "67%". */
   value: string;
+  /** Optional smaller, muted text trailing the value, e.g. " / 142". */
+  valueSuffix?: string;
   delta?: StatDelta;
 };
 
@@ -29,7 +31,7 @@ export function StatCardGrid({ stats }: { stats: StatDatum[] }) {
 
 /** One stat card: tinted icon + label, big value, and an optional delta pill. */
 export function StatCard({ stat }: { stat: StatDatum }) {
-  const { icon: Icon, label, value, delta, tone } = stat;
+  const { icon: Icon, label, value, valueSuffix, delta, tone } = stat;
   return (
     <div className={styles.statCard}>
       <span className={styles.statCardHead}>
@@ -39,7 +41,12 @@ export function StatCard({ stat }: { stat: StatDatum }) {
         <span>{label}</span>
       </span>
       <span className={styles.statCardBody}>
-        <span className={styles.statCardValue}>{value}</span>
+        <span className={styles.statCardValue}>
+          {value}
+          {valueSuffix && (
+            <span className={styles.statCardValueSuffix}>{valueSuffix}</span>
+          )}
+        </span>
         {delta && (
           <MetricDelta value={delta.value} invert={delta.invert} suffix={delta.suffix} />
         )}

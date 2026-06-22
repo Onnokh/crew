@@ -18,6 +18,7 @@ import type {
   PostsCreatedStats,
   RecentRetrievalDetail,
   RecentRetrievalRow,
+  RepoPostCount,
   UserActivityStat,
   VecCandidate,
 } from "./queries.js";
@@ -25,6 +26,7 @@ import {
   conversionStats,
   coverageStats,
   earliestActivityAt,
+  postsByRepo,
   postsCreatedStats,
   recentActivity,
   userActivityStats,
@@ -350,6 +352,10 @@ export class SqliteRepository implements PostRepository {
 
   async postsCreatedStats(window: CoverageWindow): Promise<PostsCreatedStats> {
     return postsCreatedStats(this.raw, window);
+  }
+
+  async postsByRepo(): Promise<RepoPostCount[]> {
+    return postsByRepo(this.raw);
   }
 }
 
