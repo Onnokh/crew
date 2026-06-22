@@ -1,5 +1,6 @@
 import * as HoverCard from "@radix-ui/react-hover-card";
 import {
+  Activity,
   CheckCircle2,
   FileText,
   Flag,
@@ -8,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { ActivityItem, UserUsageItem } from "../telemetry/telemetry-data";
+import { EmptyState } from "../ui/empty-state/empty-state";
 import { UserAvatar } from "../ui/user-avatar/user-avatar";
 import { relativeTime } from "../../lib/format";
 import shared from "../../styles/dashboard.module.scss";
@@ -27,7 +29,7 @@ export function ActivityFeed({
   empty?: string;
 }) {
   if (loading) return <p className={shared.emptyRow}>Loading...</p>;
-  if (events.length === 0) return <p className={shared.emptyRow}>{empty}</p>;
+  if (events.length === 0) return <EmptyState icon={Activity} message={empty} />;
   const usageByName = new Map(
     users.filter((u) => u.name).map((u) => [u.name as string, u]),
   );

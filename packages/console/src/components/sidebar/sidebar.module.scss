@@ -13,6 +13,14 @@
   background: transparent;
 }
 
+// Logo/brand on the left, theme toggle pinned to the right.
+.appSidebarHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+}
+
 .appSidebarHeader {
   display: flex;
   align-items: center;
@@ -106,12 +114,12 @@
 
 .sidebarLink:hover,
 .sidebarButton:hover {
-  background: #f4f4f4;
+  background: $color-surface-hover;
 }
 
 .sidebarButtonActive {
   border-color: transparent;
-  background: #f4f4f4;
+  background: $color-surface-hover;
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / 4%);
 }
 
@@ -157,7 +165,7 @@
 
 .teamTreeItem:hover,
 .teamTreeItemActive {
-  background: #f4f4f4;
+  background: $color-surface-hover;
   color: $color-text;
 }
 
@@ -178,7 +186,7 @@
   cursor: pointer;
 
   &:hover {
-    background: #f4f4f4;
+    background: $color-surface-hover;
   }
 }
 
@@ -285,7 +293,7 @@
   outline: none;
 
   &[data-highlighted] {
-    background: #f4f4f4;
+    background: $color-surface-hover;
   }
 
   svg {

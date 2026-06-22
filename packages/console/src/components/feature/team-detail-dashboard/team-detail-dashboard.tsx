@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { FolderGit2, Gauge, HardDrive, ScrollText } from "lucide-react";
+import { BarChart3, FolderGit2, Gauge, HardDrive, ScrollText, Users } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -23,6 +23,7 @@ import {
 import { ActivityFeed } from "../../activity-feed/activity-feed";
 import { AddMemberDialog } from "../../dialogs/add-member-dialog/add-member-dialog";
 import { EditMemberDialog, type ApiKey } from "../../dialogs/edit-member-dialog/edit-member-dialog";
+import { EmptyState } from "../../ui/empty-state/empty-state";
 import { PageHeading } from "../../ui/page-heading/page-heading";
 import { UserAvatar } from "../../ui/user-avatar/user-avatar";
 import { TeamSettingsDialog } from "../../dialogs/team-settings-dialog/team-settings-dialog";
@@ -155,7 +156,7 @@ export function TeamDetailDashboard({
     {
       icon: Gauge,
       label: "Avg / post",
-      value: totalPosts > 0 ? formatBytes((data?.dbSizeBytes ?? 0) / totalPosts) : "—",
+      value: formatBytes(totalPosts > 0 ? (data?.dbSizeBytes ?? 0) / totalPosts : 0),
     },
   ];
 
@@ -217,7 +218,7 @@ export function TeamDetailDashboard({
           {isLoading ? (
             <p className={shared.emptyRow}>Loading...</p>
           ) : projects.length === 0 ? (
-            <p className={shared.emptyRow}>No posts yet.</p>
+            <EmptyState icon={FolderGit2} message="No posts yet." />
           ) : (
             <div className={styles.pieRow}>
               <ResponsiveContainer width="100%" height="100%">
@@ -264,7 +265,7 @@ export function TeamDetailDashboard({
           {isLoading ? (
             <p className={shared.emptyRow}>Loading...</p>
           ) : memberUsage.length === 0 ? (
-            <p className={shared.emptyRow}>No activity yet.</p>
+            <EmptyState icon={BarChart3} message="No activity yet." />
           ) : (
             <div className={styles.chartBody}>
             <ResponsiveContainer width="100%" height="100%">
@@ -315,7 +316,7 @@ export function TeamDetailDashboard({
           {isLoading && members.length === 0 ? (
             <p className={shared.emptyRow}>Loading...</p>
           ) : rows.length === 0 ? (
-            <p className={shared.emptyRow}>No members yet.</p>
+            <EmptyState icon={Users} message="No members yet." />
           ) : (
             <ul className={shared.teamList}>
               {rows.map((row) => (

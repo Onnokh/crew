@@ -50,7 +50,7 @@
   padding: 0.875rem $space-md;
   border: 1px solid transparent;
   border-radius: 14px;
-  background: #f4f4f4;
+  background: $color-surface-hover;
   color: $color-text;
   font-size: 0.9375rem;
 
@@ -189,28 +189,28 @@
 // --- Tinted icon-badge tones (stat cards, activity feed, overview) -----------
 
 .toneBlue {
-  background: #dcebfb;
-  color: #2f76c4;
+  background: var(--tone-blue-bg);
+  color: var(--tone-blue-fg);
 }
 
 .toneGreen {
-  background: #d6f1e5;
-  color: #1f9d70;
+  background: var(--tone-green-bg);
+  color: var(--tone-green-fg);
 }
 
 .toneOrange {
-  background: #fdeacd;
-  color: #d9821f;
+  background: var(--tone-orange-bg);
+  color: var(--tone-orange-fg);
 }
 
 .toneRed {
-  background: #fadcd9;
-  color: #d2453b;
+  background: var(--tone-red-bg);
+  color: var(--tone-red-fg);
 }
 
 .tonePink {
-  background: #fbdcef;
-  color: #c0288f;
+  background: var(--tone-pink-bg);
+  color: var(--tone-pink-fg);
 }
 
 @media (max-width: 640px) {

@@ -1,4 +1,6 @@
+import { Trophy } from "lucide-react";
 import type { UserUsageItem } from "../telemetry/telemetry-data";
+import { EmptyState } from "../ui/empty-state/empty-state";
 import { UserAvatar } from "../ui/user-avatar/user-avatar";
 import shared from "../../styles/dashboard.module.scss";
 import styles from "./hall-of-legends.module.scss";
@@ -20,7 +22,7 @@ export function HallOfLegends({
   limit?: number;
 }) {
   if (loading) return <p className={shared.emptyRow}>Loading...</p>;
-  if (users.length === 0) return <p className={shared.emptyRow}>{empty}</p>;
+  if (users.length === 0) return <EmptyState icon={Trophy} message={empty} />;
 
   const ranked = [...users].sort((a, b) => b.total - a.total).slice(0, limit);
   const top = ranked.slice(0, 3);

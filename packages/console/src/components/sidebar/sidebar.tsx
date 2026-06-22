@@ -14,6 +14,7 @@ import { authClient, useSession } from "../../auth/client";
 import crewProfile from "../../assets/crew-profile.png";
 import type { TeamRow, UserRow } from "../../hooks/use-admin-data";
 import { avatarUrl } from "../ui/user-avatar/user-avatar";
+import { ThemeToggle } from "../ui/theme-toggle/theme-toggle";
 import styles from "./sidebar.module.scss";
 
 /**
@@ -34,13 +35,16 @@ export function Sidebar({
 
   return (
     <aside className={styles.appSidebar}>
-      <Link to="/" className={styles.appSidebarHeader}>
-        <img className={styles.appMark} src={crewProfile} alt="" />
-        <div>
-          <strong>Crew</strong>
-          <small>Dashboard</small>
-        </div>
-      </Link>
+      <div className={styles.appSidebarHeaderRow}>
+        <Link to="/" className={styles.appSidebarHeader}>
+          <img className={styles.appMark} src={crewProfile} alt="" />
+          <div>
+            <strong>Crew</strong>
+            <small>Dashboard</small>
+          </div>
+        </Link>
+        <ThemeToggle />
+      </div>
 
       <nav className={styles.appNav} aria-label="Admin navigation">
         <SidebarLink

@@ -38,7 +38,7 @@
   padding: $space-lg;
   border: 1px solid $color-border;
   border-radius: 20px;
-  background: #fbfbfb;
+  background: $color-surface;
 }
 
 .fsStatList {
@@ -87,8 +87,10 @@
 }
 
 // The latest-activity column rendered as a bordered, filled side panel.
+// `align-self: stretch` keeps it the full sidebar width even when its body is a
+// narrow empty state (otherwise the column-flex cross axis shrink-wraps it).
 .teamsActivity {
-  align-self: start;
+  align-self: stretch;
   position: sticky;
   top: $space-lg;
   display: flex;
@@ -98,7 +100,7 @@
   padding: $space-lg;
   border: 1px solid $color-border;
   border-radius: 20px;
-  background: #fbfbfb;
+  background: $color-surface;
 }
 
 .teamsActivityTitle {
