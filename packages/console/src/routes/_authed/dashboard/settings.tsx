@@ -2,11 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireAdmin } from "../../../auth/require-admin";
 import { AdminRoutePage } from "../-dashboard-layout";
 
-export const Route = createFileRoute("/_authed/dashboard/")({
+export const Route = createFileRoute("/_authed/dashboard/settings")({
   beforeLoad: requireAdmin,
-  component: DashboardPage,
+  component: SettingsDashboardPage,
 });
 
-function DashboardPage() {
-  return <AdminRoutePage fixedSection="dashboard" />;
+function SettingsDashboardPage() {
+  return <AdminRoutePage fixedSection="settings" />;
 }

@@ -7,8 +7,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { ActivityItem } from "../telemetry/telemetry-data";
-import { relativeTime } from "./format";
-import styles from "../../routes/_authed/admin.module.scss";
+import { relativeTime } from "../../lib/format";
+import shared from "../../styles/dashboard.module.scss";
+import styles from "./activity-feed.module.scss";
 
 /** The Events list: a time-sorted feed of searches, posts, confirms, and flags. */
 export function ActivityFeed({
@@ -20,8 +21,8 @@ export function ActivityFeed({
   loading?: boolean;
   empty?: string;
 }) {
-  if (loading) return <p className={styles.emptyRow}>Loading...</p>;
-  if (events.length === 0) return <p className={styles.emptyRow}>{empty}</p>;
+  if (loading) return <p className={shared.emptyRow}>Loading...</p>;
+  if (events.length === 0) return <p className={shared.emptyRow}>{empty}</p>;
   return (
     <ul className={styles.usageEvents}>
       {events.map((event) => (
@@ -57,6 +58,7 @@ function ActivityEvent({ event }: { event: ActivityItem }) {
             ({event.resultCount} {event.resultCount === 1 ? "result" : "results"})
           </span>
         )}
+        {event.team && <span className={styles.eventTeam}>{event.team}</span>}
       </span>
       <time className={styles.eventMeta}>{relativeTime(event.createdAt)}</time>
     </li>
@@ -71,19 +73,19 @@ function eventStyle(event: ActivityItem): {
 } {
   switch (event.kind) {
     case "post":
-      return { action: "posted", icon: FileText, tone: styles.tonePink };
+      return { action: "posted", icon: FileText, tone: shared.tonePink };
     case "confirm":
-      return { action: "confirmed", icon: CheckCircle2, tone: styles.toneGreen };
+      return { action: "confirmed", icon: CheckCircle2, tone: shared.toneGreen };
     case "flag":
       return {
         action: event.reason ? `flagged (${event.reason})` : "flagged",
         icon: Flag,
-        tone: styles.toneOrange,
+        tone: shared.toneOrange,
       };
     default:
       return event.resultCount === 0
-        ? { action: "got no results for", icon: SearchX, tone: styles.toneRed }
-        : { action: "searched for", icon: Search, tone: styles.toneBlue };
+        ? { action: "got no results for", icon: SearchX, tone: shared.toneRed }
+        : { action: "searched for", icon: Search, tone: shared.toneBlue };
   }
 }
 

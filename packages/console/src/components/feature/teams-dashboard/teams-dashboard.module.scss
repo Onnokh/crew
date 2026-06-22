@@ -1,0 +1,6 @@
+@use "../../../styles/tokens" as *;
+
+.teamRowChevron {
+  flex-shrink: 0;
+  color: $color-text-subtle;
+}

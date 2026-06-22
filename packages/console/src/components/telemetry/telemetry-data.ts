@@ -27,7 +27,16 @@ export type ActivityItem = {
   reason: string | null;
   resultCount: number | null;
   user: string | null;
+  /** Team this happened in; only set on the org-wide Teams-overview feed. */
+  team?: string | null;
   createdAt: number;
+};
+
+/** One row of the org-wide Teams overview (`/api/admin/teams/overview`). */
+export type TeamOverviewItem = {
+  id: string;
+  /** Total Posts ever created in this Team's corpus. */
+  posts: number;
 };
 
 /** Mirrors the server's `RetrievalResultRow` (api/telemetry.ts). */

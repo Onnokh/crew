@@ -1,0 +1,68 @@
+@use "../../styles/tokens" as *;
+
+.usageEvents {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.usageEvent {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm 0;
+  font-size: $text-sm;
+
+  & + & {
+    border-top: 1px solid $color-border;
+  }
+}
+
+.eventIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+}
+
+.eventText {
+  overflow: hidden;
+  color: $color-text-muted;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eventVerb {
+  color: $color-text;
+  font-weight: 600;
+}
+
+.eventCount {
+  color: $color-text-muted;
+  font-variant-numeric: tabular-nums;
+}
+
+.eventMeta {
+  color: $color-text-muted;
+  font-size: $text-sm;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+// Team tag on the org-wide Teams-overview feed (absent on the per-team feeds).
+.eventTeam {
+  margin-left: $space-sm;
+  padding: 0.05rem 0.4rem;
+  border-radius: $radius-sm;
+  background: $color-surface-hover;
+  color: $color-text-muted;
+  font-size: $text-xs;
+  font-weight: 600;
+  white-space: nowrap;
+}

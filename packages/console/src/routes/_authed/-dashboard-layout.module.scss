@@ -1,0 +1,146 @@
+@use "../../styles/tokens" as *;
+
+.pageFull {
+  min-height: 100vh;
+  background: $color-bg;
+}
+
+.adminShell {
+  display: grid;
+  grid-template-columns: minmax(14rem, 16rem) minmax(0, 1fr) minmax(18rem, 20rem);
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  // Page is a hatched backdrop; the content floats on top as a card.
+  $hatch: color-mix(in srgb, var(--color-border-strong) 45%, transparent);
+  background-image: repeating-linear-gradient(
+    45deg,
+    $hatch 0,
+    $hatch 1px,
+    transparent 1px,
+    transparent 8px
+  );
+}
+
+.adminShellNoRail {
+  grid-template-columns: minmax(14rem, 16rem) minmax(0, 1fr);
+}
+
+.appContent {
+  min-width: 0;
+  // Floats as a card: full viewport height minus the 16px inset, scrolling
+  // internally when its content overflows.
+  height: calc(100vh - 2rem);
+  margin: 1rem;
+  padding: 1rem;
+  overflow-y: auto;
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+  background: $color-bg;
+
+  // Soft fade + blur masking the scroll edges. Pinned to the card's top and
+  // bottom; the negative block margins let them overlay content rather than
+  // displace it, and the negative inline margins bleed over the padding.
+  &::before,
+  &::after {
+    content: "";
+    position: sticky;
+    z-index: 5;
+    display: block;
+    height: 3.25rem;
+    margin-inline: -1rem;
+    opacity: 0;
+    pointer-events: none;
+    backdrop-filter: blur(2px);
+    -webkit-mask-image: linear-gradient(var(--fade-dir), #000, transparent);
+    mask-image: linear-gradient(var(--fade-dir), #000, transparent);
+  }
+
+  &::before {
+    --fade-dir: to bottom;
+    top: -1rem;
+    margin-bottom: -3.25rem;
+    background: linear-gradient(to bottom, $color-bg, transparent);
+  }
+
+  &::after {
+    --fade-dir: to top;
+    bottom: -1rem;
+    margin-top: -3.25rem;
+    background: linear-gradient(to top, $color-bg, transparent);
+  }
+
+  // Reveal each edge only while there is content scrolled past it. Without
+  // scroll-driven timelines the fades stay hidden (opacity: 0) — no overflow,
+  // no veil.
+  @supports (animation-timeline: scroll()) {
+    &::before {
+      animation: appFadeTop linear both;
+      animation-timeline: scroll(nearest);
+    }
+
+    &::after {
+      animation: appFadeBottom linear both;
+      animation-timeline: scroll(nearest);
+    }
+  }
+}
+
+@keyframes appFadeTop {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+@keyframes appFadeBottom {
+  0% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.settingsList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+
+  div {
+    display: flex;
+    justify-content: space-between;
+    gap: $space-lg;
+    padding: $space-md 0;
+    border-bottom: 1px solid $color-border;
+  }
+
+  span {
+    color: $color-text-muted;
+  }
+}
+
+@media (max-width: 900px) {
+  .adminShell {
+    grid-template-columns: 1fr;
+  }
+
+  // Stacked layout: the card drops its fixed height and inset so the page
+  // scrolls as one column.
+  .appContent {
+    height: auto;
+    margin: 0;
+    overflow-y: visible;
+    border: 0;
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .appContent {
+    padding: $space-lg;
+  }
+
+  .settingsList div {
+    flex-direction: column;
+    gap: $space-xs;
+  }
+}

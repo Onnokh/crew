@@ -28,7 +28,7 @@ export const Route = createFileRoute("/_authed")({
 function AuthedLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  if (pathname === "/admin" || pathname.startsWith("/dashboard")) {
+  if (pathname.startsWith("/dashboard")) {
     return <Outlet />;
   }
 

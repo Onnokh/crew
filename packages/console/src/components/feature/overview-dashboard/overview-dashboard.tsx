@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Building2, FileText, Users } from "lucide-react";
 import { useMemo } from "react";
-import { apiFetch } from "../../api/client";
-import crewProfile from "../../assets/crew-profile.png";
-import { useSession } from "../../auth/client";
+import { apiFetch } from "../../../api/client";
+import crewProfile from "../../../assets/crew-profile.png";
+import { useSession } from "../../../auth/client";
 import {
   telemetryKeys,
   type ActivityItem,
@@ -11,10 +11,12 @@ import {
   type CoveragePanelData,
   type PostsCreatedPanelData,
   type UserUsageItem,
-} from "../telemetry/telemetry-data";
-import { ActivityFeed } from "./activity-feed";
-import { StatCardGrid, type StatDatum } from "./stat-card";
-import styles from "../../routes/_authed/admin.module.scss";
+} from "../../telemetry/telemetry-data";
+import { ActivityFeed } from "../../activity-feed/activity-feed";
+import { StatCardGrid, type StatDatum } from "../../ui/stat-card/stat-card";
+import { UserUsageList } from "../../user-usage-list/user-usage-list";
+import shared from "../../../styles/dashboard.module.scss";
+import styles from "./overview-dashboard.module.scss";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -80,27 +82,27 @@ export function OverviewDashboard({
       key: "teams",
       label: "Teams",
       icon: Building2,
-      tone: styles.toneBlue,
+      tone: shared.toneBlue,
       value: String(teamsCount),
     },
     {
       key: "users",
       label: "Users",
       icon: Users,
-      tone: styles.toneGreen,
+      tone: shared.toneGreen,
       value: String(usersCount),
     },
     {
       key: "posts",
       label: "Posts",
       icon: FileText,
-      tone: styles.tonePink,
+      tone: shared.tonePink,
       value: postsAll ? String(postsAll.total) : "...",
     },
   ];
 
   return (
-    <section className={styles.usagePage}>
+    <section className={shared.usagePage}>
       <header className={styles.overviewHero}>
         <div className={styles.overviewAvatarFrame}>
           <img
@@ -127,16 +129,16 @@ export function OverviewDashboard({
         </p>
       </header>
 
-      <section className={styles.usageSection}>
+      <section className={shared.usageSection}>
         <StatCardGrid stats={stats} />
       </section>
 
       <div className={styles.overviewColumns}>
-        <section className={styles.usageSection}>
+        <section className={shared.usageSection}>
           <h2>Events</h2>
           <ActivityFeed events={events} loading={activityLoading} />
         </section>
-        <section className={styles.usageSection}>
+        <section className={shared.usageSection}>
           <h2>Top users</h2>
           <UserUsageList users={topUsers ?? []} loading={usersLoading} />
         </section>
@@ -148,44 +150,4 @@ export function OverviewDashboard({
 /** A count for the greeting: the number, or an ellipsis while it loads. */
 function num(value: number | undefined): string {
   return value === undefined ? "…" : String(value);
-}
-
-/** The busiest users, each with their posts/searches split and a total. */
-function UserUsageList({
-  users,
-  loading,
-}: {
-  users: UserUsageItem[];
-  loading?: boolean;
-}) {
-  if (loading) return <p className={styles.emptyRow}>Loading...</p>;
-  if (users.length === 0) return <p className={styles.emptyRow}>No activity yet.</p>;
-  return (
-    <ul className={styles.userUsageList}>
-      {users.slice(0, 8).map((user) => {
-        const name = user.name ?? "Unknown user";
-        return (
-          <li key={user.userId} className={styles.userUsageRow}>
-            <span className={styles.userUsageAvatar}>{initials(name)}</span>
-            <span className={styles.userUsageText}>
-              <span className={styles.userUsageName}>{name}</span>
-              <span className={styles.userUsageMeta}>
-                {user.posts} {user.posts === 1 ? "post" : "posts"} · {user.searches}{" "}
-                {user.searches === 1 ? "search" : "searches"}
-              </span>
-            </span>
-            <span className={styles.userUsageTotal}>{user.total}</span>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-/** Up to two uppercase initials for an avatar bubble. */
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  const letters =
-    (parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "");
-  return letters.toUpperCase() || "?";
 }

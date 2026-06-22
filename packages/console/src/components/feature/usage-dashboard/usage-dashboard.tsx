@@ -20,18 +20,20 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ApiError, apiFetch } from "../../api/client";
+import { ApiError, apiFetch } from "../../../api/client";
 import {
   telemetryKeys,
   type ActivityItem,
   type ConversionPanelData,
   type CoveragePanelData,
   type PostsCreatedPanelData,
-} from "../telemetry/telemetry-data";
-import { ActivityFeed } from "./activity-feed";
-import { SHORT_TIME, shortDate } from "./format";
-import { ratePct, StatCardGrid, type StatDatum } from "./stat-card";
-import styles from "../../routes/_authed/admin.module.scss";
+} from "../../telemetry/telemetry-data";
+import { ActivityFeed } from "../../activity-feed/activity-feed";
+import { PageHeading } from "../../ui/page-heading/page-heading";
+import { SHORT_TIME, shortDate } from "../../../lib/format";
+import { ratePct, StatCardGrid, type StatDatum } from "../../ui/stat-card/stat-card";
+import shared from "../../../styles/dashboard.module.scss";
+import styles from "./usage-dashboard.module.scss";
 
 const CHART_MARGIN = { top: 12, right: 20, bottom: 24, left: 8 };
 
@@ -77,7 +79,7 @@ export default function UsageDashboard() {
   const error = coverageError ?? conversionError ?? postsError ?? activityError;
   if (error) {
     return (
-      <p className={styles.error} role="alert">
+      <p className={shared.error} role="alert">
         {describe(error)}
       </p>
     );
@@ -96,10 +98,12 @@ export default function UsageDashboard() {
   const events = (activityData ?? []).slice(0, 10);
 
   return (
-    <section className={styles.usagePage}>
-      <div className={styles.usageToolbar}>
-        <PeriodSelect value={period} onChange={setPeriod} />
-      </div>
+    <section className={shared.usagePage}>
+      <PageHeading
+        title="Performance"
+        subtitle="Retrieval volume, coverage, and conversion across your crew."
+        action={<PeriodSelect value={period} onChange={setPeriod} />}
+      />
       <UsageSection>
         <StatCardGrid
           stats={statRowData(coverageData, conversionData, postsData, showDelta)}
@@ -124,7 +128,7 @@ export default function UsageDashboard() {
             </span>
           </div>
           {isLoading ? (
-            <p className={styles.emptyRow}>Loading...</p>
+            <p className={shared.emptyRow}>Loading...</p>
           ) : (
             <ResponsiveContainer width="100%" height={330}>
               <AreaChart data={chartData} accessibilityLayer margin={CHART_MARGIN}>
@@ -175,7 +179,7 @@ export default function UsageDashboard() {
         </section>
       </UsageSection>
 
-      <UsageSection title="Posts created">
+      <UsageSection title="Posts">
         <section className={styles.usageChart}>
           <div className={styles.usageLegend}>
             <span>
@@ -184,7 +188,7 @@ export default function UsageDashboard() {
             </span>
           </div>
           {postsLoading ? (
-            <p className={styles.emptyRow}>Loading...</p>
+            <p className={shared.emptyRow}>Loading...</p>
           ) : (
             <ResponsiveContainer width="100%" height={330}>
               <BarChart data={postsChart} accessibilityLayer margin={CHART_MARGIN}>
@@ -313,7 +317,7 @@ function UsageSection({
   children: ReactNode;
 }) {
   return (
-    <section className={styles.usageSection}>
+    <section className={shared.usageSection}>
       {title && <h2>{title}</h2>}
       {children}
     </section>
@@ -332,7 +336,7 @@ function statRowData(
       key: "searches",
       label: "Searches",
       icon: Search,
-      tone: styles.toneBlue,
+      tone: shared.toneBlue,
       value: coverage ? String(coverage.total) : "...",
       delta:
         showDelta && coverage
@@ -343,7 +347,7 @@ function statRowData(
       key: "confirmed",
       label: "Confirmed",
       icon: CheckCircle2,
-      tone: styles.toneGreen,
+      tone: shared.toneGreen,
       value: conversion
         ? `${ratePct(conversion.converted, conversion.withResults)}%`
         : "...",
@@ -361,7 +365,7 @@ function statRowData(
       key: "zero",
       label: "Zero-results",
       icon: Ban,
-      tone: styles.toneRed,
+      tone: shared.toneRed,
       value: coverage ? `${ratePct(coverage.zeroResults, coverage.total)}%` : "...",
       delta:
         showDelta && coverage
@@ -378,7 +382,7 @@ function statRowData(
       key: "posts",
       label: "Posts",
       icon: FileText,
-      tone: styles.tonePink,
+      tone: shared.tonePink,
       value: posts ? String(posts.total) : "...",
       delta:
         showDelta && posts

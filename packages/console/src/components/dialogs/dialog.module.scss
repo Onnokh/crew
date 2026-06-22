@@ -1,0 +1,121 @@
+@use "../../styles/tokens" as *;
+
+// Shared dialog chrome — the trigger button + Radix overlay/content scaffolding
+// reused by every dialog. Dialog-specific bits (forms, lists) live co-located
+// with each dialog.
+
+// Small white button (black text, bordered) that sits right of the page title.
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  padding: $space-sm $space-md;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  background: $color-bg;
+  color: $color-text;
+  font-size: $text-sm;
+  font-weight: 600;
+  // Match the Performance period chip's height (icon-pinned line box).
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.04);
+
+  &:hover:not(:disabled) {
+    background: $color-surface-hover;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  width: 90vw;
+  max-width: 25rem;
+  padding: $space-lg;
+  border: 1px solid $color-border-strong;
+  border-radius: $radius-lg;
+  background: $color-bg;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.12);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $color-text-muted;
+  cursor: pointer;
+
+  &:hover {
+    background: $color-surface-hover;
+  }
+}
+
+.description {
+  margin: 0;
+  color: $color-text-muted;
+  font-size: $text-sm;
+  line-height: $lh-base;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  margin-top: $space-sm;
+
+  // The lone input spans the dialog width — no inline wrapping here.
+  input {
+    width: 100%;
+    max-width: none;
+  }
+
+  // Create dialog has a single full-width submit; settings has a Cancel/Save row.
+  > button {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+// Right-aligned Cancel/Save row at the foot of the settings dialog.
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-sm;
+  margin-top: $space-xs;
+}

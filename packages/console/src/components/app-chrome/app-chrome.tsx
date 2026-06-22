@@ -58,7 +58,7 @@ export function AppChrome({ children }: { children: ReactNode }) {
                     {isAdmin ? (
                       <>
                         <DropdownMenu.Item className={styles.menuItem} asChild>
-                          <Link to="/admin">User management</Link>
+                          <Link to="/dashboard">Dashboard</Link>
                         </DropdownMenu.Item>
                         <DropdownMenu.Item className={styles.menuItem} asChild>
                           <Link to="/telemetry">Retrieval telemetry</Link>

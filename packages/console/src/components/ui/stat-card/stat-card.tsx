@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, type LucideIcon } from "lucide-react";
-import styles from "../../routes/_authed/admin.module.scss";
+import styles from "./stat-card.module.scss";
 
 /** Period-over-period change for a stat card. `invert` flips the colour (more is worse). */
 export type StatDelta = { value: number; invert?: boolean; suffix?: string };
@@ -9,7 +9,7 @@ export type StatDatum = {
   key: string;
   label: string;
   icon: LucideIcon;
-  /** Tinted icon-badge tone, matching the events feed (a `styles.tone*` class). */
+  /** Tinted icon-badge tone, layered over the badge (a caller-provided `tone*` class). */
   tone: string | undefined;
   /** Pre-formatted display value, e.g. "86" or "67%". */
   value: string;
@@ -33,7 +33,7 @@ export function StatCard({ stat }: { stat: StatDatum }) {
   return (
     <div className={styles.statCard}>
       <span className={styles.statCardHead}>
-        <span className={`${styles.eventIcon} ${tone ?? ""}`}>
+        <span className={`${styles.iconBadge} ${tone ?? ""}`}>
           <Icon size={15} aria-hidden="true" />
         </span>
         <span>{label}</span>

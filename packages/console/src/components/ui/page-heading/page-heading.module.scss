@@ -1,0 +1,35 @@
+@use "../../../styles/tokens" as *;
+
+// Title and action share the first row (action bottom-aligned to the title, so
+// it lands in the same place no matter the subtitle length); the subtitle spans
+// the full width on the row beneath.
+.pageHeading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  column-gap: $space-lg;
+  row-gap: $space-sm;
+  margin-top: $space-xl;
+
+  h1 {
+    grid-column: 1;
+    margin: 0;
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+  }
+
+  p {
+    grid-column: 1 / -1;
+    margin: 0;
+    max-width: 60ch;
+    color: $color-text-muted;
+    font-size: 1.125rem;
+  }
+}
+
+.pageHeadingAction {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+}

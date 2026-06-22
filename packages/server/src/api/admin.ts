@@ -45,6 +45,7 @@ export function mountAdmin(app: Hono, deps: Deps): void {
         return {
           id: u.id,
           email: u.email,
+          name: u.name ?? null,
           role: u.role ?? null,
           teamId: team?.id ?? null,
           teamName: team?.name ?? null,
@@ -59,11 +60,16 @@ export function mountAdmin(app: Hono, deps: Deps): void {
   // User is bound to exactly one Team at creation (ADR 0008): `teamId` picks it,
   // defaulting to the default (first) Team when omitted.
   admin.post("/users", async (c) => {
-    const body: { email?: unknown; teamId?: unknown } = await c.req
-      .json()
-      .catch(() => ({}) as { email?: unknown; teamId?: unknown });
+    const body: { email?: unknown; name?: unknown; teamId?: unknown } =
+      await c.req
+        .json()
+        .catch(
+          () => ({}) as { email?: unknown; name?: unknown; teamId?: unknown },
+        );
     const email = typeof body.email === "string" ? body.email.trim() : "";
     if (!email) return c.json({ error: "An email is required" }, 400);
+    // Name is optional; fall back to the email so a User always has a label.
+    const name = typeof body.name === "string" ? body.name.trim() : "";
 
     // Resolve the requested Team (must exist); fall back to the default Team.
     const requestedTeamId =
@@ -78,7 +84,7 @@ export function mountAdmin(app: Hono, deps: Deps): void {
     const password = generatePassword();
     try {
       const { user } = await auth.api.createUser({
-        body: { email, password, name: email },
+        body: { email, password, name: name || email },
         headers: c.req.raw.headers,
       });
       // A User must belong to exactly one Team for its keys to route (ADR 0008).
@@ -86,6 +92,28 @@ export function mountAdmin(app: Hono, deps: Deps): void {
       return c.json({ user: { id: user.id, email: user.email }, password }, 201);
     } catch (err) {
       return c.json({ error: messageOf(err, "Could not create the User") }, 400);
+    }
+  });
+
+  // Rename a User — updates the better-auth `user.name` (the single source the
+  // console reads). Display-only; nothing else (keys, Membership) is touched.
+  admin.patch("/users/:id", async (c) => {
+    const userId = c.req.param("id");
+    const body: { name?: unknown } = await c.req
+      .json()
+      .catch(() => ({}) as { name?: unknown });
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (!name) return c.json({ error: "A name is required" }, 400);
+    try {
+      const { adapter } = await auth.$context;
+      await adapter.update({
+        model: "user",
+        where: [{ field: "id", value: userId }],
+        update: { name },
+      });
+      return c.json({ user: { id: userId, name } });
+    } catch (err) {
+      return c.json({ error: messageOf(err, "Could not rename the User") }, 400);
     }
   });
 
@@ -111,6 +139,64 @@ export function mountAdmin(app: Hono, deps: Deps): void {
       createdAt: t.createdAt,
     }));
     return c.json({ teams });
+  });
+
+  // Org-wide Teams overview for the Teams dashboard: per-Team post totals. Unlike
+  // `/api/telemetry/*` — which is scoped to the admin's own Team — this reads
+  // across ALL corpora, which an admin may.
+  admin.get("/teams/overview", async (c) => {
+    const now = deps.clock.now();
+    const teams = deps.controlPlane.listTeams();
+
+    const teamRows = await Promise.all(
+      teams.map(async (t) => {
+        const repo = deps.teams.getRepository(t.id);
+        // from=0 counts every Post ever created (created_at is always positive).
+        const posts = (await repo.postsCreatedStats({ from: 0, to: now })).created;
+        return { id: t.id, posts };
+      }),
+    );
+
+    return c.json({ teams: teamRows });
+  });
+
+  // Single-Team overview for the team detail page: per-user usage (posts +
+  // searches) and the Team's own recent-activity feed. Same shape as the
+  // dashboard's "top users" + activity feed, scoped to one corpus.
+  admin.get("/teams/:id/overview", async (c) => {
+    const id = c.req.param("id");
+    if (deps.controlPlane.getTeam(id) === null) {
+      return c.json({ error: "No such Team" }, 404);
+    }
+    const repo = deps.teams.getRepository(id);
+
+    const names = new Map<string, string | null>();
+    const resolveUser = (uid: string): string | null => {
+      if (!names.has(uid)) names.set(uid, deps.controlPlane.getUser(uid)?.name ?? null);
+      return names.get(uid) ?? null;
+    };
+
+    const stats = await repo.userActivityStats(USER_LIMIT);
+    const users = stats.map((s) => ({
+      userId: s.userId,
+      name: resolveUser(s.userId),
+      posts: s.posts,
+      searches: s.searches,
+      total: s.total,
+    }));
+
+    const rows = await repo.recentActivity(ACTIVITY_TOTAL);
+    const activity = rows.map((r) => ({
+      id: r.id,
+      kind: r.kind,
+      subject: r.subject,
+      reason: r.reason,
+      resultCount: r.resultCount,
+      user: resolveUser(r.userId),
+      createdAt: r.createdAt,
+    }));
+
+    return c.json({ users, activity });
   });
 
   // Create a Team: mint an opaque id, persist it under the default Org, then warm
@@ -194,6 +280,11 @@ export function mountAdmin(app: Hono, deps: Deps): void {
 
   app.route("/api/admin", admin);
 }
+
+/** How many recent rows the single-Team overview activity feed shows. */
+const ACTIVITY_TOTAL = 12;
+/** How many ranked users the single-Team overview returns. */
+const USER_LIMIT = 50;
 
 /** Seam over better-auth's storage adapter for the `apikey` model. */
 async function keyAdapter(auth: Auth) {
