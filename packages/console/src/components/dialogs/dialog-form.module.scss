@@ -8,6 +8,8 @@
 
 .content {
   position: fixed;
+  // Above the app card's scroll-edge fades (z-index: 5), matching .overlay.
+  z-index: 51;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);

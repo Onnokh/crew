@@ -26,6 +26,8 @@
 // outside-click still closes the dialog.
 .viewport {
   position: fixed;
+  // Above the app card's scroll-edge fades (z-index: 5), matching .overlay.
+  z-index: 51;
   inset: 0;
   display: flex;
   flex-direction: column;
