@@ -220,6 +220,23 @@ export function mountTelemetry(app: Hono, deps: Deps): void {
     return c.json(data);
   });
 
+  // Top users: per-user usage (posts authored + searches run), ranked by combined
+  // activity. The repo returns raw user ids; we resolve each to a display name via
+  // the control plane (cached per id) and drop any that can't be resolved.
+  telemetry.get("/users", async (c) => {
+    const repo = teamRepoForSession(deps, c.get("teamId"));
+    const stats = await repo.userActivityStats(LIST_LIMIT);
+
+    const users: UserUsageItem[] = stats.map((s) => ({
+      userId: s.userId,
+      name: deps.controlPlane.getUser(s.userId)?.name ?? null,
+      posts: s.posts,
+      searches: s.searches,
+      total: s.total,
+    }));
+    return c.json({ users });
+  });
+
   app.route("/api/telemetry", telemetry);
 }
 
@@ -407,6 +424,19 @@ export type PostsCreatedPanelData = {
   previousCreated: number;
   /** Per-day points across the range, oldest first. */
   trend: PostsCreatedPoint[];
+};
+
+/** One row of the top-users list, with the User resolved to a name. */
+export type UserUsageItem = {
+  userId: string;
+  /** Display name of the User, or null if it could not be resolved. */
+  name: string | null;
+  /** Posts authored by this User. */
+  posts: number;
+  /** Searches run by this User. */
+  searches: number;
+  /** Combined activity (`posts + searches`), the ranking key. */
+  total: number;
 };
 
 /** One row of the activity feed (the Events list), with the User resolved to a name. */

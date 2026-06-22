@@ -18,6 +18,7 @@ import type {
   PostsCreatedStats,
   RecentRetrievalDetail,
   RecentRetrievalRow,
+  UserActivityStat,
   VecCandidate,
 } from "./queries.js";
 import {
@@ -26,6 +27,7 @@ import {
   earliestActivityAt,
   postsCreatedStats,
   recentActivity,
+  userActivityStats,
   environmentVectorSearch,
   eventsForPosts,
   insertEmbeddings,
@@ -332,6 +334,10 @@ export class SqliteRepository implements PostRepository {
 
   async earliestActivityAt(): Promise<number | null> {
     return earliestActivityAt(this.raw);
+  }
+
+  async userActivityStats(limit: number): Promise<UserActivityStat[]> {
+    return userActivityStats(this.raw, limit);
   }
 
   async conversionStats(window: ConversionWindow): Promise<ConversionStats> {

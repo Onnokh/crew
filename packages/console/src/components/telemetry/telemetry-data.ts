@@ -7,6 +7,16 @@ export const telemetryKeys = {
   coverage: ["telemetry", "coverage"] as const,
   posts: ["telemetry", "posts"] as const,
   activity: ["telemetry", "activity"] as const,
+  users: ["telemetry", "users"] as const,
+};
+
+/** Mirrors the server's `UserUsageItem` (api/telemetry.ts) — one top-users row. */
+export type UserUsageItem = {
+  userId: string;
+  name: string | null;
+  posts: number;
+  searches: number;
+  total: number;
 };
 
 /** Mirrors the server's `ActivityItem` (api/telemetry.ts) — one feed row. */

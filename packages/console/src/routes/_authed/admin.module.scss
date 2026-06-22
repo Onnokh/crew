@@ -211,7 +211,7 @@
   flex-direction: column;
   gap: calc($space-xl * 1.25);
   min-height: 100vh;
-  padding: $space-xl $space-lg;
+  padding: 1rem;
   border-right: 1px solid $color-border;
   background: #fbfbfb;
 }
@@ -225,32 +225,27 @@
 .appSidebarHeader div {
   display: flex;
   flex-direction: column;
-  gap: 2px;
   min-width: 0;
 }
 
 .appSidebarHeader strong {
   font-size: 1.25rem;
+  line-height: 1.15;
   letter-spacing: -0.02em;
 }
 
 .appSidebarHeader small {
   color: $color-text-muted;
   font-size: $text-xs;
+  line-height: 1.15;
 }
 
 .appMark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 13px;
-  background: $color-accent;
-  color: $color-accent-contrast;
-  font-size: $text-sm;
-  font-weight: 700;
+  object-fit: cover;
 }
 
 .appNav {
@@ -345,7 +340,7 @@
 .appContent {
   min-width: 0;
   min-height: 100vh;
-  padding: $space-xl;
+  padding: 1rem;
   background: $color-bg;
 }
 
@@ -604,14 +599,17 @@
 // Stat overview — B3: a row of cards, each with an icon + label, a big
 // numeral, and a period-over-period delta pill.
 .statCardGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  // Flex (not grid) so the row adapts to the card count (4 on Performance, 3 on
+  // the dashboard) — each card grows equally and wraps when they no longer fit.
+  display: flex;
+  flex-wrap: wrap;
   gap: $space-md;
   min-width: 0;
 }
 
 .statCard {
   display: grid;
+  flex: 1 1 200px;
   gap: $space-md;
   min-width: 0;
   padding: 1.25rem 1.35rem;
@@ -690,6 +688,142 @@ $delta-down: #f5453a;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: $space-xl;
   min-width: 0;
+}
+
+// Dashboard overview: a homepage-style greeting hero, a two-column
+// events/top-users grid, and the per-user usage rows. Reuses the stat cards +
+// activity feed from Performance; the hero mirrors the home page's `.hero`.
+.overviewHero {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  margin-top: $space-xl;
+}
+
+// Slightly rotated frame holding the avatar, straightening on hover.
+.overviewAvatarFrame {
+  width: fit-content;
+  padding: 1px;
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+  background: $color-surface-hover;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  transform: rotate(-2deg);
+  transition: transform 0.5s ease;
+
+  &:hover {
+    transform: rotate(0deg);
+  }
+}
+
+.overviewAvatar {
+  display: block;
+  width: 80px;
+  height: 80px;
+  border-radius: calc($radius-lg - 1px);
+  object-fit: cover;
+}
+
+.overviewGreeting {
+  margin: 0;
+  font-size: $text-lg;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: $lh-lg;
+  text-wrap: balance;
+}
+
+.overviewName {
+  color: $color-text;
+  font-weight: 600;
+}
+
+.overviewRest {
+  color: $color-text-muted;
+  font-weight: 500;
+}
+
+.overviewBio {
+  margin: 0;
+  max-width: 60ch;
+  color: $color-text-muted;
+  font-size: $text-base;
+  line-height: $lh-base;
+
+  strong {
+    color: $color-text;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.overviewColumns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-xl;
+  min-width: 0;
+}
+
+.userUsageList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.userUsageRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm 0;
+}
+
+.userUsageRow + .userUsageRow {
+  border-top: 1px solid $color-border;
+}
+
+.userUsageAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  background: $color-surface-hover;
+  color: $color-text-muted;
+  font-size: $text-xs;
+  font-weight: 700;
+}
+
+.userUsageText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.userUsageName {
+  overflow: hidden;
+  color: $color-text;
+  font-size: $text-sm;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userUsageMeta {
+  color: $color-text-muted;
+  font-size: $text-xs;
+  font-variant-numeric: tabular-nums;
+}
+
+.userUsageTotal {
+  color: $color-text;
+  font-size: $text-base;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .usageChart {
@@ -1061,7 +1195,8 @@ $delta-down: #f5453a;
     border-left: 0;
   }
 
-  .usageChartGrid {
+  .usageChartGrid,
+  .overviewColumns {
     grid-template-columns: 1fr;
   }
 }

@@ -1,17 +1,12 @@
 import * as Select from "@radix-ui/react-select";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowDown,
-  ArrowUp,
   Ban,
   Check,
   CheckCircle2,
   ChevronDown,
   FileText,
-  Flag,
   Search,
-  SearchX,
-  type LucideIcon,
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import {
@@ -33,17 +28,12 @@ import {
   type CoveragePanelData,
   type PostsCreatedPanelData,
 } from "../telemetry/telemetry-data";
+import { ActivityFeed } from "./activity-feed";
+import { SHORT_TIME, shortDate } from "./format";
+import { ratePct, StatCardGrid, type StatDatum } from "./stat-card";
 import styles from "../../routes/_authed/admin.module.scss";
 
 const CHART_MARGIN = { top: 12, right: 20, bottom: 24, left: 8 };
-const SHORT_DATE = new Intl.DateTimeFormat(undefined, {
-  month: "short",
-  day: "numeric",
-});
-const SHORT_TIME = new Intl.DateTimeFormat(undefined, {
-  hour: "numeric",
-  minute: "2-digit",
-});
 
 export default function UsageDashboard() {
   const [period, setPeriod] = useState<Period>("7d");
@@ -111,11 +101,9 @@ export default function UsageDashboard() {
         <PeriodSelect value={period} onChange={setPeriod} />
       </div>
       <UsageSection>
-        <div className={styles.statCardGrid}>
-          {statRowData(coverageData, conversionData, postsData, showDelta).map((stat) => (
-            <StatCard key={stat.key} stat={stat} />
-          ))}
-        </div>
+        <StatCardGrid
+          stats={statRowData(coverageData, conversionData, postsData, showDelta)}
+        />
       </UsageSection>
 
       <div className={styles.usageChartGrid}>
@@ -123,16 +111,16 @@ export default function UsageDashboard() {
         <section className={styles.usageChart}>
           <div className={styles.usageLegend}>
             <span>
-              <i className={styles.legendOrange} />
-              No-result searches
+              <i className={styles.legendGreen} />
+              Confirmed
             </span>
             <span>
-              <i className={styles.legendGreen} />
-              Confirmed searches
+              <i className={styles.legendOrange} />
+              Zero-results
             </span>
             <span>
               <i className={styles.legendBlue} />
-              Unconfirmed searches
+              Unconfirmed
             </span>
           </div>
           {isLoading ? (
@@ -155,7 +143,7 @@ export default function UsageDashboard() {
                   type="monotone"
                   stackId="searches"
                   dataKey="noResults"
-                  name="No-result searches"
+                  name="Zero-results"
                   stroke="#f0ad6d"
                   fill="#f0ad6d"
                   fillOpacity={0.5}
@@ -165,7 +153,7 @@ export default function UsageDashboard() {
                   type="monotone"
                   stackId="searches"
                   dataKey="confirmed"
-                  name="Confirmed searches"
+                  name="Confirmed"
                   stroke="#6fc7ae"
                   fill="#6fc7ae"
                   fillOpacity={0.5}
@@ -175,7 +163,7 @@ export default function UsageDashboard() {
                   type="monotone"
                   stackId="searches"
                   dataKey="unconfirmed"
-                  name="Unconfirmed searches"
+                  name="Unconfirmed"
                   stroke="#5b9bd5"
                   fill="#5b9bd5"
                   fillOpacity={0.5}
@@ -226,17 +214,7 @@ export default function UsageDashboard() {
       </div>
 
       <UsageSection title="Events">
-        {activityLoading ? (
-          <p className={styles.emptyRow}>Loading...</p>
-        ) : events.length === 0 ? (
-          <p className={styles.emptyRow}>No events yet.</p>
-        ) : (
-          <ul className={styles.usageEvents}>
-            {events.map((event) => (
-              <UsageEvent key={event.id} event={event} />
-            ))}
-          </ul>
-        )}
+        <ActivityFeed events={events} loading={activityLoading} />
       </UsageSection>
     </section>
   );
@@ -342,18 +320,6 @@ function UsageSection({
   );
 }
 
-type StatDatum = {
-  key: string;
-  label: string;
-  icon: LucideIcon;
-  /** Tinted icon-badge tone, matching the events feed (a `styles.tone*` class). */
-  tone: string | undefined;
-  /** Pre-formatted display value, e.g. "86" or "67%". */
-  value: string;
-  /** Period-over-period change. `invert` flips the colour (more is worse). */
-  delta?: { value: number; invert?: boolean; suffix?: string };
-};
-
 /** Assemble the four stat-overview cards from the loaded panel data. */
 function statRowData(
   coverage: CoveragePanelData | undefined,
@@ -422,116 +388,6 @@ function statRowData(
   ];
 }
 
-/** One stat card: icon + label, big value, and a period-over-period delta pill. */
-function StatCard({ stat }: { stat: StatDatum }) {
-  const { icon: Icon, label, value, delta, tone } = stat;
-  return (
-    <div className={styles.statCard}>
-      <span className={styles.statCardHead}>
-        <span className={`${styles.eventIcon} ${tone ?? ""}`}>
-          <Icon size={15} aria-hidden="true" />
-        </span>
-        <span>{label}</span>
-      </span>
-      <span className={styles.statCardBody}>
-        <span className={styles.statCardValue}>{value}</span>
-        {delta && <MetricDelta value={delta.value} invert={delta.invert} suffix={delta.suffix} />}
-      </span>
-    </div>
-  );
-}
-
-/** A signed ±N change vs the previous period as a coloured pill with an arrow. */
-function MetricDelta({
-  value,
-  invert,
-  suffix = "",
-}: {
-  value: number;
-  invert?: boolean;
-  suffix?: string;
-}) {
-  if (value === 0) {
-    return <span className={`${styles.statDelta} ${styles.deltaFlat}`}>±0{suffix}</span>;
-  }
-  const good = value > 0 !== Boolean(invert);
-  const Arrow = value > 0 ? ArrowUp : ArrowDown;
-  const sign = value > 0 ? "+" : "-";
-  return (
-    <span className={`${styles.statDelta} ${good ? styles.deltaUp : styles.deltaDown}`}>
-      {sign}
-      {Math.abs(value)}
-      {suffix}
-      <Arrow size={13} aria-hidden="true" />
-    </span>
-  );
-}
-
-/** A part/whole as an integer percentage (0 when the whole is 0). */
-function ratePct(part: number, whole: number): number {
-  return whole === 0 ? 0 : Math.round((part / whole) * 100);
-}
-
-function UsageEvent({ event }: { event: ActivityItem }) {
-  const { action, icon: Icon, tone } = eventStyle(event);
-  const count =
-    event.kind === "search" && event.resultCount !== null && event.resultCount > 0;
-
-  return (
-    <li className={styles.usageEvent}>
-      <span className={`${styles.eventIcon} ${tone}`}>
-        <Icon size={15} aria-hidden="true" />
-      </span>
-      <span className={styles.eventText}>
-        {event.user ? (
-          <>
-            <span className={styles.eventVerb}>{event.user}</span> {action} {event.subject}
-          </>
-        ) : (
-          <>
-            <span className={styles.eventVerb}>{capitalize(action)}</span> {event.subject}
-          </>
-        )}
-        {count && (
-          <span className={styles.eventCount}>
-            {" "}
-            ({event.resultCount} {event.resultCount === 1 ? "result" : "results"})
-          </span>
-        )}
-      </span>
-      <time className={styles.eventMeta}>{relativeTime(event.createdAt)}</time>
-    </li>
-  );
-}
-
-/** The verb phrase, icon, and tinted-icon tone for one activity item. */
-function eventStyle(event: ActivityItem): {
-  action: string;
-  icon: LucideIcon;
-  tone: string | undefined;
-} {
-  switch (event.kind) {
-    case "post":
-      return { action: "posted", icon: FileText, tone: styles.tonePink };
-    case "confirm":
-      return { action: "confirmed", icon: CheckCircle2, tone: styles.toneGreen };
-    case "flag":
-      return {
-        action: event.reason ? `flagged (${event.reason})` : "flagged",
-        icon: Flag,
-        tone: styles.toneOrange,
-      };
-    default:
-      return event.resultCount === 0
-        ? { action: "got no results for", icon: SearchX, tone: styles.toneRed }
-        : { action: "searched for", icon: Search, tone: styles.toneBlue };
-  }
-}
-
-function capitalize(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
 function UsageTooltip({
   active,
   payload,
@@ -585,26 +441,9 @@ function postsChartData(posts: PostsCreatedPanelData, hourly: boolean) {
 }
 
 
-function shortDate(timestamp: number): string {
-  return SHORT_DATE.format(new Date(timestamp));
-}
-
 /** Axis label for a trend bucket: clock time for hourly (Today/24h) views, else a short date. */
 function bucketLabel(timestamp: number, hourly: boolean): string {
   return hourly ? SHORT_TIME.format(new Date(timestamp)) : shortDate(timestamp);
-}
-
-/** Compact "just now / 5m / 3h / 2d" relative to now; falls back to a short date past a week. */
-function relativeTime(timestamp: number): string {
-  const seconds = Math.round((Date.now() - timestamp) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.round(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return shortDate(timestamp);
 }
 
 function describe(err: unknown): string {

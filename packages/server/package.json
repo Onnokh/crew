@@ -9,7 +9,8 @@
     "dev": "node --env-file-if-exists=../../.env --watch --import tsx src/main.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "bake-model": "node --import tsx scripts/bake-model.ts"
+    "bake-model": "node --import tsx scripts/bake-model.ts",
+    "seed:fake": "node --env-file-if-exists=../../.env --import tsx scripts/seed-fake-usage.ts"
   },
   "dependencies": {
     "@better-auth/api-key": "^1.6.19",

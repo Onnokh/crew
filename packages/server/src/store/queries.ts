@@ -363,6 +363,52 @@ export function earliestActivityAt(raw: Database): number | null {
   return row.earliest;
 }
 
+/** One user's lifetime usage tally (see {@link userActivityStats}). */
+export type UserActivityStat = {
+  /** The acting User's id; resolved to a name at the API. */
+  userId: string;
+  /** Posts authored by this User. */
+  posts: number;
+  /** Searches run by this User. */
+  searches: number;
+  /** Combined activity (`posts + searches`), the ranking key. */
+  total: number;
+};
+
+/**
+ * Per-user usage across the corpus: posts authored (`posts.created_by`) and
+ * searches run (`retrievals.user_id`), tallied per User and ranked by combined
+ * activity, newest-busiest first, capped at `limit`. A `UNION ALL` over the two
+ * logs grouped by user id — no materialized counter. User-id → name resolution
+ * is the API's job (the corpus DB has no `user` table).
+ */
+export function userActivityStats(
+  raw: Database,
+  limit: number,
+): UserActivityStat[] {
+  const rows = raw
+    .prepare(
+      `SELECT userId,
+              COALESCE(SUM(isPost), 0) AS posts,
+              COALESCE(SUM(isSearch), 0) AS searches
+         FROM (
+                SELECT created_by AS userId, 1 AS isPost, 0 AS isSearch FROM posts
+          UNION ALL
+                SELECT user_id AS userId, 0 AS isPost, 1 AS isSearch FROM retrievals
+         )
+        GROUP BY userId
+        ORDER BY posts + searches DESC, userId
+        LIMIT ?`,
+    )
+    .all(limit) as Array<{ userId: string; posts: number; searches: number }>;
+  return rows.map((r) => ({
+    userId: r.userId,
+    posts: r.posts,
+    searches: r.searches,
+    total: r.posts + r.searches,
+  }));
+}
+
 /** One row of the unified recent-activity feed (see {@link recentActivity}). */
 export type ActivityRow = {
   id: string;

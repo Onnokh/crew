@@ -17,7 +17,9 @@ import { lazy, Suspense, useState, type FormEvent } from "react";
 import { ApiError, apiFetch } from "../../api/client";
 import { requireAdmin } from "../../auth/require-admin";
 import { ConfirmDelete } from "../../components/confirm-delete/confirm-delete";
+import { OverviewDashboard } from "../../components/usage-dashboard/overview-dashboard";
 import { CopyBox } from "../../components/ui/copy-box/copy-box";
+import crewProfile from "../../assets/crew-profile.png";
 import styles from "./admin.module.scss";
 
 const UsagePanel = lazy(
@@ -276,6 +278,9 @@ function AdminDashboard(props: AdminDashboardProps) {
   const currentSubtitle = selectedTeam
     ? "Members, usage, and API keys for this Team."
     : subtitleForSection(section);
+  // The dashboard and performance views bring their own hero, so they drop the
+  // generic content header and the right-hand activity rail (full-bleed).
+  const fullBleed = section === "usage" || section === "dashboard";
 
   return (
     <section className={styles.pageFull}>
@@ -287,17 +292,17 @@ function AdminDashboard(props: AdminDashboardProps) {
 
       <div
         className={
-          section === "usage"
+          fullBleed
             ? `${styles.adminShell} ${styles.adminShellNoRail}`
             : styles.adminShell
         }
       >
         <aside className={styles.appSidebar}>
           <div className={styles.appSidebarHeader}>
-            <span className={styles.appMark}>Cr</span>
+            <img className={styles.appMark} src={crewProfile} alt="" />
             <div>
-              <strong>Crew Admin</strong>
-              <small>Control plane</small>
+              <strong>Crew</strong>
+              <small>Dashboard</small>
             </div>
           </div>
 
@@ -307,20 +312,17 @@ function AdminDashboard(props: AdminDashboardProps) {
                 <Home size={18} aria-hidden="true" />
                 Home
               </span>
-              <small>App</small>
             </Link>
             <SidebarLink
               active={section === "dashboard"}
               icon={LayoutDashboard}
               label="Dashboard"
-              meta="Home"
               to="/dashboard"
             />
             <SidebarLink
               active={section === "usage"}
               icon={BarChart3}
               label="Performance"
-              meta="Global"
               to="/dashboard/performance"
             />
 
@@ -334,7 +336,6 @@ function AdminDashboard(props: AdminDashboardProps) {
                   <Building2 size={18} aria-hidden="true" />
                   Teams
                 </span>
-                <small>Create</small>
               </button>
               <div className={styles.teamTree}>
                 {props.teams.map((team) => {
@@ -369,14 +370,13 @@ function AdminDashboard(props: AdminDashboardProps) {
               active={section === "settings"}
               icon={Settings}
               label="Settings"
-              meta="Org"
               onClick={() => setSection?.("settings")}
             />
           </nav>
         </aside>
 
         <main className={styles.appContent}>
-          {section !== "usage" && (
+          {!fullBleed && (
             <header className={styles.contentHeader}>
               <div>
                 <p className={styles.eyebrow}>Admin</p>
@@ -389,7 +389,12 @@ function AdminDashboard(props: AdminDashboardProps) {
               </span>
             </header>
           )}
-          {section === "dashboard" && <DashboardPanel {...props} />}
+          {section === "dashboard" && (
+            <OverviewDashboard
+              usersCount={props.users.length}
+              teamsCount={props.teams.length}
+            />
+          )}
           {section === "usage" && (
             <Suspense fallback={<p className={styles.emptyRow}>Loading...</p>}>
               <UsagePanel />
@@ -407,47 +412,9 @@ function AdminDashboard(props: AdminDashboardProps) {
           )}
         </main>
 
-        {section !== "usage" && (
+        {!fullBleed && (
           <ActivityRail users={props.users} teams={props.teams} />
         )}
-      </div>
-    </section>
-  );
-}
-
-function DashboardPanel(props: AdminDashboardProps) {
-  return (
-    <section className={styles.dashboardPanel}>
-      <div className={styles.dashboardMetrics}>
-        <DashboardMetric
-          icon={Building2}
-          label="Teams"
-          value={props.teams.length}
-          note="Ready for events"
-        />
-        <DashboardMetric
-          icon={Users}
-          label="Users"
-          value={props.users.length}
-          note="Provisioned"
-        />
-        <DashboardMetric
-          icon={KeyRound}
-          label="API keys"
-          value={keyCount(props.users)}
-          note="Usage coming soon"
-        />
-      </div>
-
-      <div className={styles.dashboardPlaceholders}>
-        <section>
-          <SectionHead label="Events" meta="Coming soon" />
-          <p>Recent workspace events will appear here.</p>
-        </section>
-        <section>
-          <SectionHead label="Usage" meta="Coming soon" />
-          <p>Team and API key usage trends will appear here.</p>
-        </section>
       </div>
     </section>
   );
@@ -522,31 +489,6 @@ function Metric({
   );
 }
 
-function DashboardMetric({
-  icon: Icon,
-  label,
-  value,
-  note,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: number | string;
-  note: string;
-}) {
-  return (
-    <div className={styles.dashboardMetric}>
-      <span className={styles.dashboardMetricIcon}>
-        <Icon size={22} aria-hidden="true" />
-      </span>
-      <div>
-        <span>{label}</span>
-        <strong>{value}</strong>
-        <small>{note}</small>
-      </div>
-    </div>
-  );
-}
-
 function SidebarButton({
   active,
   icon: Icon,
@@ -557,7 +499,7 @@ function SidebarButton({
   active: boolean;
   icon: LucideIcon;
   label: string;
-  meta: string;
+  meta?: string;
   onClick: () => void;
 }) {
   return (
@@ -570,7 +512,7 @@ function SidebarButton({
         <Icon size={18} aria-hidden="true" />
         {label}
       </span>
-      <small>{meta}</small>
+      {meta && <small>{meta}</small>}
     </button>
   );
 }
@@ -585,7 +527,7 @@ function SidebarLink({
   active: boolean;
   icon: LucideIcon;
   label: string;
-  meta: string;
+  meta?: string;
   to: "/dashboard" | "/dashboard/performance";
 }) {
   return (
@@ -594,7 +536,7 @@ function SidebarLink({
         <Icon size={18} aria-hidden="true" />
         {label}
       </span>
-      <small>{meta}</small>
+      {meta && <small>{meta}</small>}
     </Link>
   );
 }
