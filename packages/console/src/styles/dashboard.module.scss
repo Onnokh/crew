@@ -154,7 +154,19 @@
 // it holds its grid column and doesn't shift the row.
 .teamRowEdit {
   opacity: 0;
-  transition: opacity 120ms ease;
+  transition: opacity 120ms ease, color 120ms ease;
+  // Base icon-button look (the row's edit affordance is now a router Link, not a
+  // dialog trigger, so it needs its own reset rather than inheriting one).
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted, #6b7280);
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text, #111827);
+  }
 
   &[data-state="open"] {
     opacity: 1;

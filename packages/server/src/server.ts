@@ -3,6 +3,7 @@ import type { IncomingMessage } from "node:http";
 import { mountAdmin } from "./api/admin.js";
 import { mountAuth } from "./api/auth.js";
 import { mountConsole } from "./api/console.js";
+import { mountMe } from "./api/me.js";
 import { mountReview } from "./api/review.js";
 import { mountTelemetry } from "./api/telemetry.js";
 import type { Principal } from "./core/user.js";
@@ -55,6 +56,7 @@ export function buildServer(deps: Deps): FastMCP<Principal> {
   // The human JSON API. Mounts under `/api/*` BEFORE the console so its SPA
   // catch-all never shadows them.
   mountAdmin(server.getApp(), deps);
+  mountMe(server.getApp(), deps);
   mountReview(server.getApp(), deps);
   mountTelemetry(server.getApp(), deps);
 

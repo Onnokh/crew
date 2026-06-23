@@ -1,7 +1,6 @@
 import { Hono } from "hono";
-import { customAlphabet } from "nanoid";
 import type { Deps } from "../deps.js";
-import type { Auth } from "../auth/better-auth.js";
+import { generatePassword, keyAdapter, shortId } from "../auth/api-keys.js";
 import { normalizeDomain } from "../guardrails/intake.js";
 
 /**
@@ -383,74 +382,6 @@ export function mountAdmin(app: Hono, deps: Deps): void {
 const ACTIVITY_TOTAL = 12;
 /** How many ranked users the single-Team overview returns. */
 const USER_LIMIT = 50;
-
-/** Seam over better-auth's storage adapter for the `apikey` model. */
-async function keyAdapter(auth: Auth) {
-  const { adapter } = await auth.$context;
-  return {
-    // Safe key metadata only; the hashed `key` is never selected.
-    list: async (referenceId: string): Promise<ApiKeyRow[]> => {
-      const rows = await adapter.findMany<RawApiKey>({
-        model: "apikey",
-        where: [{ field: "referenceId", value: referenceId }],
-      });
-      return rows
-        .map((k) => ({
-          id: k.id,
-          name: k.name ?? null,
-          start: k.start ?? null,
-          enabled: k.enabled ?? true,
-          createdAt: toIso(k.createdAt),
-          lastRequest: toIso(k.lastRequest),
-        }))
-        // Newest first; a never-used key (no createdAt) sorts last.
-        .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
-    },
-    deleteById: (id: string) =>
-      adapter.delete({ model: "apikey", where: [{ field: "id", value: id }] }),
-    deleteAllFor: (referenceId: string) =>
-      adapter.deleteMany({
-        model: "apikey",
-        where: [{ field: "referenceId", value: referenceId }],
-      }),
-  };
-}
-
-/** The api-key columns we read; the rest (incl. the hash) is ignored. */
-type RawApiKey = {
-  id: string;
-  name?: string | null;
-  start?: string | null;
-  enabled?: boolean | null;
-  createdAt?: Date | string | number | null;
-  lastRequest?: Date | string | number | null;
-};
-
-/** Safe key metadata as the listing returns it. */
-type ApiKeyRow = {
-  id: string;
-  name: string | null;
-  start: string | null;
-  enabled: boolean;
-  createdAt: string | null;
-  lastRequest: string | null;
-};
-
-/** Normalize a better-auth date column (Date | epoch | ISO string) to an ISO string. */
-function toIso(value: Date | string | number | null | undefined): string | null {
-  if (value == null) return null;
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
-
-/** A URL-safe one-time password — long enough that it need never be memorised. */
-const generatePassword = customAlphabet(
-  "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789",
-  20,
-);
-
-/** A short suffix to keep minted key names distinct in better-auth's listing. */
-const shortId = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 6);
 
 /** Pull a human message off a better-auth APIError, falling back to `fallback`. */
 function messageOf(err: unknown, fallback: string): string {

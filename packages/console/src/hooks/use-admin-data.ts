@@ -51,6 +51,8 @@ export type AdminActions = {
   ) => void;
   mintKey: (user: UserRow) => void;
   revokeKey: (key: ApiKey) => void;
+  /** Delete a User — the single off-switch. `onSuccess` navigates away. */
+  deleteUser: (vars: { id: string }, opts?: MutateOpts) => void;
   createTeam: (name: string, opts?: MutateOpts) => void;
   renameTeam: (vars: { id: string; name: string }, opts?: MutateOpts) => void;
   /** Replace a Team's intake allowlist (the git hosts it accepts Posts from). */
@@ -68,6 +70,7 @@ export type AdminMutationState = {
   resettingPassword: boolean;
   mintingKey: boolean;
   revokingKey: boolean;
+  deletingUser: boolean;
   creatingTeam: boolean;
   renamingTeam: boolean;
   savingTeamDomains: boolean;
@@ -177,6 +180,12 @@ export function useAdminData(): AdminData {
     onSuccess: () => invalidateUsers(),
   });
 
+  const deleteUser = useMutation({
+    mutationFn: (vars: { id: string }) =>
+      apiFetch(`/api/admin/users/${vars.id}`, { method: "DELETE" }),
+    onSuccess: () => invalidateUsers(),
+  });
+
   const renameUser = useMutation({
     mutationFn: (vars: { id: string; name: string }) =>
       apiFetch(`/api/admin/users/${vars.id}`, {
@@ -253,6 +262,7 @@ export function useAdminData(): AdminData {
     resetPassword.error ??
     mintKey.error ??
     revokeKey.error ??
+    deleteUser.error ??
     null;
   const error = failure ? describe(failure) : null;
   const teamFailure =
@@ -275,6 +285,7 @@ export function useAdminData(): AdminData {
       resetPassword: (vars, opts) => resetPassword.mutate(vars, opts),
       mintKey: (user) => mintKey.mutate(user),
       revokeKey: (key) => revokeKey.mutate(key),
+      deleteUser: (vars, opts) => deleteUser.mutate(vars, opts),
       createTeam: (name, opts) => createTeam.mutate(name, opts),
       renameTeam: (vars, opts) => renameTeam.mutate(vars, opts),
       setTeamDomains: (vars, opts) => setTeamDomains.mutate(vars, opts),
@@ -286,6 +297,7 @@ export function useAdminData(): AdminData {
       resettingPassword: resetPassword.isPending,
       mintingKey: mintKey.isPending,
       revokingKey: revokeKey.isPending,
+      deletingUser: deleteUser.isPending,
       creatingTeam: createTeam.isPending,
       renamingTeam: renameTeam.isPending,
       savingTeamDomains: setTeamDomains.isPending,

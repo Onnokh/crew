@@ -61,6 +61,9 @@ export function AppChrome({ children }: { children: ReactNode }) {
                       <span className={styles.menuEmail}>{user.email}</span>
                     </div>
                     <DropdownMenu.Separator className={styles.menuSeparator} />
+                    <DropdownMenu.Item className={styles.menuItem} asChild>
+                      <Link to="/profile">Profile</Link>
+                    </DropdownMenu.Item>
                     {isAdmin ? (
                       <DropdownMenu.Item className={styles.menuItem} asChild>
                         <Link to="/dashboard">Dashboard</Link>

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { BarChart3, FolderGit2, Gauge, HardDrive, ScrollText, Users } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { BarChart3, FolderGit2, Gauge, HardDrive, ScrollText, Settings, Users } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { apiFetch } from "../../../api/client";
 import { relativeTime } from "../../../lib/format";
@@ -11,7 +12,7 @@ import {
 } from "../../telemetry/telemetry-data";
 import { ActivityFeed } from "../../activity-feed/activity-feed";
 import { AddMemberDialog } from "../../dialogs/add-member-dialog/add-member-dialog";
-import { EditMemberDialog, type ApiKey } from "../../dialogs/edit-member-dialog/edit-member-dialog";
+import { type ApiKey } from "../../account/api-keys-section";
 import { EmptyState } from "../../ui/empty-state/empty-state";
 import { PageHeading } from "../../ui/page-heading/page-heading";
 import { UserAvatar } from "../../ui/user-avatar/user-avatar";
@@ -97,15 +98,6 @@ export function TeamDetailDashboard({
   onAddMember,
   addingMember,
   memberError,
-  onRenameMember,
-  renamingMember,
-  onResetPassword,
-  resettingPassword,
-  onMintKey,
-  mintingKey,
-  mintedKey,
-  onRevokeKey,
-  revokingKey,
   newPassword,
 }: {
   teamId: string;
@@ -131,20 +123,6 @@ export function TeamDetailDashboard({
   ) => void;
   addingMember: boolean;
   memberError: string | null;
-  /** Rename a member (updates their better-auth `name`). */
-  onRenameMember: (userId: string, name: string) => void;
-  renamingMember: boolean;
-  /** Reset a member's password (set the given value, or generate when omitted). */
-  onResetPassword: (userId: string, email: string, password?: string) => void;
-  resettingPassword: boolean;
-  /** Mint a fresh API key for the given member. */
-  onMintKey: (userId: string) => void;
-  mintingKey: boolean;
-  /** Show-once minted key, surfaced inside its member's Edit dialog. */
-  mintedKey: { userId: string; key: string } | null;
-  /** Revoke a single API key. */
-  onRevokeKey: (key: ApiKey) => void;
-  revokingKey: boolean;
   /** Show-once password from a just-added member, rendered on their row. */
   newPassword: { userId: string; email: string; password: string } | null;
 }) {
@@ -298,30 +276,14 @@ export function TeamDetailDashboard({
                           : "No activity yet"}
                       </span>
                     </span>
-                    <EditMemberDialog
-                      triggerClassName={shared.teamRowEdit}
-                      name={row.name ?? row.email}
-                      email={row.email}
-                      keys={row.keys}
-                      onRename={(name) => onRenameMember(row.userId, name)}
-                      renaming={renamingMember}
-                      onResetPassword={(password) =>
-                        onResetPassword(row.userId, row.email, password)
-                      }
-                      resettingPassword={resettingPassword}
-                      resetPassword={
-                        newPassword?.userId === row.userId
-                          ? newPassword.password
-                          : null
-                      }
-                      onMintKey={() => onMintKey(row.userId)}
-                      mintingKey={mintingKey}
-                      onRevokeKey={onRevokeKey}
-                      revokingKey={revokingKey}
-                      mintedKey={
-                        mintedKey?.userId === row.userId ? mintedKey.key : null
-                      }
-                    />
+                    <Link
+                      to="/dashboard/users/$userId"
+                      params={{ userId: row.userId }}
+                      className={shared.teamRowEdit}
+                      aria-label={`Edit ${row.name ?? row.email}`}
+                    >
+                      <Settings size={16} aria-hidden="true" />
+                    </Link>
                   </div>
                   {newPassword?.userId === row.userId && (
                     <div className={styles.secretSlot}>

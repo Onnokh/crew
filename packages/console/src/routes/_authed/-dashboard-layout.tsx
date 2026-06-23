@@ -5,6 +5,7 @@ import { OverviewDashboard } from "../../components/feature/overview-dashboard/o
 import { PageHeading } from "../../components/ui/page-heading/page-heading";
 import { TeamsDashboard } from "../../components/feature/teams-dashboard/teams-dashboard";
 import { TeamDetailDashboard } from "../../components/feature/team-detail-dashboard/team-detail-dashboard";
+import { UserDetailDashboard } from "../../components/feature/user-detail-dashboard/user-detail-dashboard";
 import { useAdminData, type AdminData } from "../../hooks/use-admin-data";
 import shared from "../../styles/dashboard.module.scss";
 import styles from "./-dashboard-layout.module.scss";
@@ -31,6 +32,8 @@ function AdminDashboard(props: AdminDashboardProps) {
   const section = props.fixedSection ?? "dashboard";
   const selectedTeamId = section.startsWith("team:") ? section.slice(5) : null;
   const selectedTeam = props.teams.find((team) => team.id === selectedTeamId);
+  const selectedUserId = section.startsWith("user:") ? section.slice(5) : null;
+  const selectedUser = props.users.find((user) => user.id === selectedUserId);
   const selectedTeamUsers = selectedTeam
     ? props.users.filter((user) => user.teamId === selectedTeam.id)
     : [];
@@ -121,23 +124,49 @@ function AdminDashboard(props: AdminDashboardProps) {
               }
               addingMember={props.pending.creatingUser}
               memberError={props.error}
-              onRenameMember={(userId, name) =>
-                props.actions.renameUser({ id: userId, name })
+              newPassword={props.secrets.newPassword}
+            />
+          )}
+          {selectedUser && (
+            <UserDetailDashboard
+              key={selectedUser.id}
+              name={selectedUser.name ?? selectedUser.email}
+              email={selectedUser.email}
+              teamName={selectedUser.teamName}
+              keys={selectedUser.keys}
+              onRename={(name) =>
+                props.actions.renameUser({ id: selectedUser.id, name })
               }
-              renamingMember={props.pending.renamingUser}
-              onResetPassword={(userId, email, password) =>
-                props.actions.resetPassword({ id: userId, email, password })
+              renaming={props.pending.renamingUser}
+              onResetPassword={(password) =>
+                props.actions.resetPassword({
+                  id: selectedUser.id,
+                  email: selectedUser.email,
+                  password,
+                })
               }
               resettingPassword={props.pending.resettingPassword}
-              onMintKey={(userId) => {
-                const user = selectedTeamUsers.find((u) => u.id === userId);
-                if (user) props.actions.mintKey(user);
-              }}
+              resetPassword={
+                props.secrets.newPassword?.userId === selectedUser.id
+                  ? props.secrets.newPassword.password
+                  : null
+              }
+              onMintKey={() => props.actions.mintKey(selectedUser)}
               mintingKey={props.pending.mintingKey}
-              mintedKey={props.secrets.mintedKey}
+              mintedKey={
+                props.secrets.mintedKey?.userId === selectedUser.id
+                  ? props.secrets.mintedKey.key
+                  : null
+              }
               onRevokeKey={(key) => props.actions.revokeKey(key)}
               revokingKey={props.pending.revokingKey}
-              newPassword={props.secrets.newPassword}
+              onDelete={() =>
+                props.actions.deleteUser(
+                  { id: selectedUser.id },
+                  { onSuccess: () => navigate({ to: "/dashboard/teams" }) },
+                )
+              }
+              deleting={props.pending.deletingUser}
             />
           )}
         </main>
