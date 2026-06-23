@@ -15,10 +15,13 @@ import { relativeTime } from "../../lib/format";
 import shared from "../../styles/dashboard.module.scss";
 import styles from "./activity-feed.module.scss";
 
+/** Stable empty default so a missing `users` prop doesn't make a new array each render. */
+const NO_USERS: UserUsageItem[] = [];
+
 /** The Events list: a time-sorted feed of searches, posts, confirms, and flags. */
 export function ActivityFeed({
   events,
-  users = [],
+  users = NO_USERS,
   loading,
   empty = "No events yet.",
 }: {
@@ -31,7 +34,7 @@ export function ActivityFeed({
   if (loading) return <p className={shared.emptyRow}>Loading...</p>;
   if (events.length === 0) return <EmptyState icon={Activity} message={empty} />;
   const usageByName = new Map(
-    users.filter((u) => u.name).map((u) => [u.name as string, u]),
+    users.flatMap((u) => (u.name ? ([[u.name, u]] as const) : [])),
   );
   return (
     <ul className={styles.usageEvents}>

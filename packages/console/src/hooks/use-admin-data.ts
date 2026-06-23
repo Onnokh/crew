@@ -31,15 +31,23 @@ export type TeamRow = {
   createdAt: number;
 };
 
+/** Per-call mutation options: an `onSuccess` the caller runs after the mutation
+ * settles successfully (e.g. a dialog closing itself). Runs after the action's
+ * own onSuccess (cache invalidation / secrets), so the list is fresh by then. */
+export type MutateOpts = { onSuccess?: () => void };
+
 export type AdminActions = {
-  createUser: (vars: { name: string; email: string; teamId: string }) => void;
-  renameUser: (vars: { id: string; name: string }) => void;
+  createUser: (
+    vars: { name: string; email: string; teamId: string },
+    opts?: MutateOpts,
+  ) => void;
+  renameUser: (vars: { id: string; name: string }, opts?: MutateOpts) => void;
   mintKey: (user: UserRow) => void;
   revokeKey: (key: ApiKey) => void;
-  createTeam: (name: string) => void;
-  renameTeam: (vars: { id: string; name: string }) => void;
+  createTeam: (name: string, opts?: MutateOpts) => void;
+  renameTeam: (vars: { id: string; name: string }, opts?: MutateOpts) => void;
   /** Delete a Team. `onSuccess` lets the caller navigate away from its page. */
-  deleteTeam: (vars: { id: string }, opts?: { onSuccess?: () => void }) => void;
+  deleteTeam: (vars: { id: string }, opts?: MutateOpts) => void;
 };
 
 export type AdminMutationState = {
@@ -218,12 +226,12 @@ export function useAdminData(): AdminData {
     error,
     teamError,
     actions: {
-      createUser: (vars) => createUser.mutate(vars),
-      renameUser: (vars) => renameUser.mutate(vars),
+      createUser: (vars, opts) => createUser.mutate(vars, opts),
+      renameUser: (vars, opts) => renameUser.mutate(vars, opts),
       mintKey: (user) => mintKey.mutate(user),
       revokeKey: (key) => revokeKey.mutate(key),
-      createTeam: (name) => createTeam.mutate(name),
-      renameTeam: (vars) => renameTeam.mutate(vars),
+      createTeam: (name, opts) => createTeam.mutate(name, opts),
+      renameTeam: (vars, opts) => renameTeam.mutate(vars, opts),
       deleteTeam: (vars, opts) => deleteTeam.mutate(vars, opts),
     },
     pending: {

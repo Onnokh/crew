@@ -1,45 +1,36 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { Plus, X } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import styles from "../dialog.module.scss";
 import admin from "../../../styles/dashboard.module.scss";
 
 /**
  * The "Create team" action in the Teams heading: a small primary button that
  * opens a Radix Dialog holding the create-team form. Submitting calls
- * {@link onCreate} and closes the dialog once the mutation stops pending; an
- * error keeps it open so the message shows.
+ * {@link onCreate} and closes the dialog from the mutation's own success
+ * callback; an error never fires it, so the dialog stays open to show the message.
  */
 export function CreateTeamDialog({
   onCreate,
   creating,
   error,
 }: {
-  onCreate: (name: string) => void;
+  onCreate: (name: string, opts?: { onSuccess?: () => void }) => void;
   creating: boolean;
   error: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  // Track the in-flight submit so we close only after a create that succeeded
-  // (creating went true → false with no error), not on the initial idle state.
-  const [submitted, setSubmitted] = useState(false);
-
-  useEffect(() => {
-    if (submitted && !creating) {
-      if (!error) {
-        setOpen(false);
-        setName("");
-      }
-      setSubmitted(false);
-    }
-  }, [submitted, creating, error]);
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!name.trim()) return;
-    onCreate(name.trim());
-    setSubmitted(true);
+    onCreate(name.trim(), {
+      onSuccess: () => {
+        setOpen(false);
+        setName("");
+      },
+    });
   }
 
   return (

@@ -30,7 +30,7 @@ export function TeamsDashboard({
 }: {
   teams: TeamRow[];
   users: UserRow[];
-  onCreateTeam: (name: string) => void;
+  onCreateTeam: (name: string, opts?: { onSuccess?: () => void }) => void;
   creatingTeam: boolean;
   error: string | null;
 }) {

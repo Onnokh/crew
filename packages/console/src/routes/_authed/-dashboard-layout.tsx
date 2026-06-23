@@ -91,8 +91,8 @@ function AdminDashboard(props: AdminDashboardProps) {
                 name: u.name,
                 keys: u.keys,
               }))}
-              onRename={(name) =>
-                props.actions.renameTeam({ id: selectedTeam.id, name })
+              onRename={(name, opts) =>
+                props.actions.renameTeam({ id: selectedTeam.id, name }, opts)
               }
               renaming={props.pending.renamingTeam}
               error={props.teamError}
@@ -105,12 +105,11 @@ function AdminDashboard(props: AdminDashboardProps) {
               deleting={props.pending.deletingTeam}
               canDelete={canDeleteTeam}
               deleteDisabledReason={deleteDisabledReason}
-              onAddMember={(name, email) =>
-                props.actions.createUser({
-                  name,
-                  email,
-                  teamId: selectedTeam.id,
-                })
+              onAddMember={(name, email, opts) =>
+                props.actions.createUser(
+                  { name, email, teamId: selectedTeam.id },
+                  opts,
+                )
               }
               addingMember={props.pending.creatingUser}
               memberError={props.error}

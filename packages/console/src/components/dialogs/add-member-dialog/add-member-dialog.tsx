@@ -1,49 +1,45 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { UserPlus, X } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import base from "../dialog.module.scss";
 import styles from "../dialog-form.module.scss";
 
 /**
  * The "Add member" action next to the team-detail Members heading: a small button
  * that opens a Radix Dialog holding the add-member form (name + email).
- * Submitting calls {@link onAdd} and closes once the mutation stops pending; an
- * error keeps it open so the message shows. Uses the shared dialog design system.
+ * Submitting calls {@link onAdd} and closes the dialog from the mutation's own
+ * success callback; an error never fires it, so the dialog stays open to show the
+ * message. Uses the shared dialog design system.
  */
 export function AddMemberDialog({
   onAdd,
   adding,
   error,
 }: {
-  onAdd: (name: string, email: string) => void;
+  onAdd: (
+    name: string,
+    email: string,
+    opts?: { onSuccess?: () => void },
+  ) => void;
   adding: boolean;
   error: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  // Track the in-flight submit so we close only after an add that succeeded
-  // (adding went true → false with no error), not on the initial idle state.
-  const [submitted, setSubmitted] = useState(false);
-
-  useEffect(() => {
-    if (submitted && !adding) {
-      if (!error) {
-        setOpen(false);
-        setName("");
-        setEmail("");
-      }
-      setSubmitted(false);
-    }
-  }, [submitted, adding, error]);
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
     if (!trimmedName || !trimmedEmail) return;
-    onAdd(trimmedName, trimmedEmail);
-    setSubmitted(true);
+    onAdd(trimmedName, trimmedEmail, {
+      onSuccess: () => {
+        setOpen(false);
+        setName("");
+        setEmail("");
+      },
+    });
   }
 
   return (

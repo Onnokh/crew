@@ -1,17 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, FolderGit2, Gauge, HardDrive, ScrollText, Users } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { lazy, Suspense } from "react";
 import { apiFetch } from "../../../api/client";
 import { relativeTime } from "../../../lib/format";
 import { CopyBox } from "../../ui/copy-box/copy-box";
@@ -58,7 +47,14 @@ type TeamOverview = {
   dbSizeBytes: number;
 };
 
-const CHART_MARGIN = { top: 12, right: 20, bottom: 24, left: 8 };
+// Code-split the recharts-backed charts so the heavy library loads on demand
+// (when a chart first renders), not in the main route chunk.
+const ProjectsPieChart = lazy(() =>
+  import("./team-charts").then((m) => ({ default: m.ProjectsPieChart })),
+);
+const MemberUsageBarChart = lazy(() =>
+  import("./team-charts").then((m) => ({ default: m.MemberUsageBarChart })),
+);
 
 /** Pie slice / member-bar palette, cycled by index (mirrors the usage dashboard). */
 const CHART_COLORS = [
@@ -76,12 +72,6 @@ const CHART_COLORS = [
 function repoLabel(repo: string): string {
   const parts = repo.split("/").filter(Boolean);
   return parts[parts.length - 1] ?? repo;
-}
-
-/** Member-bar axis tick: first word (or the email's local part) keeps labels short. */
-function shortName(name: string): string {
-  const base = name.includes("@") ? (name.split("@")[0] ?? name) : name;
-  return base.split(/\s+/)[0] ?? base;
 }
 
 /**
@@ -116,7 +106,7 @@ export function TeamDetailDashboard({
   teamId: string;
   teamName: string;
   members: Member[];
-  onRename: (name: string) => void;
+  onRename: (name: string, opts?: { onSuccess?: () => void }) => void;
   renaming: boolean;
   error: string | null;
   /** Delete this team (only enabled when {@link canDelete}). */
@@ -124,7 +114,11 @@ export function TeamDetailDashboard({
   deleting: boolean;
   canDelete: boolean;
   deleteDisabledReason: string | null;
-  onAddMember: (name: string, email: string) => void;
+  onAddMember: (
+    name: string,
+    email: string,
+    opts?: { onSuccess?: () => void },
+  ) => void;
   addingMember: boolean;
   memberError: string | null;
   /** Rename a member (updates their better-auth `name`). */
@@ -188,9 +182,9 @@ export function TeamDetailDashboard({
 
   // Bar: each member's posts + searches, busiest first; members with no
   // activity are dropped so the comparison reads cleanly.
-  const memberUsage = rows
-    .filter((r) => r.total > 0)
-    .map((r) => ({ name: r.name, posts: r.posts, searches: r.searches }));
+  const memberUsage = rows.flatMap((r) =>
+    r.total > 0 ? [{ name: r.name, posts: r.posts, searches: r.searches }] : [],
+  );
 
   return (
     <section className={shared.usagePage}>
@@ -221,29 +215,9 @@ export function TeamDetailDashboard({
             <EmptyState icon={FolderGit2} message="No posts yet." />
           ) : (
             <div className={styles.pieRow}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={projects}
-                    dataKey="posts"
-                    nameKey="label"
-                    cx="50%"
-                    // Pull the donut up to sit over the bar chart's plot area,
-                    // which reserves ~88px at the bottom for its angled labels.
-                    cy="42%"
-                    innerRadius={62}
-                    outerRadius={112}
-                    paddingAngle={2}
-                    stroke="var(--color-bg)"
-                    strokeWidth={2}
-                  >
-                    {projects.map((p, i) => (
-                      <Cell key={p.repo} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<ProjectTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
+              <Suspense fallback={<p className={shared.emptyRow}>Loading...</p>}>
+                <ProjectsPieChart data={projects} colors={CHART_COLORS} />
+              </Suspense>
               <ul className={styles.pieLegend}>
                 {projects.map((p, i) => (
                   <li key={p.repo}>
@@ -268,36 +242,9 @@ export function TeamDetailDashboard({
             <EmptyState icon={BarChart3} message="No activity yet." />
           ) : (
             <div className={styles.chartBody}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={memberUsage} accessibilityLayer margin={CHART_MARGIN}>
-                <CartesianGrid stroke="var(--color-border)" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={10}
-                  height={64}
-                  interval={0}
-                  angle={-35}
-                  textAnchor="end"
-                  tickFormatter={shortName}
-                />
-                <YAxis tickLine={false} axisLine={false} allowDecimals={false} width={32} />
-                <Tooltip
-                  content={<MemberTooltip />}
-                  cursor={{ fill: "var(--color-border)", opacity: 0.4 }}
-                />
-                <Bar dataKey="posts" name="Posts" stackId="usage" fill="#5b9bd5" maxBarSize={48} />
-                <Bar
-                  dataKey="searches"
-                  name="Searches"
-                  stackId="usage"
-                  fill="#6fc7ae"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={48}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+              <Suspense fallback={<p className={shared.emptyRow}>Loading...</p>}>
+                <MemberUsageBarChart data={memberUsage} />
+              </Suspense>
             </div>
           )}
         </section>
@@ -393,48 +340,3 @@ export function TeamDetailDashboard({
   );
 }
 
-/** Tooltip for a Projects pie slice: full repo path and its post count. */
-function ProjectTooltip({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: Array<{ payload?: { repo?: string }; value?: number }>;
-}) {
-  const item = payload?.[0];
-  if (!active || !item) return null;
-  return (
-    <div className={styles.chartTooltip}>
-      <strong>{item.payload?.repo}</strong>
-      <span>
-        {item.value} {item.value === 1 ? "post" : "posts"}
-      </span>
-    </div>
-  );
-}
-
-/** Tooltip for a member's usage bar: posts, searches, and their total. */
-function MemberTooltip({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: Array<{ name?: string; value?: number; color?: string }>;
-  label?: string;
-}) {
-  if (!active || !payload?.length) return null;
-  const total = payload.reduce((sum, item) => sum + (item.value ?? 0), 0);
-  return (
-    <div className={styles.chartTooltip}>
-      <strong>{label}</strong>
-      {payload.map((item) => (
-        <span key={item.name}>
-          <i style={{ background: item.color }} />
-          {item.name}: {item.value}
-        </span>
-      ))}
-      <span>Total: {total}</span>
-    </div>
-  );
-}

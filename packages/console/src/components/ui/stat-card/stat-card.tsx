@@ -30,7 +30,7 @@ export function StatCardGrid({ stats }: { stats: StatDatum[] }) {
 }
 
 /** One stat card: tinted icon + label, big value, and an optional delta pill. */
-export function StatCard({ stat }: { stat: StatDatum }) {
+function StatCard({ stat }: { stat: StatDatum }) {
   const { icon: Icon, label, value, valueSuffix, delta, tone } = stat;
   return (
     <div className={styles.statCard}>
@@ -55,8 +55,9 @@ export function StatCard({ stat }: { stat: StatDatum }) {
   );
 }
 
+
 /** A signed ±N change vs the previous period as a coloured pill with an arrow. */
-export function MetricDelta({
+function MetricDelta({
   value,
   invert,
   suffix = "",
@@ -79,9 +80,4 @@ export function MetricDelta({
       <Arrow size={13} aria-hidden="true" />
     </span>
   );
-}
-
-/** A part/whole as an integer percentage (0 when the whole is 0). */
-export function ratePct(part: number, whole: number): number {
-  return whole === 0 ? 0 : Math.round((part / whole) * 100);
 }

@@ -1,6 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { AlertTriangle, ChevronDown, Settings, Trash2, X } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import base from "../dialog.module.scss";
 import styles from "../dialog-form.module.scss";
 
@@ -10,9 +10,10 @@ import styles from "../dialog-form.module.scss";
  * disclosure, so renaming reads as the primary action and deleting is something
  * you have to reach for.
  *
- * Saving calls {@link onRename} and closes once the mutation stops pending; an
- * error keeps it open so the message shows. The field resets to {@link teamName}
- * whenever the dialog (re)opens. Deletion is two-step (a confirm row guards the
+ * Saving calls {@link onRename} and closes the dialog from the mutation's own
+ * success callback; an error never fires it, so the dialog stays open to show the
+ * message. The field resets to {@link teamName} whenever the dialog (re)opens.
+ * Deletion is two-step (a confirm row guards the
  * click) and only offered when {@link canDelete}; otherwise the reason is shown.
  * On a successful delete the page navigates away, so the dialog need not close.
  */
@@ -27,7 +28,7 @@ export function TeamSettingsDialog({
   deleteDisabledReason,
 }: {
   teamName: string;
-  onRename: (name: string) => void;
+  onRename: (name: string, opts?: { onSuccess?: () => void }) => void;
   renaming: boolean;
   error: string | null;
   onDelete: () => void;
@@ -38,19 +39,9 @@ export function TeamSettingsDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(teamName);
-  // Track the in-flight save so we close only after a rename that succeeded
-  // (renaming went true → false with no error), not on the initial idle state.
-  const [submitted, setSubmitted] = useState(false);
   // The danger disclosure and its two-step confirm, both reset when reopened.
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
-
-  useEffect(() => {
-    if (submitted && !renaming) {
-      if (!error) setOpen(false);
-      setSubmitted(false);
-    }
-  }, [submitted, renaming, error]);
 
   function onOpenChange(next: boolean) {
     if (next) {
@@ -67,8 +58,7 @@ export function TeamSettingsDialog({
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!dirty) return;
-    onRename(name.trim());
-    setSubmitted(true);
+    onRename(name.trim(), { onSuccess: () => setOpen(false) });
   }
 
   return (

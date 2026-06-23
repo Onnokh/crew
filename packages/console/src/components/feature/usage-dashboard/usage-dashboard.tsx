@@ -8,18 +8,7 @@ import {
   FileText,
   Search,
 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
 import { ApiError, apiFetch } from "../../../api/client";
 import {
   telemetryKeys,
@@ -31,12 +20,19 @@ import {
 } from "../../telemetry/telemetry-data";
 import { ActivityFeed } from "../../activity-feed/activity-feed";
 import { PageHeading } from "../../ui/page-heading/page-heading";
-import { SHORT_TIME, shortDate } from "../../../lib/format";
-import { ratePct, StatCardGrid, type StatDatum } from "../../ui/stat-card/stat-card";
+import { ratePct, SHORT_TIME, shortDate } from "../../../lib/format";
+import { StatCardGrid, type StatDatum } from "../../ui/stat-card/stat-card";
 import shared from "../../../styles/dashboard.module.scss";
 import styles from "./usage-dashboard.module.scss";
 
-const CHART_MARGIN = { top: 12, right: 20, bottom: 24, left: 8 };
+// Code-split the recharts-backed charts so the heavy library loads on demand
+// (when a chart first renders), not in the main route chunk.
+const SearchesAreaChart = lazy(() =>
+  import("./usage-charts").then((m) => ({ default: m.SearchesAreaChart })),
+);
+const PostsBarChart = lazy(() =>
+  import("./usage-charts").then((m) => ({ default: m.PostsBarChart })),
+);
 
 export default function UsageDashboard() {
   const [period, setPeriod] = useState<Period>("7d");
@@ -139,51 +135,9 @@ export default function UsageDashboard() {
           {isLoading ? (
             <p className={shared.emptyRow}>Loading...</p>
           ) : (
-            <ResponsiveContainer width="100%" height={330}>
-              <AreaChart data={chartData} accessibilityLayer margin={CHART_MARGIN}>
-                <CartesianGrid stroke="var(--color-border)" vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={14}
-                  height={42}
-                  padding={{ left: 20, right: 20 }}
-                />
-                <YAxis tickLine={false} axisLine={false} allowDecimals={false} width={32} />
-                <Tooltip content={<UsageTooltip />} />
-                <Area
-                  type="monotone"
-                  stackId="searches"
-                  dataKey="noResults"
-                  name="Zero-results"
-                  stroke="#f0ad6d"
-                  fill="#f0ad6d"
-                  fillOpacity={0.5}
-                  strokeWidth={2}
-                />
-                <Area
-                  type="monotone"
-                  stackId="searches"
-                  dataKey="confirmed"
-                  name="Confirmed"
-                  stroke="#6fc7ae"
-                  fill="#6fc7ae"
-                  fillOpacity={0.5}
-                  strokeWidth={2}
-                />
-                <Area
-                  type="monotone"
-                  stackId="searches"
-                  dataKey="unconfirmed"
-                  name="Unconfirmed"
-                  stroke="#5b9bd5"
-                  fill="#5b9bd5"
-                  fillOpacity={0.5}
-                  strokeWidth={2}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <Suspense fallback={<p className={shared.emptyRow}>Loading...</p>}>
+              <SearchesAreaChart data={chartData} />
+            </Suspense>
           )}
         </section>
       </UsageSection>
@@ -199,28 +153,9 @@ export default function UsageDashboard() {
           {postsLoading ? (
             <p className={shared.emptyRow}>Loading...</p>
           ) : (
-            <ResponsiveContainer width="100%" height={330}>
-              <BarChart data={postsChart} accessibilityLayer margin={CHART_MARGIN}>
-                <CartesianGrid stroke="var(--color-border)" vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={14}
-                  height={42}
-                  padding={{ left: 20, right: 20 }}
-                />
-                <YAxis tickLine={false} axisLine={false} allowDecimals={false} width={32} />
-                <Tooltip content={<UsageTooltip />} cursor={{ fill: "var(--color-border)", opacity: 0.4 }} />
-                <Bar
-                  dataKey="created"
-                  name="New posts"
-                  fill="#5b9bd5"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={36}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            <Suspense fallback={<p className={shared.emptyRow}>Loading...</p>}>
+              <PostsBarChart data={postsChart} />
+            </Suspense>
           )}
         </section>
       </UsageSection>
@@ -403,31 +338,6 @@ function statRowData(
           : undefined,
     },
   ];
-}
-
-function UsageTooltip({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: Array<{ name?: string; value?: number; color?: string }>;
-  label?: string;
-}) {
-  if (!active || !payload?.length) return null;
-  const total = payload.reduce((sum, item) => sum + (item.value ?? 0), 0);
-  return (
-    <div className={styles.usageTooltip}>
-      <strong>{label}</strong>
-      {payload.map((item) => (
-        <span key={item.name}>
-          <i style={{ background: item.color }} />
-          {item.name}: {item.value}
-        </span>
-      ))}
-      {payload.length > 1 && <span>Total searches: {total}</span>}
-    </div>
-  );
 }
 
 function usageChartData(

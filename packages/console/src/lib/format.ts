@@ -15,6 +15,11 @@ export function shortDate(timestamp: number): string {
   return SHORT_DATE.format(new Date(timestamp));
 }
 
+/** A part/whole as an integer percentage (0 when the whole is 0). */
+export function ratePct(part: number, whole: number): number {
+  return whole === 0 ? 0 : Math.round((part / whole) * 100);
+}
+
 /** Compact "just now / 5m / 3h / 2d" relative to now; falls back to a short date past a week. */
 export function relativeTime(timestamp: number): string {
   const seconds = Math.round((Date.now() - timestamp) / 1000);

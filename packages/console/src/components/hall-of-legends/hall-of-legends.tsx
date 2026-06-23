@@ -24,7 +24,7 @@ export function HallOfLegends({
   if (loading) return <p className={shared.emptyRow}>Loading...</p>;
   if (users.length === 0) return <EmptyState icon={Trophy} message={empty} />;
 
-  const ranked = [...users].sort((a, b) => b.total - a.total).slice(0, limit);
+  const ranked = users.toSorted((a, b) => b.total - a.total).slice(0, limit);
   const top = ranked.slice(0, 3);
   const rest = ranked.slice(3);
   // Visual order on the podium: 2nd, 1st, 3rd — so 1st stands tallest in the middle.
