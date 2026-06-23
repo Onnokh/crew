@@ -102,6 +102,13 @@ USER node
 VOLUME ["/data"]
 EXPOSE 8080
 
+# Liveness probe baked into the image so it applies under any Coolify build pack
+# (the UI health-check fields only take effect for the Dockerfile build pack).
+# Uses Node's global fetch — the slim base ships no curl/wget. start-period
+# covers cold-boot model load before the HTTP listener opens.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=40s --retries=5 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8080)+'/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
 WORKDIR /app/packages/server
 # Run the entry point with tsx as a loader (no compile step). NOT
 # `node node_modules/.bin/tsx`: that .bin/tsx is a POSIX shell shim, which `node`
