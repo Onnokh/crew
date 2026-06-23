@@ -10,8 +10,14 @@
 # both. The builder stage carries the C/C++ toolchain; the slim runner copies the
 # already-compiled node_modules so the final image stays toolchain-free.
 
-# ── Shared base: pin Node ────────────────────────────────────────────────────
-FROM node:24-bookworm-slim AS base
+# ── Shared base: pin Node + platform ─────────────────────────────────────────
+# Pin linux/amd64 (matches docker-compose.yml): @anush008/tokenizers (fastembed's
+# tokenizer, loaded by the bake-model step) ships prebuilts ONLY for
+# darwin-universal, linux-x64-gnu, win32-x64-msvc — no linux-arm64-gnu. On an
+# arm64 build host (Apple Silicon, Hetzner CAX) a native build dies with
+# `Cannot find module '@anush008/tokenizers-linux-arm64-gnu'`. Forcing amd64
+# builds (QEMU-emulated on arm64 hosts) keeps the image host-agnostic.
+FROM --platform=linux/amd64 node:24-bookworm-slim AS base
 WORKDIR /app
 
 # ── Builder: install deps (native builds), copy source, bake the model ──────────
