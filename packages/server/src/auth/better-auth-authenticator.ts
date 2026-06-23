@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
-import type { User } from "../core/user.js";
-import type { PostRepository } from "../store/repository.js";
+import type { Principal, User } from "../core/user.js";
+import type { ControlPlaneRepository } from "../store/control-plane-repository.js";
 import type { Auth } from "./better-auth.js";
 import type { Authenticator } from "./authenticator.js";
 
@@ -8,18 +8,30 @@ import type { Authenticator } from "./authenticator.js";
  * The production {@link Authenticator}, backed by better-auth. Agents present
  * `Authorization: Bearer <api-key>` (verified via `verifyApiKey`); humans carry
  * a session cookie (resolved via `getSession`). Neither → `null` → 401 upstream.
- * The repository is touched only to resolve a key's owner into name/role.
+ *
+ * Resolution is `key → user → team → DB` (ADR 0008): once the credential yields a
+ * User, the control plane resolves that User's one Team. A credential that
+ * resolves to no Team yields `null` (401) — there is nowhere to route it.
  */
 export class BetterAuthAuthenticator implements Authenticator {
   constructor(
     private readonly auth: Auth,
-    private readonly repo: PostRepository,
+    private readonly controlPlane: ControlPlaneRepository,
   ) {}
 
-  async authenticate(request: IncomingMessage): Promise<User | null> {
+  async authenticate(request: IncomingMessage): Promise<Principal | null> {
     const bearer = extractBearerToken(request.headers.authorization);
-    if (bearer !== null) return this.fromApiKey(bearer);
-    return this.fromSession(request);
+    const user =
+      bearer !== null ? await this.fromApiKey(bearer) : await this.fromSession(request);
+    if (user === null) return null;
+    return this.withTeam(user);
+  }
+
+  /** Attach the User's one Team; null when they have no membership (→ 401). */
+  private withTeam(user: User): Principal | null {
+    const team = this.controlPlane.getTeamForUser(user.id);
+    if (team === null) return null;
+    return { ...user, teamId: team.id };
   }
 
   /** Resolve an agent's Bearer API key to its owning User, or null. */
@@ -27,7 +39,7 @@ export class BetterAuthAuthenticator implements Authenticator {
     const result = await this.auth.api.verifyApiKey({ body: { key } });
     if (!result.valid || !result.key) return null;
     // `referenceId` is the owning User's id; resolve name/role from `user`.
-    return this.repo.getUser(result.key.referenceId);
+    return this.controlPlane.getUser(result.key.referenceId);
   }
 
   /** Resolve a human's session cookie to the signed-in User, or null. */

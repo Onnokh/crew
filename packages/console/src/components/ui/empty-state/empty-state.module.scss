@@ -1,0 +1,37 @@
+@use "../../../styles/tokens" as *;
+
+// A centered icon-above-message placeholder. Fills its container and centers
+// on both axes so it sits in the middle of charts, lists, and side panels.
+// A faint filled block so an empty panel reads as a placeholder rather than a
+// gap — like a calm skeleton resting state.
+.emptyState {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-md;
+  min-height: 8rem;
+  padding: $space-xl $space-lg;
+  border-radius: 20px;
+  background: $color-surface;
+  text-align: center;
+}
+
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  border-radius: 50%;
+  background: $color-surface-hover;
+  color: $color-text-muted;
+}
+
+.emptyMessage {
+  margin: 0;
+  color: $color-text-muted;
+  font-size: $text-sm;
+}

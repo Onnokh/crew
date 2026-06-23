@@ -27,11 +27,11 @@ export async function apiFetch<T>(
   return (await response.json()) as T;
 }
 
-/** A non-2xx response from the server JSON API; carries the HTTP status. */
+/** A non-2xx response from the server JSON API; carries the HTTP status and raw body. */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
-    body: string,
+    readonly body: string,
   ) {
     super(`Server responded ${status}: ${body}`);
     this.name = "ApiError";

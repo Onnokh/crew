@@ -3,16 +3,40 @@ import { desc, eq } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { NewPostEvent, PostEvent } from "../core/post-event.js";
 import type { NewPost, Post } from "../core/post.js";
-import type { User } from "../core/user.js";
 import type { Embedder } from "../embedding/embedder.js";
 import type { Clock } from "../platform/clock.js";
 import type { IdGen } from "../platform/id-gen.js";
-import type { Candidate, PostEventRow, VecCandidate } from "./queries.js";
+import type {
+  ActivityRow,
+  Candidate,
+  ConversionStats,
+  ConversionWindow,
+  CoverageStats,
+  CoverageWindow,
+  NewRetrieval,
+  PostEventRow,
+  PostsCreatedStats,
+  RecentRetrievalDetail,
+  RecentRetrievalRow,
+  RepoPostCount,
+  UserActivityStat,
+  VecCandidate,
+} from "./queries.js";
 import {
+  conversionStats,
+  coverageStats,
+  earliestActivityAt,
+  postsByRepo,
+  postsCreatedStats,
+  recentActivity,
+  userActivityStats,
   environmentVectorSearch,
   eventsForPosts,
   insertEmbeddings,
+  insertRetrieval,
   keywordSearch,
+  recentRetrievals,
+  recentRetrievalsDetailed,
   vectorSearch,
 } from "./queries.js";
 import type { PostRepository, PostSort } from "./repository.js";
@@ -279,13 +303,59 @@ export class SqliteRepository implements PostRepository {
       .run();
   }
 
-  async getUser(id: string): Promise<User | null> {
-    // Raw SQL because better-auth owns the `user` table (kept out of schema.ts).
-    // Quoted identifier because `user` is a SQL keyword.
-    const row = this.raw
-      .prepare(`SELECT id, name, role FROM "user" WHERE id = ?`)
-      .get(id) as { id: string; name: string; role: string | null } | undefined;
-    return row ? { id: row.id, name: row.name, role: row.role } : null;
+  recordRetrieval(input: NewRetrieval): void {
+    // Mint ids here (the IdGen seam) so the query helper stays a pure writer.
+    insertRetrieval(
+      this.raw,
+      {
+        id: this.idGen.next("ret"),
+        userId: input.userId,
+        repo: input.repo,
+        situation: input.situation,
+        environment: input.environment,
+        limit: input.limit,
+        createdAt: this.clock.now(),
+      },
+      input.results.map((r) => ({ id: this.idGen.next("rr"), ...r })),
+    );
+  }
+
+  async listRecentRetrievals(limit: number): Promise<RecentRetrievalRow[]> {
+    return recentRetrievals(this.raw, limit);
+  }
+
+  async listRecentRetrievalsDetailed(
+    limit: number,
+  ): Promise<RecentRetrievalDetail[]> {
+    return recentRetrievalsDetailed(this.raw, limit);
+  }
+
+  async recentActivity(limit: number): Promise<ActivityRow[]> {
+    return recentActivity(this.raw, limit);
+  }
+
+  async earliestActivityAt(): Promise<number | null> {
+    return earliestActivityAt(this.raw);
+  }
+
+  async userActivityStats(limit: number, sinceMs: number): Promise<UserActivityStat[]> {
+    return userActivityStats(this.raw, limit, sinceMs);
+  }
+
+  async conversionStats(window: ConversionWindow): Promise<ConversionStats> {
+    return conversionStats(this.raw, window);
+  }
+
+  async coverageStats(window: CoverageWindow): Promise<CoverageStats> {
+    return coverageStats(this.raw, window);
+  }
+
+  async postsCreatedStats(window: CoverageWindow): Promise<PostsCreatedStats> {
+    return postsCreatedStats(this.raw, window);
+  }
+
+  async postsByRepo(): Promise<RepoPostCount[]> {
+    return postsByRepo(this.raw);
   }
 }
 

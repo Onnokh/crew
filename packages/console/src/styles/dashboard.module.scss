@@ -1,0 +1,234 @@
+@use "tokens" as *;
+
+// Shared dashboard styling — the handful of classes used across more than one
+// dashboard/dialog surface. Single-component styles live co-located with their
+// component; these are the deliberate cross-cutting bits.
+
+// --- Page scaffolding ---------------------------------------------------------
+
+.usagePage {
+  display: flex;
+  flex-direction: column;
+  gap: calc($space-xl * 1.15);
+  min-width: 0;
+  max-width: 68rem;
+  margin: 0 auto;
+}
+
+.usageSection {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  min-width: 0;
+
+  h2 {
+    margin: 0;
+    color: $color-text;
+    font-size: 1.625rem;
+    font-weight: 700;
+    line-height: $lh-lg;
+  }
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: baseline;
+  gap: $space-sm;
+  flex-wrap: wrap;
+}
+
+.sectionCaption {
+  color: $color-text-muted;
+  font-size: $text-sm;
+}
+
+.emptyRow {
+  color: $color-text-muted;
+  font-size: $text-sm;
+}
+
+.error {
+  margin: 0 0 $space-md;
+  color: $color-danger;
+  font-size: 0.875rem;
+}
+
+// --- Form controls (dialogs) --------------------------------------------------
+
+.input {
+  flex: 1;
+  min-width: min(100%, 12rem);
+  max-width: 22rem;
+  padding: 0.875rem $space-md;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: $color-surface-hover;
+  color: $color-text;
+  font-size: 0.9375rem;
+
+  &:focus-visible {
+    outline: 2px solid $color-accent;
+    outline-offset: 1px;
+  }
+}
+
+.primary {
+  min-height: 3rem;
+  padding: $space-sm $space-lg;
+  border: none;
+  border-radius: 14px;
+  background: $color-accent;
+  color: $color-accent-contrast;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: $color-accent-hover;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+}
+
+.secondary {
+  min-height: 3rem;
+  padding: $space-sm $space-lg;
+  border: 1px solid $color-border;
+  border-radius: 14px;
+  background: $color-bg;
+  color: $color-text;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: $color-surface-hover;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+}
+
+// --- Team list rows (teams + team-detail) ------------------------------------
+
+.teamList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li + li {
+    border-top: 1px solid $color-border;
+  }
+}
+
+.teamRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-md $space-sm;
+  border-radius: $radius-md;
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    background: $color-surface-hover;
+  }
+
+  // The edit trigger stays hidden until the row is hovered/focused (or its
+  // dialog is open), so the row reads clean at rest.
+  &:hover .teamRowEdit,
+  &:focus-within .teamRowEdit {
+    opacity: 1;
+  }
+}
+
+// Revealed on row hover; see `.teamRow`. Kept mounted (opacity, not display) so
+// it holds its grid column and doesn't shift the row.
+.teamRowEdit {
+  opacity: 0;
+  transition: opacity 120ms ease;
+
+  &[data-state="open"] {
+    opacity: 1;
+  }
+}
+
+.teamRowIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.625rem;
+  background: $color-surface-hover;
+  color: $color-text-muted;
+  overflow: hidden;
+  object-fit: cover;
+}
+
+.teamRowText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.teamRowName {
+  overflow: hidden;
+  color: $color-text;
+  font-size: $text-base;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teamRowMeta {
+  color: $color-text-muted;
+  font-size: $text-sm;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
+// --- Tinted icon-badge tones (stat cards, activity feed, overview) -----------
+
+.toneBlue {
+  background: var(--tone-blue-bg);
+  color: var(--tone-blue-fg);
+}
+
+.toneGreen {
+  background: var(--tone-green-bg);
+  color: var(--tone-green-fg);
+}
+
+.toneOrange {
+  background: var(--tone-orange-bg);
+  color: var(--tone-orange-fg);
+}
+
+.toneRed {
+  background: var(--tone-red-bg);
+  color: var(--tone-red-fg);
+}
+
+.tonePink {
+  background: var(--tone-pink-bg);
+  color: var(--tone-pink-fg);
+}
+
+@media (max-width: 640px) {
+  .input,
+  .primary {
+    width: 100%;
+    max-width: none;
+  }
+}

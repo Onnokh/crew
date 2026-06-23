@@ -3,7 +3,6 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { FakeClock, FakeEmbedder, FakeIdGen } from "../test/fakes.js";
-import { seedUser } from "../test/seed-user.js";
 import { migrate } from "./migrate.js";
 import { pinOrCheckEmbeddingModel } from "./meta.js";
 import { SqliteRepository } from "./sqlite-repository.js";
@@ -15,8 +14,7 @@ function open(): Database.Database {
   const db = new Database(":memory:");
   db.pragma("foreign_keys = ON");
   sqliteVec.load(db);
-  migrate(db);
-  seedUser(db, "user_alice", "Alice");
+  migrate(db, "team");
   return db;
 }
 

@@ -1,11 +1,13 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 /**
- * Drizzle TABLE definitions for `posts` and `post_events`. drizzle-kit reads
- * this file to generate migrations, so it must stay inside `packages/server`.
- * The FTS5/vec0 virtual tables and better-auth's `user` table are deliberately
- * absent (kept in hand-written migrations so drizzle-kit doesn't manage them);
- * `created_by`'s FK into `user(id)` is declared in SQL, not via `.references()`.
+ * Drizzle TABLE definitions for `posts` and `post_events` — the PER-TEAM corpus
+ * schema (ADR 0007). drizzle-kit reads this file to generate migrations, so it
+ * must stay inside `packages/server`. The FTS5/vec0 virtual tables are
+ * deliberately absent (kept in hand-written migrations so drizzle-kit doesn't
+ * manage them). `created_by` is a plain user id resolved against the control
+ * plane at read time: the corpus DB carries no `user` table, so the former FK
+ * into `user(id)` is dropped (it has no target here).
  */
 
 /** One stored item of shared agent knowledge. */
@@ -24,7 +26,7 @@ export const posts = sqliteTable("posts", {
   repo: text("repo").notNull(),
   /** active | retired. */
   status: text("status").notNull().default("active"),
-  /** Owning User's id (FK to better-auth's `user(id)`, enforced in SQL). */
+  /** Owning User's id; resolved against the control plane at read time (no FK here). */
   createdBy: text("created_by").notNull(),
   /** Creation timestamp, unix ms. */
   createdAt: integer("created_at").notNull(),
@@ -49,11 +51,53 @@ export const postEvents = sqliteTable("post_events", {
   reason: text("reason"),
   /** Optional one-line Note anchored to the verdict. */
   note: text("note"),
-  /** Acting User's id (FK to better-auth's `user(id)`, enforced in SQL). */
+  /** Acting User's id; resolved against the control plane at read time (no FK here). */
   createdBy: text("created_by").notNull(),
   /** When the event was recorded, unix ms. */
   createdAt: integer("created_at").notNull(),
 });
 
+/** One retrieval — a single `query` call, recorded for telemetry (see PLO-48). */
+export const retrievals = sqliteTable("retrievals", {
+  id: text("id").primaryKey(),
+  /** The querying User's id (FK to better-auth's `user(id)`, enforced in SQL). */
+  userId: text("user_id").notNull(),
+  /** The query's repo, if it carried one (boosts same-repo results); nullable. */
+  repo: text("repo"),
+  /** The freeform situation the agent searched for. */
+  situation: text("situation").notNull(),
+  /** The query's environment summary, if any; nullable. */
+  environment: text("environment"),
+  /** The requested result count, after clamping. (`limit` is a SQL keyword.) */
+  limit: integer("limit").notNull(),
+  /** How many Posts were returned (after the limit); 0 for a no-match query. */
+  resultCount: integer("result_count").notNull(),
+  /** When the query ran, unix ms. */
+  createdAt: integer("created_at").notNull(),
+});
+
+/** One returned Post within a Retrieval, with the score breakdown ranking computed. */
+export const retrievalResults = sqliteTable("retrieval_results", {
+  id: text("id").primaryKey(),
+  retrievalId: text("retrieval_id")
+    .notNull()
+    .references(() => retrievals.id),
+  postId: text("post_id").notNull(),
+  /** 1-based position in the returned list. */
+  rank: integer("rank").notNull(),
+  /** The reciprocal-rank-fusion input score. */
+  rrfScore: real("rrf_score").notNull(),
+  /** The trust multiplier (from the event log). */
+  trust: real("trust").notNull(),
+  /** The recency decay multiplier in (0, 1]. */
+  recency: real("recency").notNull(),
+  /** The same-repo boost multiplier. */
+  repoBoost: real("repo_boost").notNull(),
+  /** The final ranking score: rrf · trust · recency · repo_boost. */
+  final: real("final").notNull(),
+});
+
 export type PostRow = typeof posts.$inferSelect;
 export type PostEventRow = typeof postEvents.$inferSelect;
+export type RetrievalRow = typeof retrievals.$inferSelect;
+export type RetrievalResultRow = typeof retrievalResults.$inferSelect;

@@ -1,0 +1,31 @@
+@use "../../../styles/tokens" as *;
+
+.stack {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: $color-surface-hover;
+  color: $color-text-muted;
+  font-size: $text-xs;
+  font-weight: 700;
+  object-fit: cover;
+  box-shadow: 0 0 0 2px $color-bg;
+
+  & + & {
+    margin-left: -0.5rem;
+  }
+}
+
+.counter {
+  letter-spacing: -0.02em;
+}

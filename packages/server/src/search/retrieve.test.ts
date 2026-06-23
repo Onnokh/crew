@@ -3,23 +3,26 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { NewPost } from "../core/post.js";
+import type { AuthorLookup } from "../read/hydrate.js";
 import { migrate } from "../store/migrate.js";
 import { SqliteRepository } from "../store/sqlite-repository.js";
 import { FakeClock, FakeEmbedder, FakeIdGen } from "../test/fakes.js";
-import { seedUser } from "../test/seed-user.js";
 import { retrieve } from "./retrieve.js";
 
 let raw: Database.Database;
 let clock: FakeClock;
 let repo: SqliteRepository;
 
+// Author resolution comes from the control plane; a stub suffices here.
+const getUser: AuthorLookup = (id) =>
+  id === "user_alice" ? { id, name: "Alice", role: null } : null;
+
 beforeEach(() => {
   raw = new Database(":memory:");
   raw.pragma("foreign_keys = ON");
   sqliteVec.load(raw);
-  migrate(raw);
+  migrate(raw, "team");
   const db = drizzle(raw);
-  seedUser(raw, "user_alice", "Alice");
   clock = new FakeClock();
   repo = new SqliteRepository(db, raw, clock, new FakeIdGen(), new FakeEmbedder());
 });
@@ -41,14 +44,40 @@ async function post(overrides: Partial<NewPost> = {}): Promise<string> {
 }
 
 describe("retrieve", () => {
-  it("returns an empty list when nothing matches", async () => {
+  it("returns an empty list when nothing clears the relevance floor", async () => {
     await post({ situation: "kubernetes pod eviction" });
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "completely unrelated quantum entanglement",
       limit: 5,
     });
-    // Vector neighbours may surface the one Post, so assert shape not emptiness.
-    expect(Array.isArray(results)).toBe(true);
+    // The KNN leg still surfaces the lone Post as a nearest neighbour, but its
+    // cosine distance exceeds the floor, so it is dropped: a true zero-result.
+    expect(results).toEqual([]);
+  });
+
+  it("keeps a related Post that sits within the relevance floor", async () => {
+    const id = await post({ situation: "database connection pool exhausted" });
+    const results = await retrieve(repo, getUser, clock, {
+      situation: "database connection timeout",
+      limit: 5,
+    });
+    expect(results.map((r) => r.result.post.id)).toContain(id);
+  });
+
+  it("a looser maxVectorDistance lets a far Post back in", async () => {
+    await post({ situation: "kubernetes pod eviction" });
+    const floored = await retrieve(repo, getUser, clock, {
+      situation: "completely unrelated quantum entanglement",
+      limit: 5,
+    });
+    expect(floored).toEqual([]);
+    // Raising the ceiling past orthogonal distance (~1.0) admits the neighbour.
+    const loosened = await retrieve(repo, getUser, clock, {
+      situation: "completely unrelated quantum entanglement",
+      limit: 5,
+      maxVectorDistance: 2,
+    });
+    expect(loosened.length).toBeGreaterThan(0);
   });
 
   it("a confirmed Post outranks an equally-relevant unconfirmed one", async () => {
@@ -58,11 +87,11 @@ describe("retrieve", () => {
     clock.advance(1000);
     await repo.recordEvent({ postId: confirmed, verdict: "confirm", createdBy: "user_alice" });
 
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "database connection timeout",
       limit: 5,
     });
-    const order = results.map((r) => r.post.id);
+    const order = results.map((r) => r.result.post.id);
     expect(order.indexOf(confirmed)).toBeLessThan(order.indexOf(plain));
   });
 
@@ -72,11 +101,11 @@ describe("retrieve", () => {
 
     await repo.recordEvent({ postId: flagged, verdict: "flag", reason: "incorrect", createdBy: "user_alice" });
 
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "database connection timeout",
       limit: 5,
     });
-    const order = results.map((r) => r.post.id);
+    const order = results.map((r) => r.result.post.id);
     expect(order.indexOf(clean)).toBeLessThan(order.indexOf(flagged));
   });
 
@@ -84,12 +113,12 @@ describe("retrieve", () => {
     const otherRepo = await post({ situation: "database connection timeout", repo: "intranet" });
     const sameRepo = await post({ situation: "database connection timeout", repo: "webshop" });
 
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "database connection timeout",
       repo: "webshop",
       limit: 5,
     });
-    const order = results.map((r) => r.post.id);
+    const order = results.map((r) => r.result.post.id);
     expect(order.indexOf(sameRepo)).toBeLessThan(order.indexOf(otherRepo));
   });
 
@@ -103,12 +132,12 @@ describe("retrieve", () => {
       environment: "Node 22 fastembed onnxruntime",
     });
 
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "dependency install fails with native binary mismatch",
       environment: "Node 22 fastembed onnxruntime",
       limit: 5,
     });
-    const order = results.map((r) => r.post.id);
+    const order = results.map((r) => r.result.post.id);
     expect(order.indexOf(node)).toBeLessThan(order.indexOf(k8s));
   });
 
@@ -121,18 +150,18 @@ describe("retrieve", () => {
       await repo.recordEvent({ postId: weaker, verdict: "confirm", createdBy: "user_alice" });
     }
 
-    const [top] = await retrieve(repo, clock, {
+    const [top] = await retrieve(repo, getUser, clock, {
       situation: "typescript build fails on ci",
       limit: 1,
     });
-    expect(top!.post.id).toBe(weaker);
+    expect(top!.result.post.id).toBe(weaker);
   });
 
   it("never returns more than the requested limit", async () => {
     for (let i = 0; i < 6; i++) {
       await post({ situation: `database connection timeout variant ${i}` });
     }
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "database connection timeout",
       limit: 2,
     });
@@ -141,7 +170,7 @@ describe("retrieve", () => {
 
   it("clamps an out-of-range limit", async () => {
     await post();
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "database connection timeout",
       limit: 999,
     });
@@ -155,11 +184,11 @@ describe("retrieve", () => {
     clock.advance(100);
     await repo.recordEvent({ postId: id, verdict: "flag", reason: "stale", note: "newer note", createdBy: "user_alice" });
 
-    const results = await retrieve(repo, clock, {
+    const results = await retrieve(repo, getUser, clock, {
       situation: "database connection timeout",
       limit: 5,
     });
-    const hit = results.find((r) => r.post.id === id)!;
+    const hit = results.find((r) => r.result.post.id === id)!.result;
     expect(hit.notes[0]!.text).toBe("newer note");
     expect(hit.notes[1]!.text).toBe("older note");
     expect(hit.confirms).toBe(1);

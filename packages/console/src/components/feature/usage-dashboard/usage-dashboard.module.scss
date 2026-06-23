@@ -1,0 +1,142 @@
+@use "../../../styles/tokens" as *;
+
+// Performance dashboard: a period picker, two charts, and the events feed.
+
+.periodTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  // Mirrors the Teams "Create team" action so the two header chips read as
+  // siblings (same height, padding, radius, weight).
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  background: $color-bg;
+  color: $color-text;
+  font-size: $text-sm;
+  font-weight: 600;
+  // Pin the line box to the 16px icon so the height matches the Create-team
+  // chip exactly (its `normal` line-height otherwise renders ~3px taller).
+  line-height: 1;
+  cursor: pointer;
+  outline: none;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.04);
+
+  &:hover {
+    background: $color-surface-hover;
+  }
+
+  svg {
+    // Block, not inline — the Select.Icon wrapper would otherwise add line-box
+    // descent and make this chip ~2px taller than the Create-team one.
+    display: block;
+    color: $color-text-muted;
+  }
+}
+
+.periodContent {
+  z-index: 50;
+  min-width: var(--radix-select-trigger-width);
+  padding: $space-xs;
+  border: 1px solid $color-border-strong;
+  border-radius: $radius-md;
+  background: $color-bg;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.08);
+}
+
+.periodItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  padding: $space-sm;
+  border-radius: $radius-sm;
+  font-size: $text-sm;
+  color: $color-text;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+
+  &:hover,
+  &[data-highlighted] {
+    background: $color-surface-hover;
+  }
+}
+
+.periodCheck {
+  display: inline-flex;
+  color: $color-text-muted;
+}
+
+.usageChartGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-xl;
+  min-width: 0;
+}
+
+.usageChart {
+  min-width: 0;
+  padding: $space-lg 0 0;
+  border: 0;
+  background: transparent;
+}
+
+.usageLegend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: $space-md;
+  margin-bottom: $space-md;
+  color: $color-text-muted;
+  font-size: $text-sm;
+}
+
+.usageLegend span,
+.usageTooltip span {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.usageLegend i,
+.usageTooltip i {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+}
+
+.legendBlue {
+  background: #5b9bd5;
+}
+
+.legendGreen {
+  background: #6fc7ae;
+}
+
+.legendOrange {
+  background: #f0ad6d;
+}
+
+.usageTooltip {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  min-width: 12rem;
+  padding: $space-md;
+  border-radius: $radius-md;
+  background: #071126;
+  color: #ffffff;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 18%);
+}
+
+.usageTooltip strong {
+  font-size: $text-base;
+}
+
+@media (max-width: 900px) {
+  .usageChartGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -20,6 +20,18 @@
   --color-positive-text: #2f8f4b;
   --color-positive-bg: #f6fbf7;
   --color-positive-border: #d8ecdd;
+
+  // Tinted icon-badge tones (stat cards, activity feed, overview).
+  --tone-blue-bg: #dcebfb;
+  --tone-blue-fg: #2f76c4;
+  --tone-green-bg: #d6f1e5;
+  --tone-green-fg: #1f9d70;
+  --tone-orange-bg: #fdeacd;
+  --tone-orange-fg: #d9821f;
+  --tone-red-bg: #fadcd9;
+  --tone-red-fg: #d2453b;
+  --tone-pink-bg: #fbdcef;
+  --tone-pink-fg: #c0288f;
 }
 
 .dark {
@@ -40,6 +52,18 @@
   --color-positive-text: #6fd98c;
   --color-positive-bg: #0e1a12;
   --color-positive-border: #1f3a28;
+
+  // Tones invert: deep desaturated tint behind a brighter glyph.
+  --tone-blue-bg: #11203a;
+  --tone-blue-fg: #6aa9e0;
+  --tone-green-bg: #0f2419;
+  --tone-green-fg: #5fce9b;
+  --tone-orange-bg: #2a1d0c;
+  --tone-orange-fg: #e0a663;
+  --tone-red-bg: #2a1310;
+  --tone-red-fg: #e58379;
+  --tone-pink-bg: #2a1020;
+  --tone-pink-fg: #e072b8;
 }
 
 // Kill the default cross-fade so the only motion is the toggle's clip expansion;

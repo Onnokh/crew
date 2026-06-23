@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { normalizeRepo } from "../core/post.js";
-import type { User } from "../core/user.js";
+import type { Principal } from "../core/user.js";
 import { scanPost } from "../guardrails/scan.js";
-import type { PostRepository } from "../store/repository.js";
+import type { TeamRepositoryResolver } from "../store/team-repository-resolver.js";
 
 /**
  * Zod input schema for the `post` tool. The `.describe()` annotations are the
@@ -48,18 +48,19 @@ export type PostArgs = z.infer<typeof postParameters>;
  * User, run it through the ingestion guardrail, and persist a Post. A guardrail
  * rejection becomes a tool error and the Post never reaches the store.
  */
-export function makePostTool(repo: PostRepository) {
+export function makePostTool(teams: TeamRepositoryResolver) {
   return {
     name: "post",
     description:
       "Record a learning as a Post — a question plus its answer — so other agents can find it. The store is selective: a Post is worth storing only if it is Anchored (tied to a named API/library/version or this codebase's actual structure, not a general principle) AND Consequential (getting it wrong costs real time or ships a bug, not self-corrected in seconds) AND (Surprising — defies a competent agent's default assumption — OR Foundational — so load-bearing that not knowing it makes you build wrong and unwind work). Covers incidents/fixes, gotchas, and discovered conventions/architecture alike; capture the surprising or load-bearing shape, not the exhaustive architecture. When a candidate doesn't clearly clear the bar, don't post. Write in English. Provide a short title (the headline), the situation (the question) a future agent would face, the body (the answer) to apply, the environment it was learned in, and the repo it came from.",
     parameters: postParameters,
-    execute: async (args: PostArgs, context: { session?: User }) => {
+    execute: async (args: PostArgs, context: { session?: Principal }) => {
       const user = context.session;
       if (!user) {
         // Defensive: the authenticate hook rejects unauthenticated requests first.
         throw new Error("Unauthorized: no authenticated user on the session");
       }
+      const repo = teams.getRepository(user.teamId);
 
       // Canonicalise the repo to `group/name` so stored values are uniform
       // whatever form the client sends (full URL, ssh remote, bare slug).

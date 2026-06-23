@@ -1,0 +1,241 @@
+@use "../../../styles/tokens" as *;
+
+// Team detail: a wide members list beside a narrower scoped-activity column.
+.teamsColumns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+  gap: $space-xl;
+  min-width: 0;
+}
+
+// A section title with a small action button (e.g. Members + Add member).
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+
+  h2 {
+    margin: 0;
+    color: $color-text;
+    font-size: 1.625rem;
+    font-weight: 700;
+    line-height: $lh-lg;
+  }
+}
+
+// The right column stacks the Filesystem panel above the activity feed.
+.teamsSide {
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  min-width: 0;
+}
+
+// Filesystem: corpus DB size as a stat list beside the things that drive it.
+.filesystem {
+  padding: $space-lg;
+  border: 1px solid $color-border;
+  border-radius: 20px;
+  background: $color-surface;
+}
+
+.fsStatList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fsStatRow {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-md 0;
+  border-bottom: 1px solid $color-border;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.fsStatIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  border-radius: $radius-md;
+  background: $color-surface-hover;
+  color: $color-text-muted;
+}
+
+.fsStatLabel {
+  color: $color-text;
+  font-size: $text-sm;
+}
+
+.fsStatValue {
+  margin-left: auto;
+  color: $color-text;
+  font-size: $text-base;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+// The latest-activity column rendered as a bordered, filled side panel.
+// `align-self: stretch` keeps it the full sidebar width even when its body is a
+// narrow empty state (otherwise the column-flex cross axis shrink-wraps it).
+.teamsActivity {
+  align-self: stretch;
+  position: sticky;
+  top: $space-lg;
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  min-width: 0;
+  padding: $space-lg;
+  border: 1px solid $color-border;
+  border-radius: 20px;
+  background: $color-surface;
+}
+
+.teamsActivityTitle {
+  margin: 0;
+  padding-bottom: $space-md;
+  border-bottom: 1px solid $color-border;
+  color: $color-text;
+  font-size: $text-base;
+  font-weight: 600;
+  text-align: center;
+}
+
+.secretSlot {
+  grid-column: 1 / -1;
+}
+
+// Two side-by-side charts (Projects pie, Member usage bars) above the columns.
+// `align-items: stretch` (the grid default) keeps both cards the same height.
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-xl;
+  min-width: 0;
+  margin-bottom: $space-xl;
+
+  // Each card is a column so the chart body can grow to fill equal height.
+  > section {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+// A small muted caption under a chart's heading.
+.chartHint {
+  margin: 0 0 $space-md;
+  color: $color-text-muted;
+  font-size: $text-sm;
+}
+
+// Shared chart canvas height so the pie and the bars read as the same weight.
+$chart-body-height: 300px;
+
+// The bar chart fills the shared canvas height (ResponsiveContainer is 100%).
+.chartBody {
+  flex: 1;
+  min-height: $chart-body-height;
+}
+
+// Pie sits beside a scrollable legend so long repo names never crowd the slices.
+.pieRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 12rem);
+  align-items: center;
+  gap: $space-md;
+  min-width: 0;
+  flex: 1;
+  min-height: $chart-body-height;
+}
+
+.pieLegend {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  margin: 0;
+  padding: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    font-size: $text-sm;
+    color: $color-text;
+  }
+
+  i {
+    flex: none;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+  }
+}
+
+.pieLegendName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pieLegendValue {
+  margin-left: auto;
+  color: $color-text-muted;
+  font-variant-numeric: tabular-nums;
+}
+
+// Dark floating tooltip, matching the performance dashboard's chart tooltip.
+.chartTooltip {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  min-width: 10rem;
+  padding: $space-md;
+  border-radius: $radius-md;
+  background: #071126;
+  color: #ffffff;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 18%);
+
+  strong {
+    font-size: $text-base;
+    word-break: break-word;
+  }
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-xs;
+  }
+
+  i {
+    display: inline-block;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+  }
+}
+
+@media (max-width: 900px) {
+  .teamsColumns {
+    grid-template-columns: 1fr;
+  }
+
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -91,17 +91,18 @@ describe("review JSON API: public lists + session-gated retire/restore", () => {
     }
   }
 
-  it("serves the reads publicly but gates the writes behind a session (401)", async () => {
-    // Browsing the shared memory needs no session — the lists and search are open.
+  it("gates every route on the caller's session+Team (401 anonymous, 200 with cookie)", async () => {
+    // Every route now operates on the caller's own Team (ADR 0008), so an
+    // anonymous caller is refused on reads and writes alike.
     for (const path of [
       "/api/review/recent",
       "/api/review/flagged",
       "/api/review/search?q=anything",
     ]) {
-      const res = await fetch(`${base}${path}`);
-      expect(res.status).toBe(200);
+      expect((await fetch(`${base}${path}`)).status).toBe(401);
+      // With the seeded admin's cookie the same read succeeds against her Team.
+      expect((await fetch(`${base}${path}`, { headers: { cookie } })).status).toBe(200);
     }
-    // The moderation writes still refuse an anonymous caller.
     for (const path of [
       "/api/review/post_x/retire",
       "/api/review/post_x/restore",

@@ -1,0 +1,374 @@
+@use "../../styles/tokens" as *;
+
+.appSidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc($space-xl * 1.25);
+  min-height: 100vh;
+  // No right padding: the content card's own 1rem margin supplies the gutter,
+  // so the sidebar doesn't double it up into a 32px hatched gap.
+  padding: 1rem 0 1rem 1rem;
+  background: transparent;
+}
+
+// Logo/brand on the left, theme toggle pinned to the right.
+.appSidebarHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+}
+
+.appSidebarHeader {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  color: inherit;
+  text-decoration: none;
+}
+
+.appSidebarHeader div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.appSidebarHeader strong {
+  font-size: 1.25rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.appSidebarHeader small {
+  color: $color-text-muted;
+  font-size: $text-xs;
+  line-height: 1.15;
+}
+
+.appMark {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 13px;
+  object-fit: cover;
+}
+
+.appNav {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.appNavGroup {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  padding: $space-xs 0;
+}
+
+.sidebarLink,
+.sidebarButton,
+.sidebarButtonActive {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  width: 100%;
+  min-height: 3rem;
+  padding: $space-sm $space-md;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: $color-text;
+  font: inherit;
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebarLink span,
+.sidebarButton span,
+.sidebarButtonActive span {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-md;
+  min-width: 0;
+}
+
+.sidebarLink svg,
+.sidebarButton svg,
+.sidebarButtonActive svg {
+  color: $color-text-subtle;
+}
+
+.sidebarLink small,
+.sidebarButton small,
+.sidebarButtonActive small {
+  color: $color-text-muted;
+  font-family: $font-mono;
+  font-size: $text-xs;
+  white-space: nowrap;
+}
+
+.sidebarLink:hover,
+.sidebarButton:hover {
+  background: $color-surface-hover;
+}
+
+.sidebarButtonActive {
+  border-color: transparent;
+  background: $color-surface-hover;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 4%);
+}
+
+.teamTree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 2.25rem;
+}
+
+.teamTreeItem,
+.teamTreeItemActive {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-sm;
+  width: 100%;
+  min-height: 2.125rem;
+  padding: $space-xs $space-sm;
+  border: 0;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $color-text-muted;
+  font: inherit;
+  font-size: $text-sm;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.teamTreeItem span,
+.teamTreeItemActive span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teamTreeItem small,
+.teamTreeItemActive small {
+  font-family: $font-mono;
+  font-size: $text-xs;
+}
+
+.teamTreeItem:hover,
+.teamTreeItemActive {
+  background: $color-surface-hover;
+  color: $color-text;
+}
+
+// Pinned to the foot of the sidebar — pushed down by the auto margin.
+.sidebarUser {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  margin-top: auto;
+  width: 100%;
+  padding: $space-sm;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: $color-surface-hover;
+  }
+}
+
+.sidebarUserAvatarWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+// Small "online" indicator on the trigger avatar.
+.sidebarUserStatus {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 2px solid $color-bg;
+  border-radius: 50%;
+  background: $color-positive;
+}
+
+.sidebarUserAvatar,
+.sidebarUserMenuAvatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: $color-accent;
+  color: $color-accent-contrast;
+  font-size: $text-xs;
+  font-weight: 600;
+  overflow: hidden;
+}
+
+.sidebarUserAvatar {
+  width: 2rem;
+  height: 2rem;
+}
+
+.sidebarUserMenuAvatar {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.sidebarUserAvatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sidebarUserText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+
+  strong {
+    overflow: hidden;
+    font-size: $text-sm;
+    font-weight: 600;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  small {
+    overflow: hidden;
+    color: $color-text-muted;
+    font-size: $text-xs;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.sidebarUser svg {
+  flex-shrink: 0;
+  color: $color-text-muted;
+}
+
+.sidebarUserMenu {
+  display: flex;
+  flex-direction: column;
+  min-width: 17rem;
+  padding: $space-xs;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-bg;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+  z-index: 20;
+}
+
+// Identity block at the top of the menu: large avatar + name + email.
+.sidebarUserMenuHead {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm;
+}
+
+.sidebarUserMenuHeadText {
+  min-width: 0;
+
+  strong {
+    display: block;
+    overflow: hidden;
+    font-size: $text-sm;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  small {
+    display: block;
+    overflow: hidden;
+    color: $color-text-muted;
+    font-size: $text-xs;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.sidebarUserMenuSep {
+  height: 1px;
+  margin: $space-xs 0;
+  background: $color-border;
+}
+
+// Descriptive menu rows: icon + label + sublabel.
+.sidebarUserMenuRow,
+.sidebarUserMenuRowDanger {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm;
+  border-radius: $radius-sm;
+  color: $color-text;
+  cursor: pointer;
+  outline: none;
+
+  svg {
+    flex-shrink: 0;
+    color: $color-text-muted;
+  }
+
+  strong {
+    display: block;
+    font-size: $text-sm;
+    font-weight: 500;
+  }
+
+  small {
+    display: block;
+    color: $color-text-muted;
+    font-size: $text-xs;
+  }
+
+  &[data-highlighted] {
+    background: $color-surface-hover;
+  }
+}
+
+.sidebarUserMenuRowDanger {
+  color: $color-danger;
+
+  svg,
+  small {
+    color: $color-danger;
+  }
+}
+
+// Stacked layout: the sidebar becomes a top bar instead of a sticky column.
+@media (max-width: 900px) {
+  .appSidebar {
+    position: static;
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid $color-border;
+  }
+}
+
+@media (max-width: 640px) {
+  .appSidebar {
+    padding: $space-lg;
+  }
+}

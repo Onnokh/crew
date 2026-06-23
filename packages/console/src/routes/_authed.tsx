@@ -1,4 +1,9 @@
-import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
+import {
+  Outlet,
+  createFileRoute,
+  redirect,
+  useRouterState,
+} from "@tanstack/react-router";
 import { authClient } from "../auth/client";
 import { AppChrome } from "../components/app-chrome/app-chrome";
 
@@ -21,6 +26,12 @@ export const Route = createFileRoute("/_authed")({
 });
 
 function AuthedLayout() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  if (pathname.startsWith("/dashboard")) {
+    return <Outlet />;
+  }
+
   return (
     <AppChrome>
       <Outlet />

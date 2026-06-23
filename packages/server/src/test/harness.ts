@@ -1,17 +1,25 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { createServer } from "node:net";
 import type { AddressInfo } from "node:net";
+import { join } from "node:path";
 import * as sqliteVec from "sqlite-vec";
 import { BetterAuthAuthenticator } from "../auth/better-auth-authenticator.js";
 import { createAuth, type Auth } from "../auth/better-auth.js";
 import type { User } from "../core/user.js";
 import type { Deps } from "../deps.js";
 import { buildServer } from "../server.js";
+import { ensureDefaultOrgAndTeam } from "../store/bootstrap.js";
+import { ControlPlaneRepository } from "../store/control-plane-repository.js";
 import { migrate } from "../store/migrate.js";
-import { SqliteRepository } from "../store/sqlite-repository.js";
+import type { PostRepository } from "../store/repository.js";
+import {
+  createTeamRepositoryResolver,
+  type TeamRepositoryResolver,
+} from "../store/team-repository-resolver.js";
 import { FakeClock, FakeEmbedder, FakeIdGen } from "./fakes.js";
 
 /** Fixed boot config for the test better-auth instance (≥16-char secret). */
@@ -21,56 +29,106 @@ const TEST_BASE_URL = "http://localhost";
 /** Everything a booted test server is assembled from, plus the seeded creds. */
 export type TestEnv = {
   deps: Deps;
-  repo: SqliteRepository;
+  /** The default Team's corpus repository (Alice's team). */
+  repo: PostRepository;
+  controlPlane: ControlPlaneRepository;
+  teams: TeamRepositoryResolver;
   auth: Auth;
   /** The seeded User (real better-auth id), author of attributed Posts. */
   user: User;
+  /** The default Team id Alice belongs to. */
+  teamId: string;
   /** A freshly minted agent API key bound to `user`, for the Bearer header. */
   apiKey: string;
+  /** Provision a brand-new User on a brand-new Team; returns its id, team, and a minted key. */
+  addTeamWithUser: (opts: {
+    email: string;
+    name: string;
+  }) => Promise<{ userId: string; teamId: string; apiKey: string }>;
+  /** Tear down the temp corpus files this env opened. */
+  cleanup: () => void;
 };
 
 /**
  * Assemble a real {@link Deps} backed by real better-auth over an in-memory
- * SQLite — the same store and auth seam `main.ts` runs, with only the embedder,
- * clock, and id generator faked. No fake repository or authenticator: the
- * integration test exercises the real FTS5 + sqlite-vec path AND the real
- * api-key verification seam. Seeds one User and mints a bound agent API key.
+ * control-plane SQLite plus per-team corpus DBs as REAL temp files (so two-team
+ * isolation is physical — separate files). Only the embedder, clock, and id
+ * generator are faked. Seeds a default Org + Team, one admin-capable User (Alice)
+ * who is a member of it, and mints a bound agent API key.
  */
 export async function buildTestEnv(): Promise<TestEnv> {
   const raw = new Database(":memory:");
   raw.pragma("foreign_keys = ON");
   sqliteVec.load(raw);
-  migrate(raw);
+  // Control-plane schema (identity + org/team/membership) on this handle.
+  migrate(raw, "control-plane");
 
-  const repo = new SqliteRepository(
-    drizzle(raw),
-    raw,
-    new FakeClock(),
-    new FakeIdGen(),
-    new FakeEmbedder(),
-  );
+  const clock = new FakeClock();
+  const idGen = new FakeIdGen();
+  const embedder = new FakeEmbedder();
+  const controlPlane = new ControlPlaneRepository(raw);
+
+  const teamsDir = mkdtempSync(join(tmpdir(), "crew-teams-"));
+  const teams = createTeamRepositoryResolver({
+    teamsDir,
+    embedder,
+    clock,
+    idGen,
+  });
+
   const auth = createAuth(raw, { secret: TEST_SECRET, baseURL: TEST_BASE_URL });
 
+  // Default Org + Team, then Alice as a member of it.
+  const teamId = ensureDefaultOrgAndTeam(controlPlane, idGen, clock);
   const signUp = await auth.api.signUpEmail({
     body: { email: "alice@test.local", password: "password1234", name: "Alice" },
   });
   const userId = signUp.user.id;
+  controlPlane.addMembership(userId, teamId, clock.now());
   const minted = await auth.api.createApiKey({
     body: { name: "alice-agent", userId },
   });
 
   const deps: Deps = {
-    auth: new BetterAuthAuthenticator(auth, repo),
+    auth: new BetterAuthAuthenticator(auth, controlPlane),
     authInstance: auth,
-    repo,
-    clock: new FakeClock(),
+    controlPlane,
+    teams,
+    clock,
+    idGen,
   };
+
+  // Provision an isolated Team + member + key — used by the two-team isolation test.
+  const addTeamWithUser: TestEnv["addTeamWithUser"] = async ({ email, name }) => {
+    const orgId = idGen.next("org");
+    const newTeamId = idGen.next("team");
+    controlPlane.createOrg(orgId, `${name} Org`, clock.now());
+    controlPlane.createTeam(
+      { id: newTeamId, orgId, name: `${name} Team` },
+      clock.now(),
+    );
+    const su = await auth.api.signUpEmail({
+      body: { email, password: "password1234", name },
+    });
+    controlPlane.addMembership(su.user.id, newTeamId, clock.now());
+    const key = await auth.api.createApiKey({ body: { name: `${name}-agent`, userId: su.user.id } });
+    return { userId: su.user.id, teamId: newTeamId, apiKey: key.key };
+  };
+
   return {
     deps,
-    repo,
+    repo: teams.getRepository(teamId),
+    controlPlane,
+    teams,
     auth,
     user: { id: userId, name: "Alice", role: null },
+    teamId,
     apiKey: minted.key,
+    addTeamWithUser,
+    cleanup: () => {
+      teams.closeAll();
+      rmSync(teamsDir, { recursive: true, force: true });
+    },
   };
 }
 
@@ -94,7 +152,14 @@ export async function startTestServer(env?: TestEnv): Promise<RunningServer> {
     transportType: "httpStream",
     httpStream: { port, stateless: true, enableJsonResponse: true },
   });
-  return { port, stop: () => server.stop(), env: resolved };
+  return {
+    port,
+    stop: async () => {
+      await server.stop();
+      resolved.cleanup();
+    },
+    env: resolved,
+  };
 }
 
 /**

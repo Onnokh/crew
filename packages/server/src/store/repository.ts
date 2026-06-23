@@ -1,7 +1,20 @@
 import type { PostEvent, NewPostEvent } from "../core/post-event.js";
 import type { NewPost, Post } from "../core/post.js";
-import type { User } from "../core/user.js";
-import type { Candidate, VecCandidate } from "./queries.js";
+import type {
+  ActivityRow,
+  Candidate,
+  ConversionStats,
+  ConversionWindow,
+  CoverageStats,
+  CoverageWindow,
+  NewRetrieval,
+  PostsCreatedStats,
+  RecentRetrievalDetail,
+  RecentRetrievalRow,
+  RepoPostCount,
+  UserActivityStat,
+  VecCandidate,
+} from "./queries.js";
 
 /**
  * The persistence seam for Posts and Users. Search methods return raw candidates
@@ -78,6 +91,79 @@ export type PostRepository = {
   /** Set a Post's status back to `active`. The inverse of {@link retirePost}; a no-op if absent. */
   restorePost(id: string): Promise<void>;
 
-  /** Look up a User by id in better-auth's `user` table, or null. Read-only name lookup. */
-  getUser(id: string): Promise<User | null>;
+  /**
+   * Persist one retrieval (a `query` call) plus its per-result score breakdown,
+   * minting ids and writing the retrieval row and its result rows in one
+   * transaction. Records EVERY query, including zero-result ones (no result
+   * rows). Telemetry-only and additive — callers wrap it so a failure can't fail
+   * the query (see tools/query.ts).
+   */
+  recordRetrieval(input: NewRetrieval): void;
+
+  /**
+   * The most recent Retrievals for the telemetry dashboard, newest first, capped
+   * at `limit`. One row per `query`, carrying situation/result count/time.
+   */
+  listRecentRetrievals(limit: number): Promise<RecentRetrievalRow[]>;
+
+  /**
+   * The most recent Retrievals for the tuning view, newest first, capped at
+   * `limit`, each carrying its returned Posts (rank + full score breakdown) with
+   * a human-readable Post title (null if the Post was retired/deleted). The
+   * converted? verdict is NOT here — derive it from {@link conversionStats}.
+   */
+  listRecentRetrievalsDetailed(limit: number): Promise<RecentRetrievalDetail[]>;
+
+  /**
+   * The unified activity feed, newest first, capped at `limit`: recent searches,
+   * new Posts, and Confirm/Flag verdicts merged into one time-sorted list. User
+   * ids are returned raw — resolve them to names at the API.
+   */
+  recentActivity(limit: number): Promise<ActivityRow[]>;
+
+  /**
+   * The earliest activity timestamp across searches, Posts, and verdicts, or
+   * null when there is none. Backs the dashboard's "All time" range.
+   */
+  earliestActivityAt(): Promise<number | null>;
+
+  /**
+   * Per-user usage (posts authored + searches run) since `sinceMs`, ranked by
+   * combined activity, capped at `limit`. User ids are returned raw — resolve
+   * them to names at the API. Backs the dashboard's "top users" list (a rolling
+   * window, not a lifetime tally).
+   */
+  userActivityStats(limit: number, sinceMs: number): Promise<UserActivityStat[]>;
+
+  /**
+   * Conversion attribution over Retrievals-with-results in `[from, to)`: classify
+   * each as converted iff the same User who queried later recorded a Confirm on
+   * one of its returned Posts, after the retrieval and within the attribution
+   * window (last-touch). Window/range are read-time parameters; nothing is
+   * stored. Consumed by PLO-49 (a rate over the range) and PLO-51 (did THIS
+   * retrieval convert?).
+   */
+  conversionStats(window: ConversionWindow): Promise<ConversionStats>;
+
+  /**
+   * Coverage counts over the raw Retrievals in `[from, to)`: the total query
+   * volume and how many returned zero Posts. The zero-result rate is
+   * `zeroResults / total`. Range is read-time; nothing is stored or
+   * pre-aggregated. Consumed by PLO-50 for the zero-result-rate and
+   * query-volume panels (one call over the range, one per day for the trend).
+   */
+  coverageStats(window: CoverageWindow): Promise<CoverageStats>;
+
+  /**
+   * How many Posts were created in `[from, to)`, over the raw `posts` rows.
+   * Range is read-time; nothing is stored or pre-aggregated. One call over the
+   * range for the headline, one per day-wide bucket for the created-per-day trend.
+   */
+  postsCreatedStats(window: CoverageWindow): Promise<PostsCreatedStats>;
+
+  /**
+   * Posts grouped by their originating `repo`, busiest first, over every Post
+   * in the corpus. Backs the team detail page's per-project breakdown.
+   */
+  postsByRepo(): Promise<RepoPostCount[]>;
 };

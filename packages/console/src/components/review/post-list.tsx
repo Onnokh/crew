@@ -1,3 +1,5 @@
+import { ScrollText } from "lucide-react";
+import { EmptyState } from "../ui/empty-state/empty-state";
 import { PostCard } from "./post-card";
 import type { ReviewRow } from "./review-data";
 import styles from "./review.module.scss";
@@ -17,7 +19,7 @@ export function PostList({
   onSetRetired: (row: ReviewRow, retired: boolean) => void;
 }) {
   if (rows === undefined) return <p className={styles.muted}>Loading…</p>;
-  if (rows.length === 0) return <p className={styles.muted}>{empty}</p>;
+  if (rows.length === 0) return <EmptyState icon={ScrollText} message={empty} />;
   return (
     <ul className={styles.cards}>
       {rows.map((row) => (
