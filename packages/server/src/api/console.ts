@@ -24,9 +24,33 @@ export function mountConsole(app: Hono): boolean {
   // paths unsupported; the middleware can't read Windows back-slashes).
   const root = relative(process.cwd(), distDir).split("\\").join("/");
 
+  // Cache policy that survives deploys (set after the response so it sticks —
+  // serveStatic's own onFound runs too late to add headers). Vite content-hashes
+  // everything under /assets/, so cache it immutably for a year; the un-hashed
+  // HTML shell must revalidate every load so a deploy's new chunk names take
+  // effect immediately instead of a stale shell pointing at deleted chunks.
+  app.use("/assets/*", async (c, next) => {
+    await next();
+    c.header("Cache-Control", "public, max-age=31536000, immutable");
+  });
+  app.use("/*", async (c, next) => {
+    await next();
+    if (c.res.headers.get("Content-Type")?.includes("text/html")) {
+      c.header("Cache-Control", "no-cache");
+    }
+  });
+
   app.use("/*", serveStatic({ root }));
 
-  // Client-route fallback: a GET that matched no file gets the SPA shell.
+  // A MISSING hashed asset must 404 — never fall through to the SPA shell.
+  // Otherwise a request for a chunk that briefly doesn't exist (e.g. the window
+  // during a deploy) gets index.html with `200 text/html`, which a CDN/browser
+  // happily caches UNDER THE ASSET URL. After the deploy the real chunk exists,
+  // but caches keep serving that HTML, and the module loader rejects it with
+  // "Failed to fetch dynamically imported module". 404 keeps the cache clean.
+  app.get("/assets/*", (c) => c.text("Not found", 404));
+
+  // Client-route fallback: a non-asset GET that matched no file gets the SPA shell.
   app.get("/*", serveStatic({ root, path: "index.html" }));
 
   return true;
