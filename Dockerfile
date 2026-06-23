@@ -10,14 +10,11 @@
 # both. The builder stage carries the C/C++ toolchain; the slim runner copies the
 # already-compiled node_modules so the final image stays toolchain-free.
 
-# ── Shared base: pin Node + platform ─────────────────────────────────────────
-# Pin linux/amd64 (matches docker-compose.yml): @anush008/tokenizers (fastembed's
-# tokenizer, loaded by the bake-model step) ships prebuilts ONLY for
-# darwin-universal, linux-x64-gnu, win32-x64-msvc — no linux-arm64-gnu. On an
-# arm64 build host (Apple Silicon, Hetzner CAX) a native build dies with
-# `Cannot find module '@anush008/tokenizers-linux-arm64-gnu'`. Forcing amd64
-# builds (QEMU-emulated on arm64 hosts) keeps the image host-agnostic.
-FROM --platform=linux/amd64 node:24-bookworm-slim AS base
+# ── Shared base: pin Node ────────────────────────────────────────────────────
+# No platform pin: the embedder (Transformers.js on onnxruntime-node) tokenizes
+# in pure JS and ort-node ships linux/arm64 prebuilts, so the image builds and
+# runs natively on both amd64 and arm64 hosts.
+FROM node:24-bookworm-slim AS base
 WORKDIR /app
 
 # ── Builder: install deps (native builds), copy source, bake the model ──────────
@@ -27,10 +24,10 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 build-essential \
   && rm -rf /var/lib/apt/lists/*
 
-# Skip onnxruntime-node's CUDA/GPU binary download (~hundreds of MB) — fastembed
-# only ever runs the CPU execution provider, and the CPU runtime ships in the
-# base package. Without this the postinstall pulls the GPU build, bloating the
-# image to ~1.2 GB. Must precede `npm ci` (its postinstall reads this).
+# Skip onnxruntime-node's CUDA/GPU binary download (~hundreds of MB) — the
+# embedder only ever runs the CPU execution provider, and the CPU runtime ships
+# in the base package. Without this the postinstall pulls the GPU build, bloating
+# the image to ~1.2 GB. Must precede `npm ci` (its postinstall reads this).
 ENV ONNXRUNTIME_NODE_INSTALL_CUDA=skip
 
 # Install with the lockfile first, using only the manifests, so this layer caches

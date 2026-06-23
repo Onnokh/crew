@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 import { BetterAuthAuthenticator } from "./auth/better-auth-authenticator.js";
 import { createAuth, type Auth } from "./auth/better-auth.js";
 import type { Deps } from "./deps.js";
-import { FastEmbedder } from "./embedding/fastembed.js";
+import { TransformersEmbedder } from "./embedding/transformers.js";
 import { NanoidGen } from "./platform/nanoid-gen.js";
 import { SystemClock } from "./platform/system-clock.js";
 import { ensureDefaultOrgAndTeam } from "./store/bootstrap.js";
@@ -26,7 +26,9 @@ async function buildRealDeps(port: number): Promise<Deps> {
 
   // One shared embedding model, loaded once per host: every team connection the
   // resolver opens reuses this embedder (only the corpus vectors are per-team).
-  const embedder = await FastEmbedder.create(process.env.CREW_MODEL_CACHE_DIR);
+  const embedder = await TransformersEmbedder.create(
+    process.env.CREW_MODEL_CACHE_DIR,
+  );
 
   const controlPlane = new ControlPlaneRepository(raw);
   const teams = createTeamRepositoryResolver({
