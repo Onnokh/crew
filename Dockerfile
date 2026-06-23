@@ -73,7 +73,12 @@ RUN npm run build -w @crew/console
 FROM base AS runner
 ENV NODE_ENV=production \
     CREW_MODEL_CACHE_DIR=/app/models \
-    CREW_DB_PATH=/data/crew.db \
+    # Persisted state lives on the /data volume (writable by the `node` user).
+    # The tenancy split (ADR 0007/0008) uses a control-plane DB file plus a
+    # per-team corpus directory; both default to CWD-relative paths, which the
+    # non-root user can't create under the root-owned /app — so pin them to /data.
+    CREW_CONTROL_PLANE_DB_PATH=/data/crew-control-plane.db \
+    CREW_TEAMS_DIR=/data/teams \
     PORT=8080 \
     # FastMCP binds `localhost` by default — unreachable through Docker's port
     # forward. Bind all interfaces so published 8080 is reachable from the host.
