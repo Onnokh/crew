@@ -23,8 +23,7 @@ function parseSort(value: string | undefined): PostSort {
  *   GET  /api/review/recent   → { posts: ReviewRow[] }  most recent Posts
  *   GET  /api/review/flagged  → { posts: ReviewRow[] }  Posts carrying ≥1 Flag
  *   GET  /api/review/search   → { posts: ReviewRow[] }  ranked exactly as `query`
- *   POST /api/review/:id/retire  → 204  drop from agent `query` results
- *   POST /api/review/:id/restore → 204  bring it back
+ *   DELETE /api/review/:id    → 204  permanently delete a Post (owner or admin)
  */
 
 const LIST_LIMIT = 50;
@@ -38,6 +37,7 @@ export type ReviewRow = {
   environment: string;
   repo: string;
   status: Post["status"];
+  createdBy: string;
   createdAt: number;
   authorName: string;
   confirms: number;
@@ -49,17 +49,28 @@ export function mountReview(app: Hono, deps: Deps): void {
   const getUser = (id: string) => deps.controlPlane.getUser(id);
 
   /**
-   * Resolve the caller's Team corpus repository from their session. Returns null
-   * for no session OR a User with no Team; the handler then answers 401.
+   * Resolve the caller's session User AND their Team corpus repository. Returns
+   * null for no session OR a User with no Team; the handler then answers 401.
    */
-  async function repoForCaller(c: Context): Promise<PostRepository | null> {
+  async function callerContext(
+    c: Context,
+  ): Promise<{ repo: PostRepository; userId: string; isAdmin: boolean } | null> {
     const session = await deps.authInstance.api.getSession({
       headers: c.req.raw.headers,
     });
     if (!session?.user) return null;
     const team = deps.controlPlane.getTeamForUser(session.user.id);
     if (team === null) return null;
-    return deps.teams.getRepository(team.id);
+    return {
+      repo: deps.teams.getRepository(team.id),
+      userId: session.user.id,
+      isAdmin: session.user.role === "admin",
+    };
+  }
+
+  /** The repo half of {@link callerContext}, for the read-only list routes. */
+  async function repoForCaller(c: Context): Promise<PostRepository | null> {
+    return (await callerContext(c))?.repo ?? null;
   }
 
   // `recent` takes `?sort=newest|views|confirms` (default newest), ranked in SQL.
@@ -96,24 +107,20 @@ export function mountReview(app: Hono, deps: Deps): void {
     return c.json({ posts: results.map((r) => toReviewRow(r.result)) });
   });
 
-  // Idempotent no-ops for an unknown id (the repository swallows it).
-  app.post("/api/review/:id/retire", (c) => retire(c, repoForCaller, true));
-  app.post("/api/review/:id/restore", (c) => retire(c, repoForCaller, false));
-}
-
-/** Retire (`retired = true`) or restore a Post by route param, returning 204. */
-async function retire(
-  c: Context,
-  repoForCaller: (c: Context) => Promise<PostRepository | null>,
-  retired: boolean,
-): Promise<Response> {
-  const repo = await repoForCaller(c);
-  if (!repo) return c.json({ error: "unauthenticated" }, 401);
-  const id = c.req.param("id");
-  if (!id) return c.json({ error: "missing post id" }, 400);
-  if (retired) await repo.retirePost(id);
-  else await repo.restorePost(id);
-  return c.body(null, 204);
+  // Delete a Post. Allowed only for its author or an admin; 404 for an unknown id.
+  app.delete("/api/review/:id", async (c) => {
+    const ctx = await callerContext(c);
+    if (!ctx) return c.json({ error: "unauthenticated" }, 401);
+    const id = c.req.param("id");
+    if (!id) return c.json({ error: "missing post id" }, 400);
+    const post = await ctx.repo.getPost(id);
+    if (!post) return c.json({ error: "not found" }, 404);
+    if (!ctx.isAdmin && post.createdBy !== ctx.userId) {
+      return c.json({ error: "forbidden" }, 403);
+    }
+    await ctx.repo.deletePost(id);
+    return c.body(null, 204);
+  });
 }
 
 /** Hydrate Posts (author names + event-log counts) then flatten to {@link ReviewRow}s. */
@@ -142,6 +149,7 @@ function toReviewRow(h: {
     environment: h.post.environment,
     repo: h.post.repo,
     status: h.post.status,
+    createdBy: h.post.createdBy,
     createdAt: h.post.createdAt,
     authorName: h.authorName,
     confirms: h.confirms,

@@ -18,6 +18,7 @@ export type ReviewRow = {
   environment: string;
   repo: string;
   status: "active" | "retired";
+  createdBy: string;
   createdAt: number;
   authorName: string;
   confirms: number;

@@ -96,9 +96,11 @@ function reviewReducer(state: ReviewView, action: ReviewAction): ReviewView {
 export function ReviewPage() {
   const queryClient = useQueryClient();
 
-  // Moderation controls render only for signed-in Users; the server gates the writes regardless.
+  // Delete renders only for a Post's author (or an admin); the server gates the write regardless.
   const { data: session } = useSession();
-  const canModerate = !!session?.user;
+  const currentUserId = session?.user?.id ?? null;
+  const isAdmin =
+    (session?.user as { role?: string | null } | undefined)?.role === "admin";
 
   // `term` is the live input; `query` is the submitted text that drives the request. Empty `query` means "not searching".
   const [view, dispatch] = useReducer(reviewReducer, initialView);
@@ -131,35 +133,29 @@ export function ReviewPage() {
       ),
   });
 
-  // On success, invalidate both lists so a Post that gains/loses a flag moves between tabs.
-  const setRetired = useMutation({
-    mutationFn: ({ row, retired }: { row: ReviewRow; retired: boolean }) =>
-      apiFetch(`/api/review/${row.id}/${retired ? "retire" : "restore"}`, {
-        method: "POST",
-      }),
+  // On success, invalidate every list (recent + flagged + any search) so the
+  // deleted Post drops out wherever it was showing.
+  const deletePost = useMutation({
+    mutationFn: (row: ReviewRow) =>
+      apiFetch(`/api/review/${row.id}`, { method: "DELETE" }),
     onSuccess: async () => {
-      await Promise.all([
-        // Prefix match clears every sorted "recent" entry at once.
-        queryClient.invalidateQueries({ queryKey: ["review", "recent"] }),
-        queryClient.invalidateQueries({ queryKey: reviewKeys.flagged }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: ["review"] });
     },
   });
 
   // Surface whichever load/action failed.
   const failure =
-    recentError ?? flaggedError ?? searchError ?? setRetired.error;
+    recentError ?? flaggedError ?? searchError ?? deletePost.error;
   const error = failure
     ? failure instanceof Error
       ? failure.message
       : "Something went wrong."
     : null;
 
-  // Which row (if any) has an in-flight retire/restore, for per-row disabling.
-  const busyId = setRetired.isPending ? setRetired.variables.row.id : null;
+  // Which row (if any) has an in-flight delete, for per-row disabling.
+  const busyId = deletePost.isPending ? deletePost.variables.id : null;
 
-  const onSetRetired = (row: ReviewRow, retired: boolean) =>
-    setRetired.mutate({ row, retired });
+  const onDelete = (row: ReviewRow) => deletePost.mutate(row);
 
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -319,8 +315,9 @@ export function ReviewPage() {
             rows={searchData}
             empty={`No Posts match “${query}”.`}
             busyId={busyId}
-            canModerate={canModerate}
-            onSetRetired={onSetRetired}
+            currentUserId={currentUserId}
+            isAdmin={isAdmin}
+            onDelete={onDelete}
           />
         </div>
       ) : (
@@ -362,8 +359,9 @@ export function ReviewPage() {
               rows={browseRows}
               empty={flaggedOnly ? "No flagged Posts." : "No Posts yet."}
               busyId={busyId}
-              canModerate={canModerate}
-              onSetRetired={onSetRetired}
+              currentUserId={currentUserId}
+              isAdmin={isAdmin}
+              onDelete={onDelete}
             />
           </div>
         </div>

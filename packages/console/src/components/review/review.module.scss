@@ -446,6 +446,24 @@
   gap: $space-sm;
 }
 
+// The clickable header (title + situation) toggles the solution. Inset padding
+// with matching negative margin gives a hover highlight without shifting layout.
+.header {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  margin: -#{$space-xs} -#{$space-sm};
+  padding: $space-xs $space-sm;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background: $color-surface-hover;
+  }
+}
+
 .title {
   display: flex;
   align-items: center;
@@ -485,14 +503,26 @@
 
 .metrics {
   display: inline-flex;
-  align-items: baseline;
-  gap: $space-xs;
+  align-items: center;
+  gap: $space-sm;
   margin-left: auto;
   padding-left: $space-md;
   flex-shrink: 0;
   font-size: $text-xs;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+// One icon + count pair (confirmed / flagged / views).
+.metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+
+  svg {
+    // Slightly lifted so the glyph optically centres against the digits.
+    margin-top: -1px;
+  }
 }
 
 .dot {
@@ -505,12 +535,42 @@
   white-space: nowrap;
 }
 
+// The delete control floats in the left rail, just outside the row and
+// vertically centred on it. Hidden until the row is hovered (or the control is
+// focused / mid-confirm). Confirm/cancel stack vertically within the icon width.
 .controls {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  // Padding (not margin) bridges the rail gap: it's part of the element's box,
+  // so the pointer stays over a hover target travelling from row to icon and
+  // the control doesn't hide out from under the click.
+  padding-right: $space-sm;
+  z-index: 1;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   gap: $space-xs;
-  margin-left: $space-sm;
-  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+
+  // A visible chip (border + paper background) so it reads on the white rail,
+  // rather than the transparent in-row icon button.
+  .iconButton {
+    width: 32px;
+    height: 32px;
+    border-color: $color-border-strong;
+    background: $color-bg;
+  }
+}
+
+// Reveal on row hover or while the control is focused (keyboard / mid-confirm).
+.card:hover .controls,
+.controls:focus-within {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .iconButton {
@@ -609,15 +669,7 @@
   white-space: pre-wrap;
 }
 
-.chevron {
-  transition: transform 0.15s ease;
-}
-
-.chevronOpen {
-  transform: rotate(180deg);
-}
-
-// Retire reddens on hover; restore keeps the neutral .iconButton hover.
+// Delete reddens on hover; the neutral controls keep the standard .iconButton hover.
 .danger {
   &:hover:not(:disabled) {
     color: $color-danger;

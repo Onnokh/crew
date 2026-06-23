@@ -1,4 +1,4 @@
-import { Archive, Check, ChevronDown, RotateCcw } from "lucide-react";
+import { Check, Eye, Flag, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import type { ReviewRow } from "./review-data";
 import styles from "./review.module.scss";
@@ -28,85 +28,124 @@ function repoSlug(repo: string): string {
   return segments.length >= 2 ? segments.slice(-2).join("/") : repo;
 }
 
-/** One Post entry: heading with metrics, a disclosure chevron, and (when moderating) a retire/restore control. */
+/** One Post entry: heading with metrics, a disclosure chevron, and (for its author or an admin) a delete control with inline confirm. */
 export function PostCard({
   row,
   busy,
-  canModerate,
-  onSetRetired,
+  canDelete,
+  onDelete,
 }: {
   row: ReviewRow;
   busy: boolean;
-  canModerate: boolean;
-  onSetRetired: (row: ReviewRow, retired: boolean) => void;
+  canDelete: boolean;
+  onDelete: (row: ReviewRow) => void;
 }) {
   const retired = row.status === "retired";
   const [expanded, setExpanded] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   return (
     <li className={`${styles.card} ${retired ? styles.retired : ""}`}>
       <div className={styles.main}>
-        <h3 className={styles.title}>
-          <span className={styles.titleText}>{row.title}</span>
-          <span className={styles.sep}>/</span>
-          <span className={styles.project} title={row.repo}>
-            {repoSlug(row.repo)}
-          </span>
-          {retired && <span className={styles.tag}>retired</span>}
-          <span className={styles.metrics}>
-            <span className={row.confirms ? styles.up : styles.zero}>
-              {row.confirms} confirmed
-            </span>
-            <span className={styles.dot}>·</span>
-            <span className={row.flags ? styles.down : styles.zero}>
-              {row.flags} flagged
-            </span>
-            <span className={styles.dot}>·</span>
-            <span className={styles.zero}>{row.views} views</span>
-            <span className={styles.dot}>·</span>
-            <time
-              className={styles.time}
-              dateTime={new Date(row.createdAt).toISOString()}
-              title={new Date(row.createdAt).toLocaleString()}
+        {/* The whole header toggles the solution; the delete control (left gutter) stops propagation so it doesn't. */}
+        <div
+          className={styles.header}
+          role="button"
+          tabIndex={0}
+          aria-expanded={expanded}
+          onClick={() => setExpanded((e) => !e)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setExpanded((x) => !x);
+            }
+          }}
+        >
+          {canDelete && (
+            <span
+              className={styles.controls}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
             >
-              {shortTime(row.createdAt)}
-            </time>
-          </span>
-          <span className={styles.controls}>
-            <button
-              type="button"
-              className={styles.iconButton}
-              onClick={() => setExpanded((e) => !e)}
-              aria-expanded={expanded}
-              aria-label={expanded ? "Hide solution" : "Show solution"}
-              title={expanded ? "Hide solution" : "Show solution"}
-            >
-              <ChevronDown
-                size={15}
-                aria-hidden="true"
-                className={`${styles.chevron} ${expanded ? styles.chevronOpen : ""}`}
-              />
-            </button>
-            {canModerate && (
-              <button
-                type="button"
-                className={`${styles.iconButton} ${retired ? "" : styles.danger}`}
-                disabled={busy}
-                onClick={() => onSetRetired(row, !retired)}
-                aria-label={retired ? "Restore" : "Retire"}
-                title={retired ? "Restore" : "Retire"}
+              {confirming ? (
+                <>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${styles.danger}`}
+                    disabled={busy}
+                    onClick={() => onDelete(row)}
+                    aria-label="Confirm delete"
+                    title="Confirm delete"
+                  >
+                    <Check size={18} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.iconButton}
+                    disabled={busy}
+                    onClick={() => setConfirming(false)}
+                    aria-label="Cancel delete"
+                    title="Cancel delete"
+                  >
+                    <X size={18} aria-hidden="true" />
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className={`${styles.iconButton} ${styles.danger}`}
+                  disabled={busy}
+                  onClick={() => setConfirming(true)}
+                  aria-label="Delete"
+                  title="Delete"
+                >
+                  <Trash2 size={18} aria-hidden="true" />
+                </button>
+              )}
+            </span>
+          )}
+          <h3 className={styles.title}>
+            <span className={styles.titleText}>{row.title}</span>
+            <span className={styles.sep}>/</span>
+            <span className={styles.project} title={row.repo}>
+              {repoSlug(row.repo)}
+            </span>
+            {retired && <span className={styles.tag}>retired</span>}
+            <span className={styles.metrics}>
+              <span
+                className={`${styles.metric} ${row.confirms ? styles.up : styles.zero}`}
+                title={`${row.confirms} confirmed`}
               >
-                {retired ? (
-                  <RotateCcw size={15} aria-hidden="true" />
-                ) : (
-                  <Archive size={15} aria-hidden="true" />
-                )}
-              </button>
-            )}
-          </span>
-        </h3>
-        {row.situation !== row.title && (
-          <p className={styles.situation}>{row.situation}</p>
-        )}
+                <Check size={13} aria-hidden="true" />
+                {row.confirms}
+              </span>
+              <span
+                className={`${styles.metric} ${row.flags ? styles.down : styles.zero}`}
+                title={`${row.flags} flagged`}
+              >
+                <Flag size={13} aria-hidden="true" />
+                {row.flags}
+              </span>
+              <span
+                className={`${styles.metric} ${styles.zero}`}
+                title={`${row.views} views`}
+              >
+                <Eye size={13} aria-hidden="true" />
+                {row.views}
+              </span>
+              <span className={styles.dot}>·</span>
+              <time
+                className={styles.time}
+                dateTime={new Date(row.createdAt).toISOString()}
+                title={new Date(row.createdAt).toLocaleString()}
+              >
+                {shortTime(row.createdAt)}
+              </time>
+            </span>
+          </h3>
+          {row.situation !== row.title && (
+            <p className={styles.situation}>{row.situation}</p>
+          )}
+        </div>
         {expanded && (
           <div className={styles.answer}>
             <p className={styles.answerHead}>

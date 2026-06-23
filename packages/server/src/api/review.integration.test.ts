@@ -7,7 +7,7 @@ import {
   type RunningServer,
 } from "../test/harness.js";
 
-describe("review JSON API: public lists + session-gated retire/restore", () => {
+describe("review JSON API: public lists + session-gated delete", () => {
   let srv: RunningServer;
   let base: string;
   let cookie: string;
@@ -103,13 +103,8 @@ describe("review JSON API: public lists + session-gated retire/restore", () => {
       // With the seeded admin's cookie the same read succeeds against her Team.
       expect((await fetch(`${base}${path}`, { headers: { cookie } })).status).toBe(200);
     }
-    for (const path of [
-      "/api/review/post_x/retire",
-      "/api/review/post_x/restore",
-    ]) {
-      const res = await fetch(`${base}${path}`, { method: "POST" });
-      expect(res.status).toBe(401);
-    }
+    const del = await fetch(`${base}/api/review/post_x`, { method: "DELETE" });
+    expect(del.status).toBe(401);
   });
 
   it("list-recent returns Posts with correct confirm/flag/view counts", async () => {
@@ -151,29 +146,31 @@ describe("review JSON API: public lists + session-gated retire/restore", () => {
     expect(rows.find((r) => r.id === flaggedId)!.flags).toBe(1);
   });
 
-  it("retiring a Post removes it from query results; restoring brings it back", async () => {
-    const situation = "retire me from agent queries";
-    const id = await seedPost(situation, "body that should vanish then return");
+  it("deleting a Post removes it from query results and the review list", async () => {
+    const situation = "delete me from agent queries";
+    const id = await seedPost(situation, "body that should vanish for good");
+    // Confirm it so the delete must also clear an event-log row (FK to posts).
+    await recordEvent("confirm", id);
 
     expect(await queryFinds(situation)).toBe(true);
 
-    const retireRes = await fetch(`${base}/api/review/${id}/retire`, {
-      method: "POST",
+    // Alice is the harness-seeded admin, so the delete is authorized.
+    const delRes = await fetch(`${base}/api/review/${id}`, {
+      method: "DELETE",
       headers: { cookie },
     });
-    expect(retireRes.status).toBe(204);
+    expect(delRes.status).toBe(204);
     expect(await queryFinds(situation)).toBe(false);
-    // The retired Post still appears in the review list (so it can be restored).
-    const afterRetire = (await listRows("/api/review/recent")).find(
+    const afterDelete = (await listRows("/api/review/recent")).find(
       (r) => r.id === id,
     );
-    expect(afterRetire!.status).toBe("retired");
+    expect(afterDelete).toBeUndefined();
 
-    const restoreRes = await fetch(`${base}/api/review/${id}/restore`, {
-      method: "POST",
+    // A second delete of the now-missing Post reads as 404.
+    const again = await fetch(`${base}/api/review/${id}`, {
+      method: "DELETE",
       headers: { cookie },
     });
-    expect(restoreRes.status).toBe(204);
-    expect(await queryFinds(situation)).toBe(true);
+    expect(again.status).toBe(404);
   });
 });

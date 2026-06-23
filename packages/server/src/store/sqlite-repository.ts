@@ -289,20 +289,16 @@ export class SqliteRepository implements PostRepository {
     }));
   }
 
-  async retirePost(id: string): Promise<void> {
-    this.db
-      .update(posts)
-      .set({ status: "retired" })
-      .where(eq(posts.id, id))
-      .run();
-  }
-
-  async restorePost(id: string): Promise<void> {
-    this.db
-      .update(posts)
-      .set({ status: "active" })
-      .where(eq(posts.id, id))
-      .run();
+  async deletePost(id: string): Promise<void> {
+    this.raw.transaction(() => {
+      // Events FK into posts(id), so they must go first. The vec0 row is keyed
+      // by post_id with no trigger, so drop it explicitly. The FTS index is
+      // external-content with an AFTER DELETE trigger, so deleting the posts row
+      // unwinds it automatically (see migration 0002).
+      this.db.delete(postEvents).where(eq(postEvents.postId, id)).run();
+      this.raw.prepare("DELETE FROM posts_vec WHERE post_id = ?").run(id);
+      this.db.delete(posts).where(eq(posts.id, id)).run();
+    })();
   }
 
   recordRetrieval(input: NewRetrieval): void {

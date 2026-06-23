@@ -85,11 +85,13 @@ export type PostRepository = {
    */
   listFlaggedPosts(limit: number): Promise<Post[]>;
 
-  /** Set a Post's status to `retired` (removing it from agent `query`). A no-op if absent; idempotent. */
-  retirePost(id: string): Promise<void>;
-
-  /** Set a Post's status back to `active`. The inverse of {@link retirePost}; a no-op if absent. */
-  restorePost(id: string): Promise<void>;
+  /**
+   * Permanently delete a Post and everything anchored to it: its event log
+   * (Confirms/Flags), its stored vectors, and the keyword index entry. A no-op
+   * if absent; idempotent. Retrieval telemetry rows that referenced it keep
+   * their raw `post_id` (their title resolves to null thereafter).
+   */
+  deletePost(id: string): Promise<void>;
 
   /**
    * Persist one retrieval (a `query` call) plus its per-result score breakdown,

@@ -9,14 +9,18 @@ export function PostList({
   rows,
   empty,
   busyId,
-  canModerate,
-  onSetRetired,
+  currentUserId,
+  isAdmin,
+  onDelete,
 }: {
   rows: ReviewRow[] | undefined;
   empty: string;
   busyId: string | null;
-  canModerate: boolean;
-  onSetRetired: (row: ReviewRow, retired: boolean) => void;
+  /** Signed-in User's id, or null when signed out. */
+  currentUserId: string | null;
+  /** Admins may delete any Post; everyone else only their own. */
+  isAdmin: boolean;
+  onDelete: (row: ReviewRow) => void;
 }) {
   if (rows === undefined) return <p className={styles.muted}>Loading…</p>;
   if (rows.length === 0) return <EmptyState icon={ScrollText} message={empty} />;
@@ -27,8 +31,8 @@ export function PostList({
           key={row.id}
           row={row}
           busy={busyId === row.id}
-          canModerate={canModerate}
-          onSetRetired={onSetRetired}
+          canDelete={isAdmin || row.createdBy === currentUserId}
+          onDelete={onDelete}
         />
       ))}
     </ul>
