@@ -133,6 +133,80 @@ describe("create User returns a one-time password and appears in the listing", (
   });
 });
 
+describe("reset a User's password: generated or chosen, the new one signs in", () => {
+  let srv: RunningServer;
+  let cookie: string;
+  beforeAll(async () => {
+    ({ srv, cookie } = await bootWithAdmin());
+  });
+  afterAll(() => srv.stop());
+
+  it("generates a one-time password that replaces the old one", async () => {
+    const created = await adminFetch(srv, cookie, "/users", {
+      method: "POST",
+      body: JSON.stringify({ email: "reset-gen@test.local" }),
+    });
+    const { user, password: original } = (await created.json()) as {
+      user: { id: string };
+      password: string;
+    };
+
+    // No body → server mints a fresh strong password and returns it once.
+    const reset = await adminFetch(srv, cookie, `/users/${user.id}/password`, {
+      method: "POST",
+    });
+    expect(reset.status).toBe(200);
+    const { password: fresh } = (await reset.json()) as { password: string };
+    expect(fresh).toBeTruthy();
+    expect(fresh).not.toBe(original);
+
+    // The old password no longer works; the new one does.
+    const stale = await srv.env.auth.api
+      .signInEmail({
+        body: { email: "reset-gen@test.local", password: original },
+        asResponse: true,
+      })
+      .then((r) => r.status)
+      .catch(() => 401);
+    expect(stale).toBeGreaterThanOrEqual(400);
+    const ok = await srv.env.auth.api.signInEmail({
+      body: { email: "reset-gen@test.local", password: fresh },
+      asResponse: true,
+    });
+    expect(ok.status).toBe(200);
+  });
+
+  it("accepts an admin-chosen password and rejects one that is too short", async () => {
+    const created = await adminFetch(srv, cookie, "/users", {
+      method: "POST",
+      body: JSON.stringify({ email: "reset-chosen@test.local" }),
+    });
+    const { user } = (await created.json()) as { user: { id: string } };
+
+    const tooShort = await adminFetch(
+      srv,
+      cookie,
+      `/users/${user.id}/password`,
+      { method: "POST", body: JSON.stringify({ password: "short" }) },
+    );
+    expect(tooShort.status).toBe(400);
+
+    const chosen = "chosen-passphrase-123";
+    const ok = await adminFetch(srv, cookie, `/users/${user.id}/password`, {
+      method: "POST",
+      body: JSON.stringify({ password: chosen }),
+    });
+    expect(ok.status).toBe(200);
+    expect(((await ok.json()) as { password: string }).password).toBe(chosen);
+
+    const signIn = await srv.env.auth.api.signInEmail({
+      body: { email: "reset-chosen@test.local", password: chosen },
+      asResponse: true,
+    });
+    expect(signIn.status).toBe(200);
+  });
+});
+
 describe("mint and revoke keys; an agent posts with a minted key", () => {
   let srv: RunningServer;
   let cookie: string;

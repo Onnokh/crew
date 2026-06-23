@@ -117,6 +117,36 @@ export function mountAdmin(app: Hono, deps: Deps): void {
     }
   });
 
+  // Reset a User's password — the admin's credential-recovery off-switch. Takes
+  // an optional `password` (min 8, better-auth's floor); when omitted we mint a
+  // strong one, mirroring user creation. Returns the effective plaintext ONCE so
+  // the admin can relay it; only its hash is stored. Routes through the admin
+  // plugin's `setUserPassword`, which re-checks the caller's `admin` role.
+  admin.post("/users/:id/password", async (c) => {
+    const userId = c.req.param("id");
+    const body: { password?: unknown } = await c.req
+      .json()
+      .catch(() => ({}) as { password?: unknown });
+    const provided =
+      typeof body.password === "string" ? body.password.trim() : "";
+    if (provided && provided.length < 8) {
+      return c.json({ error: "Password must be at least 8 characters" }, 400);
+    }
+    const password = provided || generatePassword();
+    try {
+      await auth.api.setUserPassword({
+        body: { userId, newPassword: password },
+        headers: c.req.raw.headers,
+      });
+      return c.json({ password });
+    } catch (err) {
+      return c.json(
+        { error: messageOf(err, "Could not reset the password") },
+        400,
+      );
+    }
+  });
+
   // Mint a key, returning the raw secret ONCE. Server-side (no headers) so
   // `body.userId` becomes the key's `referenceId` (its owner, not the admin).
   admin.post("/users/:id/keys", async (c) => {

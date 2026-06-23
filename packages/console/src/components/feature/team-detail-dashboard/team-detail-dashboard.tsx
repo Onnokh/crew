@@ -96,6 +96,8 @@ export function TeamDetailDashboard({
   memberError,
   onRenameMember,
   renamingMember,
+  onResetPassword,
+  resettingPassword,
   onMintKey,
   mintingKey,
   mintedKey,
@@ -124,6 +126,9 @@ export function TeamDetailDashboard({
   /** Rename a member (updates their better-auth `name`). */
   onRenameMember: (userId: string, name: string) => void;
   renamingMember: boolean;
+  /** Reset a member's password (set the given value, or generate when omitted). */
+  onResetPassword: (userId: string, email: string, password?: string) => void;
+  resettingPassword: boolean;
   /** Mint a fresh API key for the given member. */
   onMintKey: (userId: string) => void;
   mintingKey: boolean;
@@ -289,6 +294,15 @@ export function TeamDetailDashboard({
                       keys={row.keys}
                       onRename={(name) => onRenameMember(row.userId, name)}
                       renaming={renamingMember}
+                      onResetPassword={(password) =>
+                        onResetPassword(row.userId, row.email, password)
+                      }
+                      resettingPassword={resettingPassword}
+                      resetPassword={
+                        newPassword?.userId === row.userId
+                          ? newPassword.password
+                          : null
+                      }
                       onMintKey={() => onMintKey(row.userId)}
                       mintingKey={mintingKey}
                       onRevokeKey={onRevokeKey}

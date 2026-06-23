@@ -28,6 +28,9 @@ export function EditMemberDialog({
   keys,
   onRename,
   renaming,
+  onResetPassword,
+  resettingPassword,
+  resetPassword,
   onMintKey,
   mintingKey,
   onRevokeKey,
@@ -40,6 +43,11 @@ export function EditMemberDialog({
   keys: ApiKey[];
   onRename: (name: string) => void;
   renaming: boolean;
+  /** Reset this member's password. Pass a value to set it, or omit to generate. */
+  onResetPassword: (password?: string) => void;
+  resettingPassword: boolean;
+  /** Show-once plaintext of a password just reset for this member, else null. */
+  resetPassword: string | null;
   onMintKey: () => void;
   mintingKey: boolean;
   onRevokeKey: (key: ApiKey) => void;
@@ -51,6 +59,7 @@ export function EditMemberDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState(name);
+  const [passwordDraft, setPasswordDraft] = useState("");
 
   // The most recent request across the member's keys, our "last activity".
   const lastRequest = keys
@@ -60,7 +69,10 @@ export function EditMemberDialog({
     .at(-1);
 
   function onOpenChange(next: boolean) {
-    if (next) setNameDraft(name);
+    if (next) {
+      setNameDraft(name);
+      setPasswordDraft("");
+    }
     setOpen(next);
   }
 
@@ -69,6 +81,18 @@ export function EditMemberDialog({
     const trimmed = nameDraft.trim();
     if (!trimmed || trimmed === name) return;
     onRename(trimmed);
+  }
+
+  // A typed password too short to be accepted (better-auth's floor is 8); empty
+  // is fine — the server auto-generates a strong one in that case.
+  const passwordTooShort =
+    passwordDraft.trim().length > 0 && passwordDraft.trim().length < 8;
+
+  function onResetSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (passwordTooShort) return;
+    const trimmed = passwordDraft.trim();
+    onResetPassword(trimmed || undefined);
   }
 
   return (
@@ -118,6 +142,31 @@ export function EditMemberDialog({
                   }
                 >
                   {renaming ? "Saving…" : "Save"}
+                </button>
+              </form>
+
+              <form className={styles.nameRow} onSubmit={onResetSubmit}>
+                <div className={styles.nameField}>
+                  <label className={form.label} htmlFor="member-password">
+                    Password
+                  </label>
+                  <input
+                    id="member-password"
+                    className={form.input}
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Leave blank to auto-generate"
+                    value={passwordDraft}
+                    onChange={(e) => setPasswordDraft(e.target.value)}
+                    aria-invalid={passwordTooShort || undefined}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className={`${form.btn} ${form.btnPrimary}`}
+                  disabled={resettingPassword || passwordTooShort}
+                >
+                  {resettingPassword ? "Resetting…" : "Reset"}
                 </button>
               </form>
 
@@ -172,7 +221,20 @@ export function EditMemberDialog({
             </div>
           </div>
 
-          {mintedKey && <MintedKey secret={mintedKey} />}
+          {resetPassword && (
+            <SecretBox
+              secret={resetPassword}
+              ariaLabel="New password — shown once, copy it now"
+              copyLabel="password"
+            />
+          )}
+          {mintedKey && (
+            <SecretBox
+              secret={mintedKey}
+              ariaLabel="New API key — shown once, copy it now"
+              copyLabel="API key"
+            />
+          )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
@@ -180,10 +242,18 @@ export function EditMemberDialog({
 }
 
 /**
- * The just-minted key, shown once: a clean white element below the keys list
- * with the secret and a small copy-icon button on the right.
+ * A show-once secret (a minted key or a freshly reset password): a clean white
+ * element below the card with the value and a small copy-icon button.
  */
-function MintedKey({ secret }: { secret: string }) {
+function SecretBox({
+  secret,
+  ariaLabel,
+  copyLabel,
+}: {
+  secret: string;
+  ariaLabel: string;
+  copyLabel: string;
+}) {
   const [copied, setCopied] = useState(false);
 
   async function onCopy() {
@@ -193,13 +263,13 @@ function MintedKey({ secret }: { secret: string }) {
   }
 
   return (
-    <div className={styles.minted} role="group" aria-label="New API key — shown once, copy it now">
+    <div className={styles.minted} role="group" aria-label={ariaLabel}>
       <code className={styles.mintedValue}>{secret}</code>
       <button
         type="button"
         className={styles.mintedCopy}
         onClick={onCopy}
-        aria-label={copied ? "Copied" : "Copy API key"}
+        aria-label={copied ? "Copied" : `Copy ${copyLabel}`}
       >
         {copied ? (
           <Check size={16} aria-hidden="true" />

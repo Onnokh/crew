@@ -42,6 +42,11 @@ export type AdminActions = {
     opts?: MutateOpts,
   ) => void;
   renameUser: (vars: { id: string; name: string }, opts?: MutateOpts) => void;
+  /** Reset a User's password. Omit `password` to auto-generate a strong one. */
+  resetPassword: (
+    vars: { id: string; email: string; password?: string },
+    opts?: MutateOpts,
+  ) => void;
   mintKey: (user: UserRow) => void;
   revokeKey: (key: ApiKey) => void;
   createTeam: (name: string, opts?: MutateOpts) => void;
@@ -53,6 +58,7 @@ export type AdminActions = {
 export type AdminMutationState = {
   creatingUser: boolean;
   renamingUser: boolean;
+  resettingPassword: boolean;
   mintingKey: boolean;
   revokingKey: boolean;
   creatingTeam: boolean;
@@ -172,6 +178,20 @@ export function useAdminData(): AdminData {
     onSuccess: () => invalidateUsers(),
   });
 
+  // Reset a password: the server returns the effective plaintext once, surfaced
+  // through the same show-once `newPassword` slot the create flow uses.
+  const resetPassword = useMutation({
+    mutationFn: (vars: { id: string; email: string; password?: string }) =>
+      apiFetch<{ password: string }>(`/api/admin/users/${vars.id}/password`, {
+        method: "POST",
+        body: JSON.stringify(vars.password ? { password: vars.password } : {}),
+      }),
+    onSuccess: ({ password }, vars) => {
+      setNewPassword({ userId: vars.id, email: vars.email, password });
+      setMintedKey(null);
+    },
+  });
+
   const createTeam = useMutation({
     mutationFn: (newName: string) =>
       apiFetch<{ team: TeamRow }>("/api/admin/teams", {
@@ -212,6 +232,7 @@ export function useAdminData(): AdminData {
     usersError ??
     createUser.error ??
     renameUser.error ??
+    resetPassword.error ??
     mintKey.error ??
     revokeKey.error ??
     null;
@@ -228,6 +249,7 @@ export function useAdminData(): AdminData {
     actions: {
       createUser: (vars, opts) => createUser.mutate(vars, opts),
       renameUser: (vars, opts) => renameUser.mutate(vars, opts),
+      resetPassword: (vars, opts) => resetPassword.mutate(vars, opts),
       mintKey: (user) => mintKey.mutate(user),
       revokeKey: (key) => revokeKey.mutate(key),
       createTeam: (name, opts) => createTeam.mutate(name, opts),
@@ -237,6 +259,7 @@ export function useAdminData(): AdminData {
     pending: {
       creatingUser: createUser.isPending,
       renamingUser: renameUser.isPending,
+      resettingPassword: resetPassword.isPending,
       mintingKey: mintKey.isPending,
       revokingKey: revokeKey.isPending,
       creatingTeam: createTeam.isPending,

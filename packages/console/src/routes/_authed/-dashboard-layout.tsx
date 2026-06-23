@@ -117,6 +117,10 @@ function AdminDashboard(props: AdminDashboardProps) {
                 props.actions.renameUser({ id: userId, name })
               }
               renamingMember={props.pending.renamingUser}
+              onResetPassword={(userId, email, password) =>
+                props.actions.resetPassword({ id: userId, email, password })
+              }
+              resettingPassword={props.pending.resettingPassword}
               onMintKey={(userId) => {
                 const user = selectedTeamUsers.find((u) => u.id === userId);
                 if (user) props.actions.mintKey(user);
