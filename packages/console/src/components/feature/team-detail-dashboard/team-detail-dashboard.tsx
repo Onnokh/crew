@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { BarChart3, FolderGit2, Gauge, HardDrive, ScrollText, Settings, Users } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { apiFetch } from "../../../api/client";
-import { relativeTime } from "../../../lib/format";
+import { fullDateTime, relativeTime } from "../../../lib/format";
 import { CopyBox } from "../../ui/copy-box/copy-box";
 import {
   type ActivityItem,
@@ -270,7 +270,12 @@ export function TeamDetailDashboard({
                     />
                     <span className={shared.teamRowText}>
                       <span className={shared.teamRowName}>{row.name}</span>
-                      <span className={shared.teamRowMeta}>
+                      <span
+                        className={shared.teamRowMeta}
+                        title={
+                          row.lastSeen ? fullDateTime(row.lastSeen) : undefined
+                        }
+                      >
                         {row.lastSeen
                           ? `Last seen ${relativeTime(row.lastSeen)}`
                           : "No activity yet"}

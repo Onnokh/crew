@@ -11,7 +11,7 @@ import {
 import type { ActivityItem, UserUsageItem } from "../telemetry/telemetry-data";
 import { EmptyState } from "../ui/empty-state/empty-state";
 import { UserAvatar } from "../ui/user-avatar/user-avatar";
-import { relativeTime } from "../../lib/format";
+import { fullDateTime, relativeTime } from "../../lib/format";
 import shared from "../../styles/dashboard.module.scss";
 import styles from "./activity-feed.module.scss";
 
@@ -83,7 +83,13 @@ function ActivityEvent({
         )}
         {event.team && <span className={styles.eventTeam}>{event.team}</span>}
       </span>
-      <time className={styles.eventMeta}>{relativeTime(event.createdAt)}</time>
+      <time
+        className={styles.eventMeta}
+        dateTime={new Date(event.createdAt).toISOString()}
+        title={fullDateTime(event.createdAt)}
+      >
+        {relativeTime(event.createdAt)}
+      </time>
     </li>
   );
 }

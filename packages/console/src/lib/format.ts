@@ -10,6 +10,16 @@ export const SHORT_TIME = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit",
 });
 
+const FULL_DATE_TIME = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+/** A full "Jun 21, 2026, 3:45 PM"-style timestamp for tooltips. */
+export function fullDateTime(timestamp: number): string {
+  return FULL_DATE_TIME.format(new Date(timestamp));
+}
+
 /** A short "Jun 21"-style date for a unix-ms timestamp. */
 export function shortDate(timestamp: number): string {
   return SHORT_DATE.format(new Date(timestamp));
