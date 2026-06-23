@@ -255,7 +255,12 @@ export type RetrievalConversion = {
 export type ConversionStats = {
   /** Retrievals in `[from, to)` that returned at least one Post. */
   withResults: number;
-  /** Of those, how many converted (last-touch Confirm by the same User in window). */
+  /**
+   * Of those, how many converted: a returned Post was Confirmed by the same User
+   * within the window (any-touch — a single Confirm credits every retrieval in
+   * the window that returned that Post, so re-querying for the same Post before
+   * confirming can count more than once).
+   */
   converted: number;
   /** Of those, how many were Flagged by the same User within the window. */
   flagged: number;
@@ -654,12 +659,18 @@ export function recentRetrievalsDetailed(
 
 /**
  * Conversion attribution over Retrievals-with-results. For each retrieval in
- * `[from, to)` that returned ≥1 Post, a last-touch Confirm converts it iff: the
- * Confirm is by the SAME User who queried (`retrievals.user_id = pe.created_by`),
- * on one of the retrieval's returned Posts, recorded strictly AFTER the
- * retrieval (`pe.created_at > r.created_at`) and within the window
+ * `[from, to)` that returned ≥1 Post, a Confirm converts it iff: the Confirm is
+ * by the SAME User who queried (`retrievals.user_id = pe.created_by`), on one of
+ * the retrieval's returned Posts, recorded strictly AFTER the retrieval
+ * (`pe.created_at > r.created_at`) and within the window
  * (`pe.created_at <= r.created_at + windowMs`). All thresholds are read-time
  * arguments over the raw rows — no stored attribution.
+ *
+ * This is ANY-TOUCH, not last-touch: there is no `retrieval_id` on a Confirm, so
+ * the join can match one Confirm to several retrievals. A single Confirm credits
+ * EVERY retrieval in the window that returned that Post — re-querying for the
+ * same Post before confirming counts more than once. Last-touch would add a
+ * `NOT EXISTS (a later retrieval of the Post before the Confirm)` clause.
  */
 export function conversionStats(
   raw: Database,
