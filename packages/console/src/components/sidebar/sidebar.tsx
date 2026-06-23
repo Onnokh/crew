@@ -153,14 +153,17 @@ function SidebarUser() {
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger className={styles.sidebarUser}>
-        <Avatar.Root className={styles.sidebarUserAvatar}>
-          <Avatar.Image
-            className={styles.sidebarUserAvatarImage}
-            src={avatarUrl(user.id ?? user.email)}
-            alt=""
-          />
-          <Avatar.Fallback>{initials(label)}</Avatar.Fallback>
-        </Avatar.Root>
+        <span className={styles.sidebarUserAvatarWrap}>
+          <Avatar.Root className={styles.sidebarUserAvatar}>
+            <Avatar.Image
+              className={styles.sidebarUserAvatarImage}
+              src={avatarUrl(user.id ?? user.email)}
+              alt=""
+            />
+            <Avatar.Fallback>{initials(label)}</Avatar.Fallback>
+          </Avatar.Root>
+          <span className={styles.sidebarUserStatus} aria-hidden="true" />
+        </span>
         <span className={styles.sidebarUserText}>
           <strong>{label}</strong>
           <small>{secondary}</small>
@@ -174,17 +177,41 @@ function SidebarUser() {
           align="start"
           sideOffset={8}
         >
-          <div className={styles.sidebarUserMenuHeader}>
-            <strong>{label}</strong>
-            <small>{user.email}</small>
+          <div className={styles.sidebarUserMenuHead}>
+            <Avatar.Root className={styles.sidebarUserMenuAvatar}>
+              <Avatar.Image
+                className={styles.sidebarUserAvatarImage}
+                src={avatarUrl(user.id ?? user.email)}
+                alt=""
+              />
+              <Avatar.Fallback>{initials(label)}</Avatar.Fallback>
+            </Avatar.Root>
+            <div className={styles.sidebarUserMenuHeadText}>
+              <strong>{label}</strong>
+              <small>{user.email}</small>
+            </div>
           </div>
           <DropdownMenu.Separator className={styles.sidebarUserMenuSep} />
           <DropdownMenu.Item
-            className={styles.sidebarUserMenuItem}
+            className={styles.sidebarUserMenuRow}
+            onSelect={() => router.navigate({ to: "/dashboard/settings" })}
+          >
+            <Settings size={18} aria-hidden="true" />
+            <span>
+              <strong>Account settings</strong>
+              <small>Profile, security, sessions</small>
+            </span>
+          </DropdownMenu.Item>
+          <DropdownMenu.Separator className={styles.sidebarUserMenuSep} />
+          <DropdownMenu.Item
+            className={styles.sidebarUserMenuRowDanger}
             onSelect={onSignOut}
           >
-            <LogOut size={16} aria-hidden="true" />
-            Sign out
+            <LogOut size={18} aria-hidden="true" />
+            <span>
+              <strong>Sign out</strong>
+              <small>End this session</small>
+            </span>
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>

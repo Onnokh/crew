@@ -190,19 +190,45 @@
   }
 }
 
-.sidebarUserAvatar {
+.sidebarUserAvatarWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+// Small "online" indicator on the trigger avatar.
+.sidebarUserStatus {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 2px solid $color-bg;
+  border-radius: 50%;
+  background: $color-positive;
+}
+
+.sidebarUserAvatar,
+.sidebarUserMenuAvatar {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
   border-radius: 50%;
   background: $color-accent;
   color: $color-accent-contrast;
   font-size: $text-xs;
   font-weight: 600;
   overflow: hidden;
+}
+
+.sidebarUserAvatar {
+  width: 2rem;
+  height: 2rem;
+}
+
+.sidebarUserMenuAvatar {
+  width: 2.75rem;
+  height: 2.75rem;
 }
 
 .sidebarUserAvatarImage {
@@ -244,7 +270,7 @@
 .sidebarUserMenu {
   display: flex;
   flex-direction: column;
-  min-width: 13rem;
+  min-width: 17rem;
   padding: $space-xs;
   border: 1px solid $color-border;
   border-radius: $radius-md;
@@ -253,13 +279,19 @@
   z-index: 20;
 }
 
-.sidebarUserMenuHeader {
+// Identity block at the top of the menu: large avatar + name + email.
+.sidebarUserMenuHead {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: $space-md;
   padding: $space-sm;
+}
+
+.sidebarUserMenuHeadText {
+  min-width: 0;
 
   strong {
+    display: block;
     overflow: hidden;
     font-size: $text-sm;
     text-overflow: ellipsis;
@@ -267,6 +299,7 @@
   }
 
   small {
+    display: block;
     overflow: hidden;
     color: $color-text-muted;
     font-size: $text-xs;
@@ -281,23 +314,46 @@
   background: $color-border;
 }
 
-.sidebarUserMenuItem {
+// Descriptive menu rows: icon + label + sublabel.
+.sidebarUserMenuRow,
+.sidebarUserMenuRowDanger {
   display: flex;
   align-items: center;
-  gap: $space-sm;
+  gap: $space-md;
   padding: $space-sm;
   border-radius: $radius-sm;
   color: $color-text;
-  font-size: $text-sm;
   cursor: pointer;
   outline: none;
+
+  svg {
+    flex-shrink: 0;
+    color: $color-text-muted;
+  }
+
+  strong {
+    display: block;
+    font-size: $text-sm;
+    font-weight: 500;
+  }
+
+  small {
+    display: block;
+    color: $color-text-muted;
+    font-size: $text-xs;
+  }
 
   &[data-highlighted] {
     background: $color-surface-hover;
   }
+}
 
-  svg {
-    color: $color-text-muted;
+.sidebarUserMenuRowDanger {
+  color: $color-danger;
+
+  svg,
+  small {
+    color: $color-danger;
   }
 }
 

@@ -30,6 +30,18 @@
   }
 }
 
+.sectionHeading {
+  display: flex;
+  align-items: baseline;
+  gap: $space-sm;
+  flex-wrap: wrap;
+}
+
+.sectionCaption {
+  color: $color-text-muted;
+  font-size: $text-sm;
+}
+
 .emptyRow {
   color: $color-text-muted;
   font-size: $text-sm;

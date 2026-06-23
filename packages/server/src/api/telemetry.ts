@@ -220,12 +220,14 @@ export function mountTelemetry(app: Hono, deps: Deps): void {
     return c.json(data);
   });
 
-  // Top users: per-user usage (posts authored + searches run), ranked by combined
-  // activity. The repo returns raw user ids; we resolve each to a display name via
-  // the control plane (cached per id) and drop any that can't be resolved.
+  // Top users: per-user usage (posts authored + searches run) over the last
+  // HALL_OF_LEGENDS_DAYS, ranked by combined activity. The repo returns raw user
+  // ids; we resolve each to a display name via the control plane (cached per id)
+  // and drop any that can't be resolved.
   telemetry.get("/users", async (c) => {
     const repo = teamRepoForSession(deps, c.get("teamId"));
-    const stats = await repo.userActivityStats(LIST_LIMIT);
+    const since = deps.clock.now() - HALL_OF_LEGENDS_DAYS * DAY_MS;
+    const stats = await repo.userActivityStats(LIST_LIMIT, since);
 
     const users: UserUsageItem[] = stats.map((s) => ({
       userId: s.userId,
@@ -257,6 +259,9 @@ const HOUR_MS = 60 * 60 * 1000;
 
 /** Default range when the request carries no `from` (last 7 days). */
 const DEFAULT_RANGE_DAYS = 7;
+
+/** Rolling window for the Hall of Legends top-users ranking (last 30 days). */
+const HALL_OF_LEGENDS_DAYS = 30;
 
 /** A half-open `[from, to)` slice of the range, for one trend point. */
 type DayBucket = { from: number; to: number };

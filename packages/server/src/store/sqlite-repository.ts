@@ -338,8 +338,8 @@ export class SqliteRepository implements PostRepository {
     return earliestActivityAt(this.raw);
   }
 
-  async userActivityStats(limit: number): Promise<UserActivityStat[]> {
-    return userActivityStats(this.raw, limit);
+  async userActivityStats(limit: number, sinceMs: number): Promise<UserActivityStat[]> {
+    return userActivityStats(this.raw, limit, sinceMs);
   }
 
   async conversionStats(window: ConversionWindow): Promise<ConversionStats> {

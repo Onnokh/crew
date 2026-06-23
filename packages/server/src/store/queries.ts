@@ -402,15 +402,17 @@ export type UserActivityStat = {
 };
 
 /**
- * Per-user usage across the corpus: posts authored (`posts.created_by`) and
+ * Per-user usage since `sinceMs`: posts authored (`posts.created_by`) and
  * searches run (`retrievals.user_id`), tallied per User and ranked by combined
- * activity, newest-busiest first, capped at `limit`. A `UNION ALL` over the two
- * logs grouped by user id — no materialized counter. User-id → name resolution
- * is the API's job (the corpus DB has no `user` table).
+ * activity, newest-busiest first, capped at `limit`. Only activity at or after
+ * `sinceMs` counts, so the ranking is a rolling window, not a lifetime tally. A
+ * `UNION ALL` over the two logs grouped by user id — no materialized counter.
+ * User-id → name resolution is the API's job (the corpus DB has no `user` table).
  */
 export function userActivityStats(
   raw: Database,
   limit: number,
+  sinceMs: number,
 ): UserActivityStat[] {
   const rows = raw
     .prepare(
@@ -423,11 +425,12 @@ export function userActivityStats(
           UNION ALL
                 SELECT user_id AS userId, 0 AS isPost, 1 AS isSearch, created_at AS ts FROM retrievals
          )
+        WHERE ts >= ?
         GROUP BY userId
         ORDER BY posts + searches DESC, userId
         LIMIT ?`,
     )
-    .all(limit) as Array<{
+    .all(sinceMs, limit) as Array<{
     userId: string;
     posts: number;
     searches: number;

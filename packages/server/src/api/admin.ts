@@ -177,7 +177,8 @@ export function mountAdmin(app: Hono, deps: Deps): void {
       return names.get(uid) ?? null;
     };
 
-    const stats = await repo.userActivityStats(USER_LIMIT);
+    // Admin team view shows lifetime usage; 0 = since the epoch (all time).
+    const stats = await repo.userActivityStats(USER_LIMIT, 0);
     const users = stats.map((s) => ({
       userId: s.userId,
       name: resolveUser(s.userId),

@@ -143,7 +143,10 @@ export function OverviewDashboard({ usersCount }: { usersCount: number }) {
           />
         </section>
         <section className={shared.usageSection}>
-          <h2>Hall of Legends</h2>
+          <div className={shared.sectionHeading}>
+            <h2>Hall of Legends</h2>
+            <span className={shared.sectionCaption}>Last 30 days</span>
+          </div>
           <HallOfLegends users={topUsers ?? []} loading={usersLoading} />
         </section>
       </div>

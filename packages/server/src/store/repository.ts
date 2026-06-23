@@ -128,11 +128,12 @@ export type PostRepository = {
   earliestActivityAt(): Promise<number | null>;
 
   /**
-   * Per-user usage (posts authored + searches run), ranked by combined activity,
-   * capped at `limit`. User ids are returned raw — resolve them to names at the
-   * API. Backs the dashboard's "top users" list.
+   * Per-user usage (posts authored + searches run) since `sinceMs`, ranked by
+   * combined activity, capped at `limit`. User ids are returned raw — resolve
+   * them to names at the API. Backs the dashboard's "top users" list (a rolling
+   * window, not a lifetime tally).
    */
-  userActivityStats(limit: number): Promise<UserActivityStat[]>;
+  userActivityStats(limit: number, sinceMs: number): Promise<UserActivityStat[]>;
 
   /**
    * Conversion attribution over Retrievals-with-results in `[from, to)`: classify
