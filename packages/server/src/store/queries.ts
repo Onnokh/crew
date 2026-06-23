@@ -211,6 +211,14 @@ export type RecentRetrievalResultRow = {
   recency: number;
   repoBoost: number;
   final: number;
+  /**
+   * Whether THIS Post is the one that converted the Retrieval: the querying User
+   * later Confirmed it within the attribution window. The retrieval-level
+   * `converted` is the OR of this across results (a single Confirm can match
+   * several returned Posts under any-touch attribution, so more than one may be
+   * true).
+   */
+  confirmed: boolean;
 };
 
 /**
@@ -593,15 +601,19 @@ export function insertRetrieval(
 export function recentRetrievals(
   raw: Database,
   limit: number,
+  offset = 0,
+  zeroResultsOnly = false,
 ): RecentRetrievalRow[] {
+  const where = zeroResultsOnly ? "WHERE result_count = 0" : "";
   const rows = raw
     .prepare(
       `SELECT id, user_id, repo, situation, environment, "limit", result_count, created_at
          FROM retrievals
+        ${where}
         ORDER BY created_at DESC, id DESC
-        LIMIT ?`,
+        LIMIT ? OFFSET ?`,
     )
-    .all(limit) as Array<{
+    .all(limit, offset) as Array<{
     id: string;
     user_id: string;
     repo: string | null;
@@ -635,10 +647,17 @@ export function recentRetrievals(
 export function recentRetrievalsDetailed(
   raw: Database,
   limit: number,
+  offset = 0,
+  zeroResultsOnly = false,
+  windowMs = DEFAULT_ATTRIBUTION_WINDOW_MS,
 ): RecentRetrievalDetail[] {
-  const retrievals = recentRetrievals(raw, limit);
+  const retrievals = recentRetrievals(raw, limit, offset, zeroResultsOnly);
   if (retrievals.length === 0) return [];
 
+  // Per-result `confirmed`: did the querying User Confirm THIS Post within the
+  // attribution window? Joins back to `retrievals` for that User and time anchor;
+  // the same any-touch rule as `conversionStats`, just per Post instead of an
+  // EXISTS over the whole result set, so the matrix can mark the converting row.
   const placeholders = retrievals.map(() => "?").join(", ");
   const resultRows = raw
     .prepare(
@@ -650,14 +669,27 @@ export function recentRetrievalsDetailed(
               rr.trust AS trust,
               rr.recency AS recency,
               rr.repo_boost AS repoBoost,
-              rr.final AS final
+              rr.final AS final,
+              EXISTS (
+                SELECT 1
+                  FROM post_events pe
+                 WHERE pe.post_id = rr.post_id
+                   AND pe.verdict = 'confirm'
+                   AND pe.created_by = r.user_id
+                   AND pe.created_at > r.created_at
+                   AND pe.created_at <= r.created_at + ?
+              ) AS confirmed
          FROM retrieval_results rr
+         JOIN retrievals r ON r.id = rr.retrieval_id
          LEFT JOIN posts p ON p.id = rr.post_id
         WHERE rr.retrieval_id IN (${placeholders})
         ORDER BY rr.retrieval_id, rr.rank`,
     )
-    .all(...retrievals.map((r) => r.id)) as Array<
-    { retrievalId: string } & RecentRetrievalResultRow
+    .all(windowMs, ...retrievals.map((r) => r.id)) as Array<
+    { retrievalId: string; confirmed: number } & Omit<
+      RecentRetrievalResultRow,
+      "confirmed"
+    >
   >;
 
   const byRetrieval = new Map<string, RecentRetrievalResultRow[]>();
@@ -672,6 +704,7 @@ export function recentRetrievalsDetailed(
       recency: row.recency,
       repoBoost: row.repoBoost,
       final: row.final,
+      confirmed: row.confirmed === 1,
     });
     byRetrieval.set(row.retrievalId, list);
   }
@@ -680,6 +713,19 @@ export function recentRetrievalsDetailed(
     ...r,
     results: byRetrieval.get(r.id) ?? [],
   }));
+}
+
+/**
+ * Total Retrievals available to the recent-Retrievals list, for the pager. With
+ * `zeroResultsOnly`, counts only the zero-result (`result_count = 0`) gap rows so
+ * the page count matches the filtered list.
+ */
+export function retrievalsCount(raw: Database, zeroResultsOnly = false): number {
+  const where = zeroResultsOnly ? "WHERE result_count = 0" : "";
+  const row = raw
+    .prepare(`SELECT COUNT(*) AS total FROM retrievals ${where}`)
+    .get() as { total: number };
+  return row.total;
 }
 
 /**

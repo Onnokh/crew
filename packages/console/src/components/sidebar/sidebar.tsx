@@ -76,6 +76,16 @@ export function Sidebar({
             >
               <span>Activity</span>
             </Link>
+            <Link
+              to="/dashboard/performance/retrievals"
+              className={
+                section === "retrievals"
+                  ? styles.teamTreeItemActive
+                  : styles.teamTreeItem
+              }
+            >
+              <span>Retrievals</span>
+            </Link>
           </div>
         </div>
 

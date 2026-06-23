@@ -108,11 +108,23 @@ export type PostRepository = {
 
   /**
    * The most recent Retrievals for the tuning view, newest first, capped at
-   * `limit`, each carrying its returned Posts (rank + full score breakdown) with
-   * a human-readable Post title (null if the Post was retired/deleted). The
-   * converted? verdict is NOT here — derive it from {@link conversionStats}.
+   * `limit` and skipping the first `offset` rows, each carrying its returned
+   * Posts (rank + full score breakdown) with a human-readable Post title (null if
+   * the Post was retired/deleted). With `zeroResultsOnly`, only the gap rows
+   * (`result_count = 0`) are returned. The converted? verdict is NOT here — derive
+   * it from {@link conversionStats}.
    */
-  listRecentRetrievalsDetailed(limit: number): Promise<RecentRetrievalDetail[]>;
+  listRecentRetrievalsDetailed(
+    limit: number,
+    offset?: number,
+    zeroResultsOnly?: boolean,
+  ): Promise<RecentRetrievalDetail[]>;
+
+  /**
+   * Total Retrievals for the recent-Retrievals pager. With `zeroResultsOnly`,
+   * counts only the zero-result gap rows so the page count matches the filter.
+   */
+  retrievalsCount(zeroResultsOnly?: boolean): Promise<number>;
 
   /**
    * The unified activity feed, newest first, capped at `limit` and skipping the

@@ -6,6 +6,7 @@ export const telemetryKeys = {
   coverage: ["telemetry", "coverage"] as const,
   posts: ["telemetry", "posts"] as const,
   activity: ["telemetry", "activity"] as const,
+  recent: ["telemetry", "recent"] as const,
   users: ["telemetry", "users"] as const,
 };
 
@@ -40,6 +41,44 @@ export type ActivityItem = {
   /** Team this happened in; only set on the org-wide Teams-overview feed. */
   team?: string | null;
   createdAt: number;
+};
+
+/** Mirrors the server's `/api/telemetry/recent` payload — one page of Retrievals. */
+export type RetrievalsPanelData = {
+  retrievals: RetrievalRow[];
+  /** Total Retrievals matching the current filter, for the pager's page count. */
+  total: number;
+};
+
+/** Mirrors the server's `RetrievalRow` (api/telemetry.ts) — one Retrieval + its results. */
+export type RetrievalRow = {
+  id: string;
+  /** The freeform query text the agent searched with. */
+  situation: string;
+  repo: string | null;
+  resultCount: number;
+  createdAt: number;
+  /** Display name of the querying User, or null if it could not be resolved. */
+  user: string | null;
+  /** True iff the querying User later Confirmed a returned Post in the window. */
+  converted: boolean;
+  /** Returned Posts with rank + score breakdown; empty for a zero-result query. */
+  results: RetrievalResultRow[];
+};
+
+/** Mirrors the server's `RetrievalResultRow` — one returned Post's score breakdown. */
+export type RetrievalResultRow = {
+  postId: string;
+  /** The Post's current title, or null if it was retired/deleted (show postId). */
+  postTitle: string | null;
+  rank: number;
+  rrfScore: number;
+  trust: number;
+  recency: number;
+  repoBoost: number;
+  final: number;
+  /** True iff this is the Post the querying User later Confirmed (in window). */
+  confirmed: boolean;
 };
 
 /** One row of the org-wide Teams overview (`/api/admin/teams/overview`). */

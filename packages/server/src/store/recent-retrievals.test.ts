@@ -157,4 +157,51 @@ describe("listRecentRetrievalsDetailed", () => {
   it("returns an empty list when there are no retrievals", async () => {
     expect(await repo.listRecentRetrievalsDetailed(10)).toEqual([]);
   });
+
+  it("marks the specific returned Post the querying User later Confirmed", async () => {
+    const a = await post("connection timeout", "Raise the pool size");
+    const b = await post("connection timeout", "Add a retry");
+    repo.recordRetrieval({
+      userId: "user_alice",
+      repo: "webshop",
+      situation: "connection timeout",
+      environment: null,
+      limit: 5,
+      results: [
+        { postId: a, rank: 1, rrfScore: 0.5, trust: 1, recency: 1, repoBoost: 1, final: 0.5 },
+        { postId: b, rank: 2, rrfScore: 0.3, trust: 1, recency: 1, repoBoost: 1, final: 0.3 },
+      ],
+    });
+    // A Confirm AFTER the retrieval, by the querying User, on Post b only.
+    clock.advance(1000);
+    await repo.recordEvent({ postId: b, verdict: "confirm", createdBy: "user_alice" });
+
+    const [detail] = await repo.listRecentRetrievalsDetailed(10);
+    const byId = new Map(detail!.results.map((r) => [r.postId, r.confirmed]));
+    expect(byId.get(a)).toBe(false);
+    expect(byId.get(b)).toBe(true);
+  });
+
+  it("does not mark a Confirm by a different User, or one before the retrieval", async () => {
+    const id = await post("x", "p");
+    // A Confirm BEFORE the retrieval should not count (attribution is forward).
+    await repo.recordEvent({ postId: id, verdict: "confirm", createdBy: "user_alice" });
+    clock.advance(1000);
+    repo.recordRetrieval({
+      userId: "user_alice",
+      repo: null,
+      situation: "x",
+      environment: null,
+      limit: 5,
+      results: [
+        { postId: id, rank: 1, rrfScore: 1, trust: 1, recency: 1, repoBoost: 1, final: 1 },
+      ],
+    });
+    // A later Confirm by a DIFFERENT User should not count either.
+    clock.advance(1000);
+    await repo.recordEvent({ postId: id, verdict: "confirm", createdBy: "user_bob" });
+
+    const [detail] = await repo.listRecentRetrievalsDetailed(10);
+    expect(detail!.results[0]!.confirmed).toBe(false);
+  });
 });

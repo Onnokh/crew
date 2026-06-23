@@ -38,6 +38,7 @@ import {
   keywordSearch,
   recentRetrievals,
   recentRetrievalsDetailed,
+  retrievalsCount,
   vectorSearch,
 } from "./queries.js";
 import type { PostRepository, PostSort } from "./repository.js";
@@ -327,8 +328,14 @@ export class SqliteRepository implements PostRepository {
 
   async listRecentRetrievalsDetailed(
     limit: number,
+    offset = 0,
+    zeroResultsOnly = false,
   ): Promise<RecentRetrievalDetail[]> {
-    return recentRetrievalsDetailed(this.raw, limit);
+    return recentRetrievalsDetailed(this.raw, limit, offset, zeroResultsOnly);
+  }
+
+  async retrievalsCount(zeroResultsOnly = false): Promise<number> {
+    return retrievalsCount(this.raw, zeroResultsOnly);
   }
 
   async recentActivity(limit: number, offset = 0): Promise<ActivityRow[]> {

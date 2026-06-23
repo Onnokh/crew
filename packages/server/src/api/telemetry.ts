@@ -10,7 +10,7 @@ import type { PostRepository } from "../store/repository.js";
  * alongside it (conversion rate, zero-result/volume, tuning detail).
  *
  * Routes:
- *   GET /api/telemetry/recent      → { retrievals: RetrievalRow[] }   most recent queries
+ *   GET /api/telemetry/recent      → { retrievals: RetrievalRow[], total }  paginated queries (?limit&offset&filter=zero-result)
  *   GET /api/telemetry/conversion  → ConversionPanelData               Query→Confirm rate + trend
  *   GET /api/telemetry/coverage    → CoveragePanelData                 zero-result rate + query volume, with a per-day trend
  */
@@ -44,7 +44,14 @@ export function mountTelemetry(app: Hono, deps: Deps): void {
   // converted: false.
   telemetry.get("/recent", async (c) => {
     const repo = teamRepoForSession(deps, c.get("teamId"));
-    const details = await repo.listRecentRetrievalsDetailed(LIST_LIMIT);
+    const limit = Math.min(numParam(c.req.query("limit")) ?? LIST_LIMIT, LIST_LIMIT);
+    const offset = Math.max(numParam(c.req.query("offset")) ?? 0, 0);
+    // The only filter is the zero-result "gap" lens; any other value is ignored.
+    const zeroResultsOnly = c.req.query("filter") === "zero-result";
+    const [details, total] = await Promise.all([
+      repo.listRecentRetrievalsDetailed(limit, offset, zeroResultsOnly),
+      repo.retrievalsCount(zeroResultsOnly),
+    ]);
 
     const verdicts = new Map<string, boolean>();
     if (details.length > 0) {
@@ -71,6 +78,7 @@ export function mountTelemetry(app: Hono, deps: Deps): void {
       retrievals: details.map((d) =>
         toRetrievalRow(d, verdicts.get(d.id) ?? false, resolveUser(d.userId)),
       ),
+      total,
     });
   });
 
@@ -484,6 +492,8 @@ export type RetrievalResultRow = {
   recency: number;
   repoBoost: number;
   final: number;
+  /** True iff THIS Post is the one the querying User Confirmed in window. */
+  confirmed: boolean;
 };
 
 /**
@@ -533,6 +543,7 @@ function toRetrievalRow(
       recency: res.recency,
       repoBoost: res.repoBoost,
       final: res.final,
+      confirmed: res.confirmed,
     })),
   };
 }

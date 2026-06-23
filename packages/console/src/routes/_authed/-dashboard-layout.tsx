@@ -16,6 +16,10 @@ const UsagePanel = lazy(
 const ActivityPanel = lazy(
   () => import("../../components/feature/activity-dashboard/activity-dashboard"),
 );
+const RetrievalsPanel = lazy(
+  () =>
+    import("../../components/feature/retrievals-dashboard/retrievals-dashboard"),
+);
 
 /**
  * Route entry for the admin dashboard. Wires the data layer ({@link useAdminData})
@@ -79,6 +83,11 @@ function AdminDashboard(props: AdminDashboardProps) {
           {section === "activity" && (
             <Suspense fallback={<p className={shared.emptyRow}>Loading...</p>}>
               <ActivityPanel />
+            </Suspense>
+          )}
+          {section === "retrievals" && (
+            <Suspense fallback={<p className={shared.emptyRow}>Loading...</p>}>
+              <RetrievalsPanel />
             </Suspense>
           )}
           {section === "teams" && (
