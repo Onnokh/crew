@@ -1,0 +1,63 @@
+@use "../../../styles/tokens" as *;
+
+// The feed + pager sit flush; the pager's own top border is the only divider.
+.feed {
+  gap: 0;
+}
+
+// Footer pager beneath the Activity feed: a row count on the left, prev/next
+// chips and the page indicator on the right.
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  padding-top: $space-md;
+  border-top: 1px solid $color-border;
+}
+
+.pagerRange {
+  color: $color-text-muted;
+  font-size: $text-sm;
+}
+
+.pagerControls {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.pagerPage {
+  color: $color-text-muted;
+  font-size: $text-sm;
+  font-weight: 600;
+}
+
+.pagerButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: $space-sm;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-bg;
+  color: $color-text;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.04);
+
+  &:hover:not(:disabled) {
+    background: $color-surface-hover;
+  }
+
+  &:disabled {
+    color: $color-text-subtle;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  svg {
+    display: block;
+  }
+}

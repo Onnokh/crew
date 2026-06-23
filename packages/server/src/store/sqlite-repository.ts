@@ -25,6 +25,7 @@ import type {
 import {
   conversionStats,
   coverageStats,
+  activityCount,
   earliestActivityAt,
   postsByRepo,
   postsCreatedStats,
@@ -330,8 +331,12 @@ export class SqliteRepository implements PostRepository {
     return recentRetrievalsDetailed(this.raw, limit);
   }
 
-  async recentActivity(limit: number): Promise<ActivityRow[]> {
-    return recentActivity(this.raw, limit);
+  async recentActivity(limit: number, offset = 0): Promise<ActivityRow[]> {
+    return recentActivity(this.raw, limit, offset);
+  }
+
+  async activityCount(): Promise<number> {
+    return activityCount(this.raw);
   }
 
   async earliestActivityAt(): Promise<number | null> {

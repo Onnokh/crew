@@ -479,7 +479,11 @@ export type ActivityRow = {
  * capped at `limit`. User-id → name resolution is the API's job (the corpus DB
  * has no `user` table). No materialized feed — read straight off the logs.
  */
-export function recentActivity(raw: Database, limit: number): ActivityRow[] {
+export function recentActivity(
+  raw: Database,
+  limit: number,
+  offset = 0,
+): ActivityRow[] {
   const rows = raw
     .prepare(
       `SELECT id, 'search' AS kind, situation AS subject,
@@ -498,9 +502,9 @@ export function recentActivity(raw: Database, limit: number): ActivityRow[] {
          FROM post_events pe
          JOIN posts p ON p.id = pe.post_id
         ORDER BY createdAt DESC
-        LIMIT ?`,
+        LIMIT ? OFFSET ?`,
     )
-    .all(limit) as Array<{
+    .all(limit, offset) as Array<{
     id: string;
     kind: ActivityRow["kind"];
     subject: string;
@@ -510,6 +514,22 @@ export function recentActivity(raw: Database, limit: number): ActivityRow[] {
     createdAt: number;
   }>;
   return rows;
+}
+
+/**
+ * Total rows in the unified activity feed — the sum of every searched, posted,
+ * and verdict row {@link recentActivity} unions over. Backs the paginated
+ * Activity view's page count; read straight off the logs, no materialized tally.
+ */
+export function activityCount(raw: Database): number {
+  const row = raw
+    .prepare(
+      `SELECT (SELECT COUNT(*) FROM retrievals)
+            + (SELECT COUNT(*) FROM posts)
+            + (SELECT COUNT(*) FROM post_events) AS total`,
+    )
+    .get() as { total: number };
+  return row.total;
 }
 
 /**

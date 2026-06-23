@@ -13,6 +13,9 @@ import styles from "./-dashboard-layout.module.scss";
 const UsagePanel = lazy(
   () => import("../../components/feature/usage-dashboard/usage-dashboard"),
 );
+const ActivityPanel = lazy(
+  () => import("../../components/feature/activity-dashboard/activity-dashboard"),
+);
 
 /**
  * Route entry for the admin dashboard. Wires the data layer ({@link useAdminData})
@@ -71,6 +74,11 @@ function AdminDashboard(props: AdminDashboardProps) {
           {section === "usage" && (
             <Suspense fallback={<p className={shared.emptyRow}>Loading...</p>}>
               <UsagePanel />
+            </Suspense>
+          )}
+          {section === "activity" && (
+            <Suspense fallback={<p className={shared.emptyRow}>Loading...</p>}>
+              <ActivityPanel />
             </Suspense>
           )}
           {section === "teams" && (

@@ -167,7 +167,15 @@ export function mountTelemetry(app: Hono, deps: Deps): void {
   // we resolve each to a display name via the control plane (cached per id).
   telemetry.get("/activity", async (c) => {
     const repo = teamRepoForSession(deps, c.get("teamId"));
-    const rows = await repo.recentActivity(LIST_LIMIT);
+    // `limit`/`offset` paginate the standalone Activity view; absent (the
+    // embedded Performance feed) they fall back to the first LIST_LIMIT rows.
+    // Limit is clamped so a hand-crafted query can't ask for an unbounded page.
+    const limit = Math.min(numParam(c.req.query("limit")) ?? LIST_LIMIT, LIST_LIMIT);
+    const offset = Math.max(numParam(c.req.query("offset")) ?? 0, 0);
+    const [rows, total] = await Promise.all([
+      repo.recentActivity(limit, offset),
+      repo.activityCount(),
+    ]);
 
     const names = new Map<string, string | null>();
     const resolveUser = (id: string): string | null => {
@@ -184,7 +192,7 @@ export function mountTelemetry(app: Hono, deps: Deps): void {
       user: resolveUser(r.userId),
       createdAt: r.createdAt,
     }));
-    return c.json({ activity });
+    return c.json({ activity, total });
   });
 
   // Posts created: how many Posts were added over the range, plus a per-day

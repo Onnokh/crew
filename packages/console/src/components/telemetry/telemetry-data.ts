@@ -22,6 +22,13 @@ export type UserUsageItem = {
   total: number;
 };
 
+/** Mirrors the server's `/api/telemetry/activity` payload — one page of the feed. */
+export type ActivityPanelData = {
+  activity: ActivityItem[];
+  /** Total rows across the whole feed, for the paginated view's page count. */
+  total: number;
+};
+
 /** Mirrors the server's `ActivityItem` (api/telemetry.ts) — one feed row. */
 export type ActivityItem = {
   id: string;

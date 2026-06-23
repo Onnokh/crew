@@ -53,12 +53,31 @@ export function Sidebar({
           label="Home"
           to="/dashboard"
         />
-        <SidebarLink
-          active={section === "usage"}
-          icon={BarChart3}
-          label="Performance"
-          to="/dashboard/performance"
-        />
+        <div className={styles.appNavGroup}>
+          <Link
+            to="/dashboard/performance"
+            className={
+              section === "usage" ? styles.sidebarButtonActive : styles.sidebarLink
+            }
+          >
+            <span>
+              <BarChart3 size={18} aria-hidden="true" />
+              Performance
+            </span>
+          </Link>
+          <div className={styles.teamTree}>
+            <Link
+              to="/dashboard/performance/activity"
+              className={
+                section === "activity"
+                  ? styles.teamTreeItemActive
+                  : styles.teamTreeItem
+              }
+            >
+              <span>Activity</span>
+            </Link>
+          </div>
+        </div>
 
         <div className={styles.appNavGroup}>
           <Link

@@ -115,11 +115,15 @@ export type PostRepository = {
   listRecentRetrievalsDetailed(limit: number): Promise<RecentRetrievalDetail[]>;
 
   /**
-   * The unified activity feed, newest first, capped at `limit`: recent searches,
-   * new Posts, and Confirm/Flag verdicts merged into one time-sorted list. User
-   * ids are returned raw — resolve them to names at the API.
+   * The unified activity feed, newest first, capped at `limit` and skipping the
+   * first `offset` rows: recent searches, new Posts, and Confirm/Flag verdicts
+   * merged into one time-sorted list. User ids are returned raw — resolve them
+   * to names at the API.
    */
-  recentActivity(limit: number): Promise<ActivityRow[]>;
+  recentActivity(limit: number, offset?: number): Promise<ActivityRow[]>;
+
+  /** Total rows in the activity feed, for the paginated view's page count. */
+  activityCount(): Promise<number>;
 
   /**
    * The earliest activity timestamp across searches, Posts, and verdicts, or
