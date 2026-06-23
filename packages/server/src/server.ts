@@ -38,6 +38,10 @@ export function buildServer(deps: Deps): FastMCP<Principal> {
   mountReview(server.getApp(), deps);
   mountTelemetry(server.getApp(), deps);
 
+  // Liveness probe for the reverse proxy / orchestrator. Registered before the
+  // console so its SPA catch-all doesn't swallow it; cheap (no SPA render).
+  server.getApp().get("/healthz", (c) => c.json({ ok: true }));
+
   // The built console SPA, served statically with a client-route fallback.
   // Mounted LAST so its catch-all only sees what `/api/auth/*` and `/mcp` left
   // behind. No-ops when the console hasn't been built (dev, tests).
