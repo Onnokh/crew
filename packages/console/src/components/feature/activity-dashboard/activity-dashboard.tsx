@@ -12,7 +12,7 @@ import { PageHeading } from "../../ui/page-heading/page-heading";
 import shared from "../../../styles/dashboard.module.scss";
 import styles from "./activity-dashboard.module.scss";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 15;
 
 /** The standalone Activity sub-page: the full event feed, one page at a time. */
 export default function ActivityDashboard() {
