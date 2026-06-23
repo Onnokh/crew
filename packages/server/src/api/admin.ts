@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { customAlphabet } from "nanoid";
 import type { Deps } from "../deps.js";
 import type { Auth } from "../auth/better-auth.js";
+import { normalizeDomain } from "../guardrails/intake.js";
 
 /**
  * Admin user-management JSON API under `/api/admin/*`, role-gated to `admin`.
@@ -167,6 +168,7 @@ export function mountAdmin(app: Hono, deps: Deps): void {
       id: t.id,
       name: t.name,
       createdAt: t.createdAt,
+      intakeDomains: t.intakeDomains,
     }));
     return c.json({ teams });
   });
@@ -262,20 +264,50 @@ export function mountAdmin(app: Hono, deps: Deps): void {
     return c.json({ team: { id, name, createdAt } }, 201);
   });
 
-  // Rename a Team — DISPLAY-ONLY. The opaque id (and thus the corpus file) is
-  // never touched, so routing/storage are unaffected (ADR 0007).
+  // Update a Team's display settings: its name (DISPLAY-ONLY — the opaque id and
+  // thus the corpus file are never touched, ADR 0007) and/or its intake
+  // allowlist (the git hosts it accepts Posts from). Both fields are optional;
+  // only the ones present in the body are applied.
   admin.patch("/teams/:id", async (c) => {
     const id = c.req.param("id");
-    const body: { name?: unknown } = await c.req
+    const body: { name?: unknown; intakeDomains?: unknown } = await c.req
       .json()
       .catch(() => ({}) as { name?: unknown });
-    const name = typeof body.name === "string" ? body.name.trim() : "";
-    if (!name) return c.json({ error: "A team name is required" }, 400);
     if (deps.controlPlane.getTeam(id) === null) {
       return c.json({ error: "No such Team" }, 404);
     }
-    deps.controlPlane.renameTeam(id, name);
-    return c.json({ team: { id, name } });
+
+    if (body.name !== undefined) {
+      const name = typeof body.name === "string" ? body.name.trim() : "";
+      if (!name) return c.json({ error: "A team name is required" }, 400);
+      deps.controlPlane.renameTeam(id, name);
+    }
+
+    if (body.intakeDomains !== undefined) {
+      if (!Array.isArray(body.intakeDomains)) {
+        return c.json({ error: "intakeDomains must be a list of git hosts" }, 400);
+      }
+      const cleaned: string[] = [];
+      for (const entry of body.intakeDomains) {
+        if (typeof entry !== "string") {
+          return c.json({ error: "Each intake domain must be a string" }, 400);
+        }
+        const host = normalizeDomain(entry);
+        // Require something host-shaped (a dot or localhost) so a stray slug
+        // can't silently lock the Team out of all intake.
+        if (!host || !(/\./.test(host) || host === "localhost")) {
+          return c.json(
+            { error: `'${entry}' is not a valid git host (e.g. git.indicia.nl)` },
+            400,
+          );
+        }
+        if (!cleaned.includes(host)) cleaned.push(host);
+      }
+      deps.controlPlane.setTeamIntakeDomains(id, cleaned);
+    }
+
+    const team = deps.controlPlane.getTeam(id);
+    return c.json({ team });
   });
 
   // Delete a Team — irreversible, and guarded so it can never strand a User or

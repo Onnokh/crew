@@ -10,7 +10,12 @@ export type Post = {
   body: string;
   /** Freeform summary of the stack/setup the Post was learned in. */
   environment: string;
-  /** The git repository the Post originated from. */
+  /**
+   * The git repository the Post originated from, stored verbatim as the client
+   * sent it (usually the full remote, e.g. `git@git.indicia.nl:group/name.git`).
+   * Reduce it with {@link normalizeRepo} for display/compare; the raw form is
+   * kept so the host survives for intake filtering ({@link repoHost}).
+   */
   repo: string;
   status: PostStatus;
   /** The id of the User this Post is attributed to. */
@@ -42,6 +47,24 @@ export function normalizeRepo(repo: string): string {
   const segments = cleaned.split("/").filter(Boolean);
   if (segments.length >= 2) return segments.slice(-2).join("/");
   return segments[0] ?? repo.trim();
+}
+
+/**
+ * Extract the git HOST from a repo identifier (e.g. `git.indicia.nl`,
+ * `github.com`), lowercased, for intake allowlisting. Handles scheme://, ssh
+ * `user@host:`, scp colons, and ports. Returns `""` for a hostless bare slug
+ * like `Onnokh/crew` — the first segment is only treated as a host when it
+ * looks like one (contains a dot, or is `localhost`), so a group is never
+ * mistaken for a host.
+ */
+export function repoHost(repo: string): string {
+  const cleaned = repo
+    .trim()
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//i, "") // strip scheme://
+    .replace(/^[^@/]*@/, ""); // strip ssh user@ / URL userinfo
+  const first = cleaned.split("/")[0] ?? "";
+  const host = (first.split(":")[0] ?? "").toLowerCase(); // drop scp/port
+  return /\./.test(host) || host === "localhost" ? host : "";
 }
 
 /** The fields a caller supplies when creating a Post; the store stamps id/timestamp/status. */

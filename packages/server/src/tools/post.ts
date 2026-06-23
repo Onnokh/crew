@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { normalizeRepo } from "../core/post.js";
 import type { Principal } from "../core/user.js";
+import { checkIntake } from "../guardrails/intake.js";
 import { scanPost } from "../guardrails/scan.js";
+import type { ControlPlaneRepository } from "../store/control-plane-repository.js";
 import type { TeamRepositoryResolver } from "../store/team-repository-resolver.js";
 
 /**
@@ -37,7 +38,7 @@ export const postParameters = z.object({
     .string()
     .min(1)
     .describe(
-      "The git repository this originated from. The plugin captures this automatically from the current git remote (a PreToolUse hook overwrites it), so you normally don't fill it in by hand; if you must, pass the `group/name` slug (e.g. `Onnokh/crew`). Stored canonically as `group/name`. Used to boost same-repo results and label cross-repo ones; never filters.",
+      "The git repository this originated from — pass the full remote (the exact `git remote get-url origin`, e.g. `git@git.indicia.nl:group/name.git`), not a shortened slug. Stored verbatim so the host is preserved; it is normalized to `group/name` for display and to boost same-repo results. The host is also matched against the team's intake allowlist when one is configured, so a wrong/missing host can get the Post rejected.",
     ),
 });
 
@@ -48,7 +49,10 @@ export type PostArgs = z.infer<typeof postParameters>;
  * User, run it through the ingestion guardrail, and persist a Post. A guardrail
  * rejection becomes a tool error and the Post never reaches the store.
  */
-export function makePostTool(teams: TeamRepositoryResolver) {
+export function makePostTool(
+  teams: TeamRepositoryResolver,
+  controlPlane: ControlPlaneRepository,
+) {
   return {
     name: "post",
     description:
@@ -62,9 +66,13 @@ export function makePostTool(teams: TeamRepositoryResolver) {
       }
       const repo = teams.getRepository(user.teamId);
 
-      // Canonicalise the repo to `group/name` so stored values are uniform
-      // whatever form the client sends (full URL, ssh remote, bare slug).
-      const normalizedRepo = normalizeRepo(args.repo);
+      // Intake allowlist: when the Team restricts which git hosts it accepts,
+      // reject anything off-list (e.g. personal projects) before storing.
+      const team = controlPlane.getTeam(user.teamId);
+      const intake = checkIntake(args.repo, team?.intakeDomains ?? []);
+      if (!intake.ok) {
+        throw new Error(`Post rejected by intake allowlist: ${intake.reason}`);
+      }
 
       // Reject secrets/PII and prompt-injection before anything is stored.
       const scan = scanPost({
@@ -72,18 +80,19 @@ export function makePostTool(teams: TeamRepositoryResolver) {
         situation: args.situation,
         body: args.body,
         environment: args.environment,
-        repo: normalizedRepo,
+        repo: args.repo,
       });
       if (!scan.ok) {
         throw new Error(`Post rejected by ingestion guardrail: ${scan.reason}`);
       }
 
+      // Store the repo verbatim (full remote); it is normalized on read.
       const post = await repo.createPost({
         title: args.title,
         situation: args.situation,
         body: args.body,
         environment: args.environment,
-        repo: normalizedRepo,
+        repo: args.repo,
         createdBy: user.id,
       });
       return `Posted. id: ${post.id}`;

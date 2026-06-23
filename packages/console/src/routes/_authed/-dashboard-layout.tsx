@@ -96,6 +96,14 @@ function AdminDashboard(props: AdminDashboardProps) {
               }
               renaming={props.pending.renamingTeam}
               error={props.teamError}
+              intakeDomains={selectedTeam.intakeDomains}
+              onSaveDomains={(domains) =>
+                props.actions.setTeamDomains({
+                  id: selectedTeam.id,
+                  intakeDomains: domains,
+                })
+              }
+              savingDomains={props.pending.savingTeamDomains}
               onDelete={() =>
                 props.actions.deleteTeam(
                   { id: selectedTeam.id },

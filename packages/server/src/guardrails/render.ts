@@ -1,4 +1,4 @@
-import type { Post } from "../core/post.js";
+import { type Post, normalizeRepo } from "../core/post.js";
 
 /** The most recent Notes shown inline per Post in a query result. */
 export const MAX_NOTES = 3;
@@ -76,7 +76,7 @@ function provenanceLine(result: RenderResult, now: number): string {
   const { post, authorName, confirms, flags, views } = result;
   const parts = [
     post.id,
-    `posted by ${authorName} in ${post.repo}, ${age(post.createdAt, now)}`,
+    `posted by ${authorName} in ${normalizeRepo(post.repo)}, ${age(post.createdAt, now)}`,
     `${confirms} confirms / ${flags} flags / ${views} views`,
   ];
   if (post.lastConfirmed !== null) {

@@ -1,5 +1,12 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { AlertTriangle, ChevronDown, Settings, Trash2, X } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  Plus,
+  Settings,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useState, type FormEvent } from "react";
 import base from "../dialog.module.scss";
 import styles from "../dialog-form.module.scss";
@@ -22,6 +29,9 @@ export function TeamSettingsDialog({
   onRename,
   renaming,
   error,
+  intakeDomains,
+  onSaveDomains,
+  savingDomains,
   onDelete,
   deleting,
   canDelete,
@@ -31,6 +41,11 @@ export function TeamSettingsDialog({
   onRename: (name: string, opts?: { onSuccess?: () => void }) => void;
   renaming: boolean;
   error: string | null;
+  /** The git hosts this team accepts Posts from; empty means accept all. */
+  intakeDomains: string[];
+  /** Persist a new allowlist. The dialog stays open so edits read as a draft. */
+  onSaveDomains: (domains: string[]) => void;
+  savingDomains: boolean;
   onDelete: () => void;
   deleting: boolean;
   canDelete: boolean;
@@ -39,6 +54,9 @@ export function TeamSettingsDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(teamName);
+  // A working copy of the allowlist plus the add-input draft, both reset on open.
+  const [domains, setDomains] = useState(intakeDomains);
+  const [domainDraft, setDomainDraft] = useState("");
   // The danger disclosure and its two-step confirm, both reset when reopened.
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -46,12 +64,33 @@ export function TeamSettingsDialog({
   function onOpenChange(next: boolean) {
     if (next) {
       setName(teamName);
+      setDomains(intakeDomains);
+      setDomainDraft("");
     } else {
       setDrawerOpen(false);
       setConfirming(false);
     }
     setOpen(next);
   }
+
+  function addDomain() {
+    const entry = domainDraft.trim().toLowerCase();
+    if (!entry || domains.includes(entry)) {
+      setDomainDraft("");
+      return;
+    }
+    setDomains([...domains, entry]);
+    setDomainDraft("");
+  }
+
+  function removeDomain(entry: string) {
+    setDomains(domains.filter((d) => d !== entry));
+  }
+
+  // Order-insensitive comparison so re-saving the same set reads as clean.
+  const domainsDirty =
+    domains.length !== intakeDomains.length ||
+    domains.some((d) => !intakeDomains.includes(d));
 
   const dirty = name.trim() !== "" && name.trim() !== teamName;
 
@@ -115,6 +154,67 @@ export function TeamSettingsDialog({
                 {renaming ? "Saving…" : "Save changes"}
               </button>
             </form>
+
+            <section className={styles.section}>
+              <h3 className={styles.sectionTitle}>Intake domains</h3>
+              <p className={styles.heroHint}>
+                Only Posts from these git hosts are accepted into the team's
+                knowledge — anything else (e.g. personal projects) is rejected at
+                intake. Leave empty to accept all.
+              </p>
+
+              {domains.length > 0 && (
+                <div className={styles.chips}>
+                  {domains.map((domain) => (
+                    <span key={domain} className={styles.chip}>
+                      {domain}
+                      <button
+                        type="button"
+                        className={styles.chipRemove}
+                        onClick={() => removeDomain(domain)}
+                        aria-label={`Remove ${domain}`}
+                      >
+                        <X size={13} aria-hidden="true" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className={styles.domainRow}>
+                <input
+                  className={styles.input}
+                  type="text"
+                  placeholder="git.indicia.nl"
+                  value={domainDraft}
+                  onChange={(e) => setDomainDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addDomain();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles.btnGhost}`}
+                  onClick={addDomain}
+                  disabled={!domainDraft.trim()}
+                >
+                  <Plus size={15} aria-hidden="true" /> Add
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnPrimary} ${styles.btnFull}`}
+                style={{ marginTop: "0.75rem" }}
+                onClick={() => onSaveDomains(domains)}
+                disabled={!domainsDirty || savingDomains}
+              >
+                {savingDomains ? "Saving…" : "Save intake domains"}
+              </button>
+            </section>
 
             <div className={styles.disclosure}>
               <button

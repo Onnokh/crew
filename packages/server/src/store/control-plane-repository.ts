@@ -30,15 +30,14 @@ export class ControlPlaneRepository {
   getTeamForUser(userId: string): Team | null {
     const row = this.raw
       .prepare(
-        `SELECT t.id AS id, t.org_id AS orgId, t.name AS name
+        `SELECT t.id AS id, t.org_id AS orgId, t.name AS name,
+                t.intake_domains AS intakeDomains
            FROM team_membership m
            JOIN team t ON t.id = m.team_id
           WHERE m.user_id = ?`,
       )
-      .get(userId) as
-      | { id: string; orgId: string; name: string }
-      | undefined;
-    return row ? { id: row.id, orgId: row.orgId, name: row.name } : null;
+      .get(userId) as TeamRow | undefined;
+    return row ? rowToTeam(row) : null;
   }
 
   /** Insert an Org row (idempotent on id). */
@@ -50,11 +49,14 @@ export class ControlPlaneRepository {
       .run(id, name, createdAt);
   }
 
-  /** Insert a Team row (idempotent on id). */
-  createTeam(team: Team, createdAt: number): void {
+  /** Insert a Team row (idempotent on id). New Teams start with an empty
+   * intake allowlist (accept everything); set it later via
+   * {@link setTeamIntakeDomains}. */
+  createTeam(team: Omit<Team, "intakeDomains">, createdAt: number): void {
     this.raw
       .prepare(
-        `INSERT OR IGNORE INTO team (id, org_id, name, created_at) VALUES (?, ?, ?, ?)`,
+        `INSERT OR IGNORE INTO team (id, org_id, name, intake_domains, created_at)
+         VALUES (?, ?, ?, '[]', ?)`,
       )
       .run(team.id, team.orgId, team.name, createdAt);
   }
@@ -68,33 +70,38 @@ export class ControlPlaneRepository {
     this.raw.prepare(`UPDATE team SET name = ? WHERE id = ?`).run(name, id);
   }
 
+  /**
+   * Replace a Team's intake allowlist (the git hosts it accepts Posts from).
+   * Stored as a JSON array; an empty array restores "accept everything". No-op
+   * if the id does not exist.
+   */
+  setTeamIntakeDomains(id: string, domains: string[]): void {
+    this.raw
+      .prepare(`UPDATE team SET intake_domains = ? WHERE id = ?`)
+      .run(JSON.stringify(domains), id);
+  }
+
   /** Every Team, newest first. The default Team (earliest) sorts last. */
   listTeams(): Array<Team & { createdAt: number }> {
     const rows = this.raw
       .prepare(
-        `SELECT id, org_id AS orgId, name, created_at AS createdAt FROM team
+        `SELECT id, org_id AS orgId, name, intake_domains AS intakeDomains,
+                created_at AS createdAt FROM team
           ORDER BY created_at DESC, id DESC`,
       )
-      .all() as Array<{
-      id: string;
-      orgId: string;
-      name: string;
-      createdAt: number;
-    }>;
-    return rows.map((r) => ({
-      id: r.id,
-      orgId: r.orgId,
-      name: r.name,
-      createdAt: r.createdAt,
-    }));
+      .all() as Array<TeamRow & { createdAt: number }>;
+    return rows.map((r) => ({ ...rowToTeam(r), createdAt: r.createdAt }));
   }
 
   /** Look up a single Team by id, or null. */
   getTeam(id: string): Team | null {
     const row = this.raw
-      .prepare(`SELECT id, org_id AS orgId, name FROM team WHERE id = ?`)
-      .get(id) as { id: string; orgId: string; name: string } | undefined;
-    return row ? { id: row.id, orgId: row.orgId, name: row.name } : null;
+      .prepare(
+        `SELECT id, org_id AS orgId, name, intake_domains AS intakeDomains
+           FROM team WHERE id = ?`,
+      )
+      .get(id) as TeamRow | undefined;
+    return row ? rowToTeam(row) : null;
   }
 
   /**
@@ -147,10 +154,42 @@ export class ControlPlaneRepository {
   firstTeam(): Team | null {
     const row = this.raw
       .prepare(
-        `SELECT id, org_id AS orgId, name FROM team
-          ORDER BY created_at ASC, id ASC LIMIT 1`,
+        `SELECT id, org_id AS orgId, name, intake_domains AS intakeDomains
+           FROM team ORDER BY created_at ASC, id ASC LIMIT 1`,
       )
-      .get() as { id: string; orgId: string; name: string } | undefined;
-    return row ? { id: row.id, orgId: row.orgId, name: row.name } : null;
+      .get() as TeamRow | undefined;
+    return row ? rowToTeam(row) : null;
+  }
+}
+
+/** A `team` row as the SELECTs above alias it (intake_domains is raw JSON). */
+type TeamRow = {
+  id: string;
+  orgId: string;
+  name: string;
+  /** JSON array of host strings; NULL on rows predating migration 0002. */
+  intakeDomains: string | null;
+};
+
+/** Map a raw team row to a {@link Team}, parsing the intake allowlist JSON
+ * defensively — a NULL (pre-migration) or malformed value reads as empty. */
+function rowToTeam(row: TeamRow): Team {
+  return {
+    id: row.id,
+    orgId: row.orgId,
+    name: row.name,
+    intakeDomains: parseDomains(row.intakeDomains),
+  };
+}
+
+function parseDomains(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.filter((d): d is string => typeof d === "string")
+      : [];
+  } catch {
+    return [];
   }
 }

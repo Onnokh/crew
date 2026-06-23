@@ -1,4 +1,5 @@
 import type { Database } from "better-sqlite3";
+import { normalizeRepo } from "../core/post.js";
 
 /** A keyword (FTS5) candidate: a Post id paired with its FTS5 rank. */
 export type Candidate = {
@@ -359,19 +360,23 @@ export type RepoPostCount = {
 };
 
 /**
- * Posts grouped by their originating `repo`, busiest first. A plain
- * `GROUP BY repo` over every Post in the corpus — no time window, no status
- * filter — backing the team detail page's per-project breakdown.
+ * Posts grouped by their originating repo, busiest first — backing the team
+ * detail page's per-project breakdown. Repos are stored verbatim (full remote),
+ * so grouping happens on the normalized `group/name` form to fold the same repo
+ * across remote shapes (https vs ssh) into one bucket.
  */
 export function postsByRepo(raw: Database): RepoPostCount[] {
-  return raw
-    .prepare(
-      `SELECT repo, COUNT(*) AS posts
-         FROM posts
-        GROUP BY repo
-        ORDER BY posts DESC, repo`,
-    )
-    .all() as RepoPostCount[];
+  const rows = raw
+    .prepare(`SELECT repo FROM posts`)
+    .all() as Array<{ repo: string }>;
+  const counts = new Map<string, number>();
+  for (const { repo } of rows) {
+    const key = normalizeRepo(repo);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([repo, posts]) => ({ repo, posts }))
+    .sort((a, b) => b.posts - a.posts || a.repo.localeCompare(b.repo));
 }
 
 /**

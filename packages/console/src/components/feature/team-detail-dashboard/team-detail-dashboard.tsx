@@ -87,6 +87,9 @@ export function TeamDetailDashboard({
   onRename,
   renaming,
   error,
+  intakeDomains,
+  onSaveDomains,
+  savingDomains,
   onDelete,
   deleting,
   canDelete,
@@ -111,6 +114,11 @@ export function TeamDetailDashboard({
   onRename: (name: string, opts?: { onSuccess?: () => void }) => void;
   renaming: boolean;
   error: string | null;
+  /** The git hosts this team accepts Posts from; empty means accept all. */
+  intakeDomains: string[];
+  /** Persist a new intake allowlist for this team. */
+  onSaveDomains: (domains: string[]) => void;
+  savingDomains: boolean;
   /** Delete this team (only enabled when {@link canDelete}). */
   onDelete: () => void;
   deleting: boolean;
@@ -202,6 +210,9 @@ export function TeamDetailDashboard({
             onRename={onRename}
             renaming={renaming}
             error={error}
+            intakeDomains={intakeDomains}
+            onSaveDomains={onSaveDomains}
+            savingDomains={savingDomains}
             onDelete={onDelete}
             deleting={deleting}
             canDelete={canDelete}

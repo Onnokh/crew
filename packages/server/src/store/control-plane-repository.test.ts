@@ -47,6 +47,7 @@ describe("ControlPlaneRepository", () => {
       id: "team_1",
       orgId: "org_1",
       name: "Team",
+      intakeDomains: [],
     });
   });
 
@@ -68,6 +69,7 @@ describe("ControlPlaneRepository", () => {
       id: "team_a",
       orgId: "org_1",
       name: "A",
+      intakeDomains: [],
     });
     expect(controlPlane.getTeam("team_nope")).toBeNull();
   });
@@ -80,6 +82,7 @@ describe("ControlPlaneRepository", () => {
       id: "team_a",
       orgId: "org_1",
       name: "New",
+      intakeDomains: [],
     });
     // Renaming a non-existent id is a harmless no-op.
     controlPlane.renameTeam("team_nope", "X");

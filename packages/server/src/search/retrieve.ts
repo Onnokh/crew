@@ -1,4 +1,5 @@
 import type { PostEvent } from "../core/post-event.js";
+import { normalizeRepo } from "../core/post.js";
 import type { RenderNote, RenderResult } from "../guardrails/render.js";
 import { MAX_NOTES } from "../guardrails/render.js";
 import type { Clock } from "../platform/clock.js";
@@ -116,7 +117,7 @@ export async function retrieve(
     const trust = trustFromCounts(h.confirms, h.flags);
     const recencyValue = recency(h.post.lastConfirmed ?? h.post.createdAt, now);
     const repoBoostValue = repoBoost(
-      input.repo !== undefined && h.post.repo === input.repo,
+      input.repo !== undefined && normalizeRepo(h.post.repo) === input.repo,
     );
     const final = rrfScore * trust * recencyValue * repoBoostValue;
     const result: RenderResult = {

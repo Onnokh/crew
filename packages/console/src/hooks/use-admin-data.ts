@@ -29,6 +29,8 @@ export type TeamRow = {
   id: string;
   name: string;
   createdAt: number;
+  /** Git hosts this team accepts Posts from; empty means accept all. */
+  intakeDomains: string[];
 };
 
 /** Per-call mutation options: an `onSuccess` the caller runs after the mutation
@@ -51,6 +53,11 @@ export type AdminActions = {
   revokeKey: (key: ApiKey) => void;
   createTeam: (name: string, opts?: MutateOpts) => void;
   renameTeam: (vars: { id: string; name: string }, opts?: MutateOpts) => void;
+  /** Replace a Team's intake allowlist (the git hosts it accepts Posts from). */
+  setTeamDomains: (
+    vars: { id: string; intakeDomains: string[] },
+    opts?: MutateOpts,
+  ) => void;
   /** Delete a Team. `onSuccess` lets the caller navigate away from its page. */
   deleteTeam: (vars: { id: string }, opts?: MutateOpts) => void;
 };
@@ -63,6 +70,7 @@ export type AdminMutationState = {
   revokingKey: boolean;
   creatingTeam: boolean;
   renamingTeam: boolean;
+  savingTeamDomains: boolean;
   deletingTeam: boolean;
 };
 
@@ -216,6 +224,16 @@ export function useAdminData(): AdminData {
     },
   });
 
+  const setTeamDomains = useMutation({
+    mutationFn: (vars: { id: string; intakeDomains: string[] }) =>
+      apiFetch<{ team: TeamRow }>(`/api/admin/teams/${vars.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ intakeDomains: vars.intakeDomains }),
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: adminKeys.teams }),
+  });
+
   const deleteTeam = useMutation({
     mutationFn: (vars: { id: string }) =>
       apiFetch(`/api/admin/teams/${vars.id}`, { method: "DELETE" }),
@@ -238,7 +256,12 @@ export function useAdminData(): AdminData {
     null;
   const error = failure ? describe(failure) : null;
   const teamFailure =
-    teamsError ?? createTeam.error ?? renameTeam.error ?? deleteTeam.error ?? null;
+    teamsError ??
+    createTeam.error ??
+    renameTeam.error ??
+    setTeamDomains.error ??
+    deleteTeam.error ??
+    null;
   const teamError = teamFailure ? describe(teamFailure) : null;
 
   return {
@@ -254,6 +277,7 @@ export function useAdminData(): AdminData {
       revokeKey: (key) => revokeKey.mutate(key),
       createTeam: (name, opts) => createTeam.mutate(name, opts),
       renameTeam: (vars, opts) => renameTeam.mutate(vars, opts),
+      setTeamDomains: (vars, opts) => setTeamDomains.mutate(vars, opts),
       deleteTeam: (vars, opts) => deleteTeam.mutate(vars, opts),
     },
     pending: {
@@ -264,6 +288,7 @@ export function useAdminData(): AdminData {
       revokingKey: revokeKey.isPending,
       creatingTeam: createTeam.isPending,
       renamingTeam: renameTeam.isPending,
+      savingTeamDomains: setTeamDomains.isPending,
       deletingTeam: deleteTeam.isPending,
     },
     secrets: { newPassword, mintedKey },

@@ -17,7 +17,7 @@ export function registerTools(server: FastMCP<Principal>, deps: Deps): void {
   // DBs carry no `user` table); a missing id renders as "unknown".
   const getUser = (id: string) => deps.controlPlane.getUser(id);
   server.addTool(makeQueryTool(deps.teams, getUser, deps.clock));
-  server.addTool(makePostTool(deps.teams));
+  server.addTool(makePostTool(deps.teams, deps.controlPlane));
   server.addTool(makeConfirmTool(deps.teams));
   server.addTool(makeFlagTool(deps.teams));
 }
