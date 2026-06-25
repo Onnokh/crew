@@ -656,8 +656,8 @@ export function recentRetrievalsDetailed(
 
   // Per-result `confirmed`: did the querying User Confirm THIS Post within the
   // attribution window? Joins back to `retrievals` for that User and time anchor;
-  // the same any-touch rule as `conversionStats`, just per Post instead of an
-  // EXISTS over the whole result set, so the matrix can mark the converting row.
+  // the same last-touch rule as `conversionStats` (the `NOT EXISTS` discards
+  // earlier touches), just per Post, so only the converting row is marked.
   const placeholders = retrievals.map(() => "?").join(", ");
   const resultRows = raw
     .prepare(
@@ -678,6 +678,15 @@ export function recentRetrievalsDetailed(
                    AND pe.created_by = r.user_id
                    AND pe.created_at > r.created_at
                    AND pe.created_at <= r.created_at + ?
+                   AND NOT EXISTS (
+                     SELECT 1
+                       FROM retrieval_results rr2
+                       JOIN retrievals r2 ON r2.id = rr2.retrieval_id
+                      WHERE rr2.post_id = rr.post_id
+                        AND r2.user_id = r.user_id
+                        AND r2.created_at > r.created_at
+                        AND r2.created_at < pe.created_at
+                   )
               ) AS confirmed
          FROM retrieval_results rr
          JOIN retrievals r ON r.id = rr.retrieval_id
@@ -737,11 +746,11 @@ export function retrievalsCount(raw: Database, zeroResultsOnly = false): number 
  * (`pe.created_at <= r.created_at + windowMs`). All thresholds are read-time
  * arguments over the raw rows — no stored attribution.
  *
- * This is ANY-TOUCH, not last-touch: there is no `retrieval_id` on a Confirm, so
- * the join can match one Confirm to several retrievals. A single Confirm credits
- * EVERY retrieval in the window that returned that Post — re-querying for the
- * same Post before confirming counts more than once. Last-touch would add a
- * `NOT EXISTS (a later retrieval of the Post before the Confirm)` clause.
+ * This is LAST-TOUCH: a Confirm credits only the MOST RECENT retrieval of that
+ * Post (by the same User) before the Confirm. The `NOT EXISTS (a later retrieval
+ * of the Post before the Confirm)` clause discards earlier touches, so one
+ * Confirm converts at most one retrieval — re-querying for the same Post before
+ * confirming no longer counts more than once, and `converted <= confirms`.
  */
 export function conversionStats(
   raw: Database,
@@ -759,6 +768,15 @@ export function conversionStats(
                    AND pe.created_by = r.user_id
                    AND pe.created_at > r.created_at
                    AND pe.created_at <= r.created_at + ?
+                   AND NOT EXISTS (
+                     SELECT 1
+                       FROM retrieval_results rr2
+                       JOIN retrievals r2 ON r2.id = rr2.retrieval_id
+                      WHERE rr2.post_id = rr.post_id
+                        AND r2.user_id = r.user_id
+                        AND r2.created_at > r.created_at
+                        AND r2.created_at < pe.created_at
+                   )
               ) AS converted,
               EXISTS (
                 SELECT 1
@@ -769,6 +787,15 @@ export function conversionStats(
                    AND pe.created_by = r.user_id
                    AND pe.created_at > r.created_at
                    AND pe.created_at <= r.created_at + ?
+                   AND NOT EXISTS (
+                     SELECT 1
+                       FROM retrieval_results rr2
+                       JOIN retrievals r2 ON r2.id = rr2.retrieval_id
+                      WHERE rr2.post_id = rr.post_id
+                        AND r2.user_id = r.user_id
+                        AND r2.created_at > r.created_at
+                        AND r2.created_at < pe.created_at
+                   )
               ) AS flagged
          FROM retrievals r
         WHERE r.created_at >= ?

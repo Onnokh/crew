@@ -78,6 +78,25 @@ describe("conversionStats", () => {
     expect(stats.byRetrieval[0]!.converted).toBe(true);
   });
 
+  it("credits only the last retrieval before the Confirm (last-touch, not any-touch)", async () => {
+    const id = await post();
+    // Alice re-queries the same Post three times, then Confirms once. Any-touch
+    // would convert all three; last-touch credits only the most recent.
+    retrieval("user_alice", id);
+    clock.advance(60_000);
+    retrieval("user_alice", id);
+    clock.advance(60_000);
+    retrieval("user_alice", id);
+    clock.advance(60_000);
+    await repo.recordEvent({ postId: id, verdict: "confirm", createdBy: "user_alice" });
+
+    const stats = await repo.conversionStats(fullRange());
+    expect(stats.withResults).toBe(3);
+    expect(stats.converted).toBe(1);
+    // Only the newest retrieval (first in the DESC-ordered list) is converted.
+    expect(stats.byRetrieval.map((r) => r.converted)).toEqual([true, false, false]);
+  });
+
   it("does not convert when a different User Confirms", async () => {
     const id = await post();
     retrieval("user_alice", id);
