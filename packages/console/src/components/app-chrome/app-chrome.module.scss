@@ -34,6 +34,27 @@ $measure: 57.5rem; // 920px
   }
 }
 
+.githubLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+
+  color: $color-text-muted;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: $color-text;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color-border-strong;
+    outline-offset: 3px;
+    border-radius: $radius-sm;
+  }
+}
+
 .signIn {
   padding: $space-xs $space-md;
   border: 1px solid $color-border-strong;
