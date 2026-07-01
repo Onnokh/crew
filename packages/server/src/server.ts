@@ -2,6 +2,7 @@ import { FastMCP, type Logger } from "fastmcp";
 import type { IncomingMessage } from "node:http";
 import { mountAdmin } from "./api/admin.js";
 import { mountAuth } from "./api/auth.js";
+import { mountCommunity } from "./api/community.js";
 import { mountConsole } from "./api/console.js";
 import { mountMe } from "./api/me.js";
 import { mountReview } from "./api/review.js";
@@ -57,6 +58,7 @@ export function buildServer(deps: Deps): FastMCP<Principal> {
   // catch-all never shadows them.
   mountAdmin(server.getApp(), deps);
   mountMe(server.getApp(), deps);
+  mountCommunity(server.getApp(), deps);
   mountReview(server.getApp(), deps);
   mountTelemetry(server.getApp(), deps);
 

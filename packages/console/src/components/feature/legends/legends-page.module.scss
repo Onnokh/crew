@@ -1,0 +1,68 @@
+@use "../../../styles/tokens" as *;
+
+// Shared chart canvas height so the donut reads at a comfortable weight.
+$chart-body-height: 300px;
+
+// The donut keeps a fixed square footprint on the left; the legend takes the
+// rest of the row so it can spread across columns instead of scrolling.
+.pieRow {
+  display: grid;
+  grid-template-columns: $chart-body-height minmax(0, 1fr);
+  align-items: center;
+  gap: $space-xl;
+  min-width: 0;
+}
+
+.chartBody {
+  width: $chart-body-height;
+  min-height: $chart-body-height;
+  height: $chart-body-height;
+}
+
+// The legend flows to its natural height beside the donut — no inner scrollbar.
+// It's laid out as an auto-fitting grid so a long project list spreads across
+// columns instead of running off the bottom of the chart.
+.pieLegend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: $space-xs $space-lg;
+  align-content: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    padding: $space-xs 0;
+    font-size: $text-sm;
+    color: $color-text;
+  }
+
+  i {
+    flex: none;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+  }
+}
+
+.pieLegendName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pieLegendValue {
+  margin-left: auto;
+  color: $color-text-muted;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 700px) {
+  .pieRow {
+    grid-template-columns: 1fr;
+  }
+}

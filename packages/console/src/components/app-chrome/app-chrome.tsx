@@ -62,6 +62,9 @@ export function AppChrome({ children }: { children: ReactNode }) {
                     </div>
                     <DropdownMenu.Separator className={styles.menuSeparator} />
                     <DropdownMenu.Item className={styles.menuItem} asChild>
+                      <Link to="/legends">Hall of Legends</Link>
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item className={styles.menuItem} asChild>
                       <Link to="/profile">Profile</Link>
                     </DropdownMenu.Item>
                     {isAdmin ? (
