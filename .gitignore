@@ -12,3 +12,9 @@ local_cache/
 
 # Claude Code agent worktrees (transient, created by subagent isolation)
 .claude/worktrees/
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# TanStack Router generated artifacts
+.tanstack/
