@@ -56,7 +56,11 @@ export function LegendsPage() {
           <h2>Top members</h2>
           <span className={shared.sectionCaption}>Last 30 days</span>
         </div>
-        <HallOfLegends users={data?.users ?? []} loading={isLoading} />
+        <HallOfLegends
+          users={data?.users ?? []}
+          loading={isLoading}
+          limit={data?.users?.length ?? 0}
+        />
       </section>
 
       <section className={shared.usageSection}>
