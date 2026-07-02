@@ -75,15 +75,18 @@ export type PostRepository = {
   /**
    * The browse list for the review page, capped at `limit`, ordered by `sort`
    * (default `"newest"`). Unlike the search legs this returns Posts of EVERY
-   * status, so the human review page can see and restore retired Posts.
+   * status, so the human review page can see and restore retired Posts. Pass
+   * `repo` (a normalized `group/name`, as {@link postsByRepo} exposes) to scope
+   * the list to one project; the match folds every remote shape of that repo.
    */
-  listRecentPosts(limit: number, sort?: PostSort): Promise<Post[]>;
+  listRecentPosts(limit: number, sort?: PostSort, repo?: string): Promise<Post[]>;
 
   /**
    * Posts that carry at least one Flag, newest-flagged first, capped at `limit`.
    * Returns Posts of every status so a flagged-then-retired Post can be restored.
+   * Pass `repo` (a normalized `group/name`) to scope the list to one project.
    */
-  listFlaggedPosts(limit: number): Promise<Post[]>;
+  listFlaggedPosts(limit: number, repo?: string): Promise<Post[]>;
 
   /**
    * Permanently delete a Post and everything anchored to it: its event log

@@ -2,12 +2,28 @@
 
 /** Query keys for the review lists. */
 export const reviewKeys = {
-  // Keyed by sort so each ordering is its own cache entry; invalidate the
-  // ["review","recent"] prefix to clear every sort at once.
-  recent: (sort: SortKey) => ["review", "recent", sort] as const,
-  flagged: ["review", "flagged"] as const,
+  // Keyed by sort AND project so each ordering/filter pairing is its own cache
+  // entry; invalidate the ["review"] prefix to clear every list at once.
+  recent: (sort: SortKey, repo: string | null) =>
+    ["review", "recent", sort, repo] as const,
+  flagged: (repo: string | null) => ["review", "flagged", repo] as const,
   search: (q: string) => ["review", "search", q] as const,
+  projects: ["review", "projects"] as const,
 };
+
+/** One project (repo) the team has Posts in — mirrors the server's `RepoPostCount`. */
+export type ProjectOption = {
+  /** Normalized `group/name`; the value sent as `?repo=`. */
+  repo: string;
+  /** Posts in this project. */
+  posts: number;
+};
+
+/** The short display label for a project: the trailing path segment of its repo. */
+export function repoLabel(repo: string): string {
+  const parts = repo.split("/").filter(Boolean);
+  return parts[parts.length - 1] ?? repo;
+}
 
 /** Mirrors the server's `ReviewRow`. */
 export type ReviewRow = {

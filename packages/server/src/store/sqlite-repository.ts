@@ -1,8 +1,9 @@
 import type { Database } from "better-sqlite3";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { NewPostEvent, PostEvent } from "../core/post-event.js";
 import type { NewPost, Post } from "../core/post.js";
+import { normalizeRepo } from "../core/post.js";
 import type { Embedder } from "../embedding/embedder.js";
 import type { Clock } from "../platform/clock.js";
 import type { IdGen } from "../platform/id-gen.js";
@@ -181,14 +182,40 @@ export class SqliteRepository implements PostRepository {
       .run(...postIds);
   }
 
+  /**
+   * Verbatim `posts.repo` values (as stored) that reduce to the normalized
+   * `group/name` filter, or null when no filter is requested. An empty array
+   * means the filter matched no stored repo, so the caller returns no Posts.
+   * Folds https/ssh remote shapes of one repo together, matching the buckets
+   * {@link postsByRepo} exposes to the project picker.
+   */
+  private reposMatching(normalized: string | undefined): string[] | null {
+    if (normalized === undefined) return null;
+    const rows = this.raw
+      .prepare(`SELECT DISTINCT repo FROM posts`)
+      .all() as Array<{ repo: string }>;
+    return rows
+      .map((r) => r.repo)
+      .filter((repo) => normalizeRepo(repo) === normalized);
+  }
+
   async listRecentPosts(
     limit: number,
     sort: PostSort = "newest",
+    repo?: string,
   ): Promise<Post[]> {
+    // Optional project filter: `repo` is a normalized `group/name`, so match it
+    // against the verbatim repos it folds to. An empty match set → no Posts.
+    const repoMatches = this.reposMatching(repo);
+    if (repoMatches !== null && repoMatches.length === 0) return [];
+
     // "Most confirmed" counts confirm events per Post via a LEFT JOIN aggregate
     // (raw SQL, like listFlaggedPosts); `newest`/`views` are plain column sorts.
     // All keep `id DESC` as a stable tiebreaker.
     if (sort === "confirms") {
+      const repoClause = repoMatches
+        ? `WHERE p.repo IN (${repoMatches.map(() => "?").join(", ")})`
+        : "";
       const rows = this.raw
         .prepare(
           `SELECT p.id, p.title, p.situation, p.body, p.environment, p.repo, p.status,
@@ -200,10 +227,11 @@ export class SqliteRepository implements PostRepository {
                 WHERE verdict = 'confirm'
                 GROUP BY post_id
              ) c ON c.post_id = p.id
+            ${repoClause}
             ORDER BY COALESCE(c.confirms, 0) DESC, p.created_at DESC, p.id DESC
             LIMIT ?`,
         )
-        .all(limit) as Array<{
+        .all(...(repoMatches ?? []), limit) as Array<{
         id: string;
         title: string | null;
         situation: string;
@@ -235,16 +263,25 @@ export class SqliteRepository implements PostRepository {
       sort === "views"
         ? [desc(posts.views), desc(posts.id)]
         : [desc(posts.createdAt), desc(posts.id)];
-    const rows = this.db
-      .select()
-      .from(posts)
+    const base = this.db.select().from(posts);
+    const filtered = repoMatches
+      ? base.where(inArray(posts.repo, repoMatches))
+      : base;
+    const rows = filtered
       .orderBy(...orderBy)
       .limit(limit)
       .all();
     return rows.map(fromRow);
   }
 
-  async listFlaggedPosts(limit: number): Promise<Post[]> {
+  async listFlaggedPosts(limit: number, repo?: string): Promise<Post[]> {
+    // Optional project filter — see {@link reposMatching} and listRecentPosts.
+    const repoMatches = this.reposMatching(repo);
+    if (repoMatches !== null && repoMatches.length === 0) return [];
+    const repoClause = repoMatches
+      ? `AND p.repo IN (${repoMatches.map(() => "?").join(", ")})`
+      : "";
+
     // A Post is "flagged" if it has at least one flag event; ordered newest-
     // flagged first. Raw SQL because the ordering key is a per-Post aggregate.
     const rows = this.raw
@@ -258,10 +295,11 @@ export class SqliteRepository implements PostRepository {
               WHERE verdict = 'flag'
               GROUP BY post_id
            ) f ON f.post_id = p.id
+          WHERE 1 = 1 ${repoClause}
           ORDER BY f.last_flagged DESC, p.id DESC
           LIMIT ?`,
       )
-      .all(limit) as Array<{
+      .all(...(repoMatches ?? []), limit) as Array<{
       id: string;
       title: string | null;
       situation: string;

@@ -37,7 +37,11 @@ describe("review JSON API: public lists + session-gated delete", () => {
   }
 
   /** Seed one Post via its MCP tool and return its id. */
-  async function seedPost(situation: string, body: string): Promise<string> {
+  async function seedPost(
+    situation: string,
+    body: string,
+    repo = "crew",
+  ): Promise<string> {
     const client = await connect(srv.port, srv.env.apiKey);
     try {
       const text = await callText(client, "post", {
@@ -45,7 +49,7 @@ describe("review JSON API: public lists + session-gated delete", () => {
         situation,
         body,
         environment: "Node 22",
-        repo: "crew",
+        repo,
       });
       const id = text.match(/post_[A-Za-z0-9_-]+/)?.[0];
       if (!id) throw new Error(`no post id in: ${text}`);
@@ -144,6 +148,60 @@ describe("review JSON API: public lists + session-gated delete", () => {
     expect(ids).toContain(flaggedId);
     expect(ids).not.toContain(cleanId);
     expect(rows.find((r) => r.id === flaggedId)!.flags).toBe(1);
+  });
+
+  it("scopes recent + flagged to one project via ?repo=, and lists projects", async () => {
+    // Two Posts in different repos; the filter value is the normalized group/name,
+    // and it must fold the full remote a post is stored under.
+    const crewId = await seedPost(
+      "project filter keeps this crew post",
+      "body in crew",
+      "git@github.com:Onnokh/crew.git",
+    );
+    const otherId = await seedPost(
+      "project filter hides this other post",
+      "body in other",
+      "acme/widgets",
+    );
+
+    // Recent scoped to the crew project returns only its Post.
+    const crewRecent = await listRows(
+      "/api/review/recent?repo=" + encodeURIComponent("Onnokh/crew"),
+    );
+    const crewRecentIds = crewRecent.map((r) => r.id);
+    expect(crewRecentIds).toContain(crewId);
+    expect(crewRecentIds).not.toContain(otherId);
+
+    // Scoped to the other project returns only its Post.
+    const otherRecent = await listRows(
+      "/api/review/recent?repo=" + encodeURIComponent("acme/widgets"),
+    );
+    const otherRecentIds = otherRecent.map((r) => r.id);
+    expect(otherRecentIds).toContain(otherId);
+    expect(otherRecentIds).not.toContain(crewId);
+
+    // Flagged honours the same filter.
+    await recordEvent("flag", otherId);
+    const otherFlagged = await listRows(
+      "/api/review/flagged?repo=" + encodeURIComponent("acme/widgets"),
+    );
+    expect(otherFlagged.map((r) => r.id)).toContain(otherId);
+    const crewFlagged = await listRows(
+      "/api/review/flagged?repo=" + encodeURIComponent("Onnokh/crew"),
+    );
+    expect(crewFlagged.map((r) => r.id)).not.toContain(otherId);
+
+    // The projects endpoint surfaces both, normalized, with counts.
+    const res = await fetch(`${base}/api/review/projects`, {
+      headers: { cookie },
+    });
+    expect(res.status).toBe(200);
+    const { projects } = (await res.json()) as {
+      projects: Array<{ repo: string; posts: number }>;
+    };
+    const repos = projects.map((p) => p.repo);
+    expect(repos).toContain("Onnokh/crew");
+    expect(repos).toContain("acme/widgets");
   });
 
   it("deleting a Post removes it from query results and the review list", async () => {

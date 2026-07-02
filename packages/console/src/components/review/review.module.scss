@@ -360,6 +360,39 @@
   }
 }
 
+.listFilters {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  margin-bottom: $space-sm;
+
+  // The chip carries its own bottom margin for the standalone layout; drop it
+  // here so the filter row aligns on one baseline.
+  .flaggedChip {
+    margin-bottom: 0;
+  }
+}
+
+.projectSelect {
+  padding: $space-xs $space-md;
+  border: 1px solid $color-border;
+  border-radius: 999px;
+  background: transparent;
+  color: $color-text-muted;
+  font: inherit;
+  font-size: $text-sm;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    color: $color-text;
+    border-color: $color-border-strong;
+  }
+}
+
 .flaggedChip {
   display: inline-flex;
   align-items: center;

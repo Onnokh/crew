@@ -16,8 +16,10 @@ import { PostList } from "./post-list";
 import { buildSetupContent, type ManualInstruction } from "./setup-snippets";
 import {
   reviewKeys,
+  repoLabel,
   SORTERS,
   SORTS,
+  type ProjectOption,
   type ReviewRow,
   type SortKey,
 } from "./review-data";
@@ -56,6 +58,8 @@ type ReviewView = {
   query: string;
   sortKey: SortKey;
   flaggedOnly: boolean;
+  /** Selected project (normalized `group/name`), or null for all projects. */
+  projectRepo: string | null;
   setupTab: string;
 };
 
@@ -65,6 +69,7 @@ type ReviewAction =
   | { type: "clearSearch" }
   | { type: "setSort"; value: SortKey }
   | { type: "toggleFlagged" }
+  | { type: "setProject"; value: string | null }
   | { type: "setSetupTab"; value: string };
 
 const initialView: ReviewView = {
@@ -72,6 +77,7 @@ const initialView: ReviewView = {
   query: "",
   sortKey: "newest",
   flaggedOnly: false,
+  projectRepo: null,
   setupTab: "",
 };
 
@@ -88,6 +94,8 @@ function reviewReducer(state: ReviewView, action: ReviewAction): ReviewView {
       return { ...state, sortKey: action.value };
     case "toggleFlagged":
       return { ...state, flaggedOnly: !state.flaggedOnly };
+    case "setProject":
+      return { ...state, projectRepo: action.value };
     case "setSetupTab":
       return { ...state, setupTab: action.value };
   }
@@ -104,7 +112,16 @@ export function ReviewPage() {
 
   // `term` is the live input; `query` is the submitted text that drives the request. Empty `query` means "not searching".
   const [view, dispatch] = useReducer(reviewReducer, initialView);
-  const { term, query, sortKey, flaggedOnly, setupTab } = view;
+  const { term, query, sortKey, flaggedOnly, projectRepo, setupTab } = view;
+
+  // The projects this team has Posts in, for the filter dropdown.
+  const { data: projects } = useQuery({
+    queryKey: reviewKeys.projects,
+    queryFn: () =>
+      apiFetch<{ projects: ProjectOption[] }>("/api/review/projects").then(
+        (r) => r.projects,
+      ),
+  });
 
   // Whether the pressed setup tab was already open, snapshotted at press time (see the trigger below).
   const tabWasOpen = useRef(false);
@@ -118,19 +135,23 @@ export function ReviewPage() {
       ).then((r) => r.posts),
   });
 
+  // The `&repo=` project filter is appended only when a project is selected.
+  const repoParam = projectRepo
+    ? `&repo=${encodeURIComponent(projectRepo)}`
+    : "";
   const { data: recentData, error: recentError } = useQuery({
-    queryKey: reviewKeys.recent(sortKey),
+    queryKey: reviewKeys.recent(sortKey, projectRepo),
     queryFn: () =>
       apiFetch<{ posts: ReviewRow[] }>(
-        `/api/review/recent?sort=${sortKey}`,
+        `/api/review/recent?sort=${sortKey}${repoParam}`,
       ).then((r) => r.posts),
   });
   const { data: flaggedData, error: flaggedError } = useQuery({
-    queryKey: reviewKeys.flagged,
+    queryKey: reviewKeys.flagged(projectRepo),
     queryFn: () =>
-      apiFetch<{ posts: ReviewRow[] }>("/api/review/flagged").then(
-        (r) => r.posts,
-      ),
+      apiFetch<{ posts: ReviewRow[] }>(
+        `/api/review/flagged?${repoParam.slice(1)}`,
+      ).then((r) => r.posts),
   });
 
   // On success, invalidate every list (recent + flagged + any search) so the
@@ -342,17 +363,41 @@ export function ReviewPage() {
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              aria-pressed={flaggedOnly}
-              className={`${styles.flaggedChip} ${flaggedOnly ? styles.flaggedChipActive : ""}`}
-              onClick={() => dispatch({ type: "toggleFlagged" })}
-            >
-              Flagged
-              {flaggedData && (
-                <span className={styles.flaggedCount}>{flaggedData.length}</span>
+            <div className={styles.listFilters}>
+              {projects && projects.length > 0 && (
+                <select
+                  className={styles.projectSelect}
+                  aria-label="Filter by project"
+                  value={projectRepo ?? ""}
+                  onChange={(e) =>
+                    dispatch({
+                      type: "setProject",
+                      value: e.target.value === "" ? null : e.target.value,
+                    })
+                  }
+                >
+                  <option value="">All projects</option>
+                  {projects.map((p) => (
+                    <option key={p.repo} value={p.repo}>
+                      {repoLabel(p.repo)} ({p.posts})
+                    </option>
+                  ))}
+                </select>
               )}
-            </button>
+              <button
+                type="button"
+                aria-pressed={flaggedOnly}
+                className={`${styles.flaggedChip} ${flaggedOnly ? styles.flaggedChipActive : ""}`}
+                onClick={() => dispatch({ type: "toggleFlagged" })}
+              >
+                Flagged
+                {flaggedData && (
+                  <span className={styles.flaggedCount}>
+                    {flaggedData.length}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
           <div className={styles.panel}>
             <PostList

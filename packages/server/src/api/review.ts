@@ -1,5 +1,6 @@
 import type { Context, Hono } from "hono";
 import type { Post } from "../core/post.js";
+import { normalizeRepo } from "../core/post.js";
 import type { Deps } from "../deps.js";
 import { hydratePosts } from "../read/hydrate.js";
 import type { PostRepository } from "../store/repository.js";
@@ -9,6 +10,16 @@ import type { PostSort } from "../store/repository.js";
 /** Coerce the `?sort=` query into a {@link PostSort}; anything else → newest. */
 function parseSort(value: string | undefined): PostSort {
   return value === "views" || value === "confirms" ? value : "newest";
+}
+
+/**
+ * Coerce the `?repo=` project filter into a normalized `group/name`, or
+ * undefined for an absent/blank value. Normalized here too so a raw remote (or
+ * a differently-shaped one) still lines up with the stored buckets.
+ */
+function parseRepo(value: string | undefined): string | undefined {
+  const trimmed = (value ?? "").trim();
+  return trimmed === "" ? undefined : normalizeRepo(trimmed);
 }
 
 /**
@@ -23,6 +34,7 @@ function parseSort(value: string | undefined): PostSort {
  *   GET  /api/review/recent   → { posts: ReviewRow[] }  most recent Posts
  *   GET  /api/review/flagged  → { posts: ReviewRow[] }  Posts carrying ≥1 Flag
  *   GET  /api/review/search   → { posts: ReviewRow[] }  ranked exactly as `query`
+ *   GET  /api/review/projects → { projects: RepoPostCount[] }  the team's projects
  *   DELETE /api/review/:id    → 204  permanently delete a Post (owner or admin)
  */
 
@@ -73,7 +85,8 @@ export function mountReview(app: Hono, deps: Deps): void {
     return (await callerContext(c))?.repo ?? null;
   }
 
-  // `recent` takes `?sort=newest|views|confirms` (default newest), ranked in SQL.
+  // `recent` takes `?sort=newest|views|confirms` (default newest), ranked in SQL,
+  // and an optional `?repo=` project filter (normalized `group/name`).
   app.get("/api/review/recent", async (c) => {
     const repo = await repoForCaller(c);
     if (!repo) return c.json({ error: "unauthenticated" }, 401);
@@ -81,17 +94,34 @@ export function mountReview(app: Hono, deps: Deps): void {
       posts: await toRows(
         repo,
         getUser,
-        await repo.listRecentPosts(LIST_LIMIT, parseSort(c.req.query("sort"))),
+        await repo.listRecentPosts(
+          LIST_LIMIT,
+          parseSort(c.req.query("sort")),
+          parseRepo(c.req.query("repo")),
+        ),
       ),
     });
   });
 
+  // Flagged Posts, optionally scoped to one project via `?repo=`.
   app.get("/api/review/flagged", async (c) => {
     const repo = await repoForCaller(c);
     if (!repo) return c.json({ error: "unauthenticated" }, 401);
     return c.json({
-      posts: await toRows(repo, getUser, await repo.listFlaggedPosts(LIST_LIMIT)),
+      posts: await toRows(
+        repo,
+        getUser,
+        await repo.listFlaggedPosts(LIST_LIMIT, parseRepo(c.req.query("repo"))),
+      ),
     });
+  });
+
+  // The projects the caller's team has Posts in, busiest first — feeds the
+  // review page's project filter. Each is a normalized `group/name` + count.
+  app.get("/api/review/projects", async (c) => {
+    const repo = await repoForCaller(c);
+    if (!repo) return c.json({ error: "unauthenticated" }, 401);
+    return c.json({ projects: await repo.postsByRepo() });
   });
 
   // Search via the same `retrieve` pipeline `query` uses. Empty `q` → empty list.
