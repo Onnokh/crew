@@ -163,11 +163,29 @@
 }
 
 .restName {
+  display: flex;
+  align-items: baseline;
+  gap: $space-sm;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.restNameText {
   overflow: hidden;
   color: $color-text;
   font-size: $text-sm;
   font-weight: 600;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Posts/searches split for ranks 4+, where there's no room for the podium band.
+.restMeta {
+  flex-shrink: 0;
+  color: $color-text-subtle;
+  font-size: $text-xs;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -191,10 +209,6 @@
   display: inline-flex;
   align-items: center;
   gap: $space-xs;
-}
-
-.legendNote {
-  color: $color-text-subtle;
 }
 
 // Swatches mirror the podium: solid step colour for posts, the same neutral
