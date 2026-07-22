@@ -30,6 +30,12 @@ export function HallOfLegends({
   // Visual order on the podium: 2nd, 1st, 3rd — so 1st stands tallest in the middle.
   const order = [top[1], top[0], top[2]].filter(Boolean) as UserUsageItem[];
 
+  // Share of activity that is searches vs posts, as a 0–1 fraction. Drives the
+  // height of the diagonal-striped (searches) band that fills each podium step
+  // from the top; the solid remainder below it is posts.
+  const searchFraction = (u: UserUsageItem) =>
+    u.searches / (u.posts + u.searches || 1);
+
   return (
     <div className={styles.podiumWrap}>
       <div className={styles.podium}>
@@ -46,7 +52,15 @@ export function HallOfLegends({
                 className={styles.podiumAvatar}
               />
               <span className={styles.podiumName}>{u.name ?? "Unknown"}</span>
-              <div className={styles.podiumStep}>
+              <div
+                className={styles.podiumStep}
+                title={`${u.posts} posts · ${u.searches} searches`}
+              >
+                <span
+                  className={styles.podiumSearches}
+                  style={{ height: `${searchFraction(u) * 100}%` }}
+                  aria-hidden
+                />
                 <span className={styles.podiumRank}>{place}</span>
                 <span className={styles.podiumTotal}>{u.total}</span>
               </div>
@@ -70,6 +84,17 @@ export function HallOfLegends({
           ))}
         </ol>
       )}
+      <div className={styles.legend}>
+        <span className={styles.legendItem}>
+          <span className={styles.legendPosts} />
+          Posts
+        </span>
+        <span className={styles.legendItem}>
+          <span className={styles.legendSearches} />
+          Searches
+        </span>
+        <span className={styles.legendNote}>(podium split)</span>
+      </div>
     </div>
   );
 }
