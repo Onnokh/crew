@@ -57,6 +57,7 @@
 }
 
 .podiumStep {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -66,8 +67,31 @@
   margin-top: $space-xs;
   padding: $space-sm 0;
   border-radius: $radius-md $radius-md 0 0;
+  overflow: hidden;
   color: $color-accent-contrast;
   font-weight: 800;
+}
+
+// The searches share of the step, filling from the top down as a diagonal-striped
+// band over the solid (posts) step colour. Height is set inline per user.
+.podiumSearches {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0,
+    transparent 3px,
+    rgba(0, 0, 0, 0.28) 3px,
+    rgba(0, 0, 0, 0.28) 6px
+  );
+  pointer-events: none;
+}
+
+.podiumRank,
+.podiumTotal {
+  position: relative;
 }
 .place1 .podiumStep {
   min-height: 6rem;
@@ -152,4 +176,44 @@
   font-size: $text-base;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-md;
+  color: $color-text-muted;
+  font-size: $text-xs;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.legendNote {
+  color: $color-text-subtle;
+}
+
+// Swatches mirror the podium: solid step colour for posts, the same neutral
+// with a diagonal-stripe overlay for searches.
+.legendPosts,
+.legendSearches {
+  display: inline-block;
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 3px;
+  background: $color-text-muted;
+}
+
+.legendSearches {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0,
+    transparent 2px,
+    rgba(0, 0, 0, 0.4) 2px,
+    rgba(0, 0, 0, 0.4) 4px
+  );
 }
