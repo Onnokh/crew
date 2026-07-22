@@ -78,7 +78,14 @@ export function HallOfLegends({
                 name={u.name}
                 className={styles.restAvatar}
               />
-              <span className={styles.restName}>{u.name ?? "Unknown"}</span>
+              <span className={styles.restName}>
+                <span className={styles.restNameText}>
+                  {u.name ?? "Unknown"}
+                </span>
+                <span className={styles.restMeta}>
+                  {u.posts} posts · {u.searches} searches
+                </span>
+              </span>
               <span className={styles.restTotal}>{u.total}</span>
             </li>
           ))}
@@ -93,7 +100,6 @@ export function HallOfLegends({
           <span className={styles.legendSearches} />
           Searches
         </span>
-        <span className={styles.legendNote}>(podium split)</span>
       </div>
     </div>
   );
