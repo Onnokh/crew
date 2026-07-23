@@ -236,6 +236,7 @@ export function runBenchmarkFixture(fixture, options = {}) {
     ? resolve(fixtureBase, fixture.workspace.source)
     : null;
   const repetitions = options.repetitions ?? fixture.repetitions ?? 1;
+  const repetitionStart = options.repetitionStart ?? 1;
   const command = fixture.codex?.command ?? ["codex"];
   const commandVersion = resolveCommandVersion(command);
   const sourceTreeSha256 = hashTree(workspaceSource);
@@ -245,7 +246,11 @@ export function runBenchmarkFixture(fixture, options = {}) {
   );
 
   const runs = [];
-  for (let repetition = 1; repetition <= repetitions; repetition += 1) {
+  for (
+    let repetition = repetitionStart;
+    repetition < repetitionStart + repetitions;
+    repetition += 1
+  ) {
     const runId = `${safeName(fixture.task_id)}__${safeName(fixture.variant_id)}__r${String(repetition).padStart(2, "0")}`;
     const runDirectory = join(outputRoot, runId);
     const workspace = join(runDirectory, "workspace");
