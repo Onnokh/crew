@@ -149,3 +149,31 @@ variance. The robust result so far is qualitative: the candidate did not
 abstain on the confirmed operational or failure knowledge, and did not query
 the locally inspectable refactor. More repetitions and prospective cases are
 required before changing the installed skill.
+
+## Expanded paired replay
+
+The next disposable replay added two telemetry-derived surfaces: an explicit
+recall question and a confirmed cross-repo operational retrieval. The latter's
+confirmed Post was unrelated to the WordPress situation, so it is scored as a
+harmful-guidance guardrail: an answer must not apply that note merely because
+retrieval returned it.
+
+The corrected replay ran one matched repetition for four cases per variant.
+All executable checks passed for both variants (4 / 4 each), with no harmful
+check failures. The current instruction contacted Crew on all four cases. The
+candidate contacted Crew on the three knowledge cases and abstained on the
+fully local refactor; the current run recorded one direct Crew executor call
+for that refactor, while the knowledge cases used the disposable proxy marker.
+
+| Variant | Executable outcomes | Cases with Crew contact | Total tokens |
+| --- | ---: | ---: | ---: |
+| Current broad | 4 / 4 | 4 / 4 | 992,096 |
+| Evidence-derived | 4 / 4 | 3 / 4 | 555,000 |
+
+The benchmark's paired token deltas for the candidate were **−304,374**,
+**−113,290**, **−42,794**, and **+23,362** tokens (median **−78,042**;
+mean **−109,274**). These remain directional: one repetition per case is too small
+for a production optimization claim, and Codex whole-task variance is large.
+The stronger result is the quality floor: the candidate preserved the
+same-repo operational and failure surfaces, answered the explicit recall case,
+rejected an unrelated cross-repo note, and abstained on the local refactor.

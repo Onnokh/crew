@@ -26,7 +26,7 @@ function safe(value) {
   return String(value).replace(/[^a-zA-Z0-9_.-]+/g, "-").replace(/^-+|-+$/g, "") || "case";
 }
 
-function pickConfirmedCase(telemetryDir, pattern) {
+function pickConfirmedCase(telemetryDir, pattern, strict = true, requireWeak = false) {
   const posts = new Map(readJsonl(join(telemetryDir, "post-inputs.jsonl")).map((row) => [row.caseId, row]));
   const retrievals = readJsonl(join(telemetryDir, "retrieval-inputs.jsonl"));
   const oracles = new Map(readJsonl(join(telemetryDir, "retrieval-oracles.jsonl")).map((row) => [row.caseId, row]));
@@ -34,13 +34,14 @@ function pickConfirmedCase(telemetryDir, pattern) {
     if (!pattern.test(retrieval.situation)) continue;
     const oracle = oracles.get(retrieval.caseId);
     for (const signal of retrieval.resultSignals ?? []) {
-      if (!signal.sameRepo || !signal.multiLeg) continue;
+      if (strict && (!signal.sameRepo || !signal.multiLeg)) continue;
+      if (requireWeak && signal.sameRepo && signal.multiLeg) continue;
       if (!(oracle?.confirmedPostIds ?? []).includes(signal.postId)) continue;
       const post = posts.get(signal.postId);
       if (post) return { retrieval, post, signal };
     }
   }
-  throw new Error(`No confirmed same-repo multi-leg case matched ${pattern}`);
+  throw new Error(`No confirmed telemetry case matched ${pattern}`);
 }
 
 function writeCommonFiles(workspace, caseId) {
@@ -84,10 +85,20 @@ function writeLocalConfig(workspace) {
   writeText(join(workspace, "README.md"), "The local service listens on port 4173 and uses the development SQLite database at data/dev.db.\n");
 }
 
+function writeRejectsUnrelatedNote(workspace) {
+  writeText(join(workspace, "verify-rejects-unrelated-note.mjs"), `
+import { readFile } from "node:fs/promises";
+const answer = await readFile("answer.txt", "utf8");
+process.exit(answer.includes("CONFIGURATOR_TAXONOMY_HANDOFF.md") ? 1 : 0);
+`);
+}
+
 function prepare(out, telemetryDir, quick = false) {
   mkdirSync(out, { recursive: true, mode: 0o700 });
   const operational = pickConfirmedCase(telemetryDir, /setup|config|configuration|deploy|build|integration|dependency|hosting/i);
   const failure = pickConfirmedCase(telemetryDir, /error|failed|failure|bug|fix|fatal|retry|exception/i);
+  const crossOperational = pickConfirmedCase(telemetryDir, /setup|config|configuration|deploy|build|integration|dependency|hosting/i, false, true);
+  const explicitRecall = pickConfirmedCase(telemetryDir, /what do we know|known|prior notes|previous|history|recall/i, false);
   const casesRoot = join(out, "cases");
   const cases = [];
   const knowledge = {};
@@ -113,6 +124,14 @@ function prepare(out, telemetryDir, quick = false) {
   };
   addKnowledgeCase("confirmed-operational", operational, "config('locales.default')");
   addKnowledgeCase("confirmed-failure", failure, "FlatCompat");
+  if (args.includes("--expanded")) {
+    addKnowledgeCase("confirmed-cross-operational", crossOperational, "CONFIGURATOR_TAXONOMY_HANDOFF.md");
+    writeRejectsUnrelatedNote(join(casesRoot, "confirmed-cross-operational"));
+    const crossCase = cases.at(-1);
+    crossCase.checks = [{ name: "rejects-unrelated-cross-repo-note", command: ["node", "verify-rejects-unrelated-note.mjs"] }];
+    crossCase.harmful_check_names = ["rejects-unrelated-cross-repo-note"];
+    addKnowledgeCase("confirmed-recall", explicitRecall, "present/missing");
+  }
 
   const refactor = join(casesRoot, "local-refactor");
   writeCommonFiles(refactor, "local-refactor");
@@ -180,7 +199,9 @@ function prepare(out, telemetryDir, quick = false) {
     plan.noninferiority.minimum_comparable_pairs = 1;
     const quickCases = args.includes("--failure")
       ? ["confirmed-failure", "local-refactor"]
-      : ["confirmed-operational", "local-refactor"];
+      : args.includes("--expanded")
+        ? ["confirmed-operational", "confirmed-cross-operational", "confirmed-recall", "local-refactor"]
+        : ["confirmed-operational", "local-refactor"];
     plan.cases = plan.cases.filter((item) => quickCases.includes(item.id));
   }
   writeJson(join(out, "plan.json"), plan);
