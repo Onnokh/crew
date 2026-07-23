@@ -1,0 +1,145 @@
+[
+  {
+    "id": "codex-cli-compatibility",
+    "repo": "https://github.com/Onnokh/crew",
+    "evidence": {
+      "task": "Run Codex non-interactively from a copied, non-git benchmark workspace.",
+      "observations": [
+        "/opt/homebrew/bin/codex --version returned codex-cli 0.141.0.",
+        "Codex 0.141.0 failed before the task because gpt-5.6-sol requires a newer Codex build.",
+        "/Applications/ChatGPT.app/Contents/Resources/codex --version returned codex-cli 0.145.0-alpha.27.",
+        "The copied workspace first failed the trust check until --skip-git-repo-check was supplied.",
+        "The desktop-bundled 0.145.0-alpha.27 binary plus --skip-git-repo-check completed the exact file assertion.",
+        "The immutable production database SHA-256 remained unchanged."
+      ],
+      "verifiedBy": [
+        "Codex process exit code",
+        "Codex JSONL turn.completed event",
+        "exact file-content assertion",
+        "before/after SHA-256"
+      ]
+    },
+    "validation": {
+      "requiredBodyPatterns": [
+        "0\\.141\\.0",
+        "0\\.145\\.0-alpha\\.27",
+        "Applications/ChatGPT\\.app/Contents/Resources/codex",
+        "skip-git-repo-check"
+      ],
+      "forbiddenPatterns": [
+        "disable all security",
+        "edit the production database"
+      ]
+    },
+    "queries": [
+      "codex exec fails because gpt-5.6-sol requires a newer Codex version",
+      "automation in copied workspace says not inside a trusted directory",
+      "which Codex binary should local benchmark automation use"
+    ],
+    "consumerQuery": "Codex automation in a copied workspace fails on the model version and repository trust check",
+    "consumerTask": "Create solution.json with the Codex executable and arguments that the verified automation should use.",
+    "consumerExpected": {
+      "codexCommand": "/Applications/ChatGPT.app/Contents/Resources/codex",
+      "args": [
+        "--skip-git-repo-check"
+      ]
+    },
+    "decoys": [
+      {
+        "title": "Upgrade Node for Codex",
+        "situation": "codex command fails after a Node runtime upgrade",
+        "body": "Switch the shell to Node 22 and reinstall the npm package.",
+        "environment": "Node.js, npm Codex package",
+        "repo": "https://github.com/example/other"
+      },
+      {
+        "title": "Trust repository globally",
+        "situation": "codex refuses to run inside a normal git checkout",
+        "body": "Add the repository to the global trust list and keep using the Homebrew binary.",
+        "environment": "Codex CLI 0.141.0, git checkout",
+        "repo": "https://github.com/Onnokh/crew"
+      }
+    ]
+  },
+  {
+    "id": "bullmq-flow-options",
+    "repo": "ssh://git@git.indicia.nl/example/queue-worker.git",
+    "evidence": {
+      "task": "Make BullMQ flow jobs retry and retain jobs like normal Queue.add jobs.",
+      "observations": [
+        "The Queue instance was configured with defaultJobOptions attempts=3, exponential backoff delay=1000, removeOnComplete=100, and removeOnFail=1000.",
+        "Jobs added through FlowProducer.add still had attempts=1.",
+        "FlowProducer creates flow jobs directly and does not read another Queue instance's defaultJobOptions.",
+        "Passing the shared options explicitly to the parent opts and every child opts produced attempts=3 and the expected retention values.",
+        "ignoreDependencyOnFailure belongs on child opts when a failed child must not block the parent."
+      ],
+      "verifiedBy": [
+        "BullMQ job options read back from Redis",
+        "failing child retry count",
+        "parent execution after failed child"
+      ]
+    },
+    "validation": {
+      "requiredBodyPatterns": [
+        "FlowProducer",
+        "defaultJobOptions",
+        "parent",
+        "child",
+        "ignoreDependencyOnFailure",
+        "attempts.?=.?3|attempts.?3",
+        "exponential",
+        "delay.?=.?1000|delay.?1000",
+        "removeOnComplete.?=.?100|removeOnComplete.?100",
+        "removeOnFail.?=.?1000|removeOnFail.?1000"
+      ],
+      "forbiddenPatterns": [
+        "stored globally in Redis",
+        "parent opts only"
+      ]
+    },
+    "queries": [
+      "BullMQ FlowProducer jobs ignore Queue defaultJobOptions and do not retry",
+      "how to give flow parents and children the same attempts backoff retention",
+      "failed BullMQ child blocks parent despite ignore dependency setting"
+    ],
+    "consumerQuery": "FlowProducer jobs use one attempt even though the Queue has retry defaults",
+    "consumerTask": "Create solution.json describing the required parent and child BullMQ options.",
+    "consumerExpected": {
+      "parent": {
+        "attempts": 3,
+        "backoff": {
+          "type": "exponential",
+          "delay": 1000
+        },
+        "removeOnComplete": 100,
+        "removeOnFail": 1000
+      },
+      "child": {
+        "attempts": 3,
+        "backoff": {
+          "type": "exponential",
+          "delay": 1000
+        },
+        "removeOnComplete": 100,
+        "removeOnFail": 1000,
+        "ignoreDependencyOnFailure": true
+      }
+    },
+    "decoys": [
+      {
+        "title": "Queue defaults live Redis",
+        "situation": "BullMQ workers do not see queue default job options",
+        "body": "Queue defaultJobOptions are persisted in Redis, so restart every Worker.",
+        "environment": "BullMQ 5, Redis",
+        "repo": "ssh://git@git.indicia.nl/example/queue-worker.git"
+      },
+      {
+        "title": "Flow retries on parent",
+        "situation": "BullMQ FlowProducer child jobs do not retry",
+        "body": "Set attempts and backoff only on the parent; children inherit the parent opts.",
+        "environment": "BullMQ 5, Redis",
+        "repo": "ssh://git@git.indicia.nl/example/queue-worker.git"
+      }
+    ]
+  }
+]
