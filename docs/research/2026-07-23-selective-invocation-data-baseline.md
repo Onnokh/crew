@@ -127,3 +127,25 @@ data-derived confidence and failure/operational cohorts fixed, and advance a
 candidate only if it is non-inferior on executable success and harmful-guidance
 checks. Calls and tokens then decide only between candidates that preserve
 outcomes.
+
+## Initial paired replay
+
+On the private disposable benchmark generated from the frozen telemetry inputs,
+the current instruction was paired with one evidence-derived candidate. The
+candidate retained the two data-backed call surfaces (a Confirmed same-repo /
+multi-leg operational case and a Confirmed same-repo / multi-leg failure case)
+and was compared with a locally inspectable refactor control.
+
+| Variant | Executable outcomes | Crew proxy calls | Total tokens | Interpretation |
+| --- | ---: | ---: | ---: | --- |
+| Current broad | 4 / 4 | 2 / 4 | 886,385 | Baseline passes the quality floor. |
+| Evidence-derived | 4 / 4 | 2 / 4 | 508,931 | Candidate also passes and preserves both confirmed call surfaces. |
+
+The benchmark runner reported paired token deltas of **−77,638.5** and
+**−111,088.5** tokens for the candidate in the two two-case quick replays.
+These are not a production optimization claim: each replay has one matched
+repetition per case, and the Codex whole-task surface has substantial run
+variance. The robust result so far is qualitative: the candidate did not
+abstain on the confirmed operational or failure knowledge, and did not query
+the locally inspectable refactor. More repetitions and prospective cases are
+required before changing the installed skill.
