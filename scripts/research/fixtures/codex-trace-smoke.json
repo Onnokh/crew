@@ -1,0 +1,37 @@
+{
+  "task_id": "codex-trace-smoke",
+  "variant_id": "baseline",
+  "repetitions": 2,
+  "prompt": "Use the shell to read seed.txt. Create result.txt containing exactly TRACE_OK followed by a newline, then reply exactly TRACE_DONE.",
+  "workspace": {
+    "source": "./codex-trace-workspace"
+  },
+  "codex": {
+    "command": [
+      "codex"
+    ],
+    "args": [
+      "--ignore-user-config",
+      "--skip-git-repo-check",
+      "--sandbox",
+      "workspace-write"
+    ],
+    "timeout_ms": 180000
+  },
+  "final": {
+    "exact": "TRACE_DONE"
+  },
+  "checks": [
+    {
+      "name": "result-file",
+      "command": [
+        "node",
+        "-e",
+        "const fs=require('node:fs'); process.stdout.write(fs.readFileSync('result.txt','utf8'))"
+      ],
+      "stdout": {
+        "exact": "TRACE_OK\n"
+      }
+    }
+  ]
+}

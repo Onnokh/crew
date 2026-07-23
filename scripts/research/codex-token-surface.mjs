@@ -93,6 +93,10 @@ function stringifyPayload(value) {
   return typeof value === "string" ? value : JSON.stringify(value);
 }
 
+function digestPayload(value) {
+  return createHash("sha256").update(stringifyPayload(value)).digest("hex");
+}
+
 function classifyCrewCall(name, input, output, directMcp) {
   const rawInput = stringifyPayload(input);
   const rawOutput = stringifyPayload(output);
@@ -165,8 +169,10 @@ function toolCallsForTurn(events, startIndex, endIndex) {
       ...classification,
       input_chars: stringifyPayload(input).length,
       input_bytes: Buffer.byteLength(stringifyPayload(input)),
+      input_sha256: digestPayload(input),
       output_chars: stringifyPayload(output).length,
       output_bytes: Buffer.byteLength(stringifyPayload(output)),
+      output_sha256: digestPayload(output),
     });
   }
 
@@ -183,8 +189,10 @@ function toolCallsForTurn(events, startIndex, endIndex) {
       ...classifyCrewCall(name, input, output, mcp),
       input_chars: stringifyPayload(input).length,
       input_bytes: Buffer.byteLength(stringifyPayload(input)),
+      input_sha256: digestPayload(input),
       output_chars: stringifyPayload(output).length,
       output_bytes: Buffer.byteLength(stringifyPayload(output)),
+      output_sha256: digestPayload(output),
     });
   }
 
@@ -278,6 +286,123 @@ function rolloutUsage(events, turn) {
   };
 }
 
+function execCall(item, index) {
+  let name;
+  let server = null;
+  let input;
+  let output;
+  let directMcp;
+
+  if (item.type === "command_execution") {
+    name = "command_execution";
+    input = item.command ?? "";
+    output = item.aggregated_output ?? "";
+  } else if (item.type === "mcp_tool_call") {
+    name = item.tool ?? item.name ?? "unknown";
+    server = item.server ?? null;
+    input = item.arguments ?? item.input ?? {};
+    output = item.result ?? item.output ?? item.error ?? "";
+    directMcp = {
+      invocation: { server, tool: name, arguments: input },
+      result: output,
+    };
+  } else if (item.type === "web_search") {
+    name = "web_search";
+    input = item.query ?? item.input ?? "";
+    output = item.result ?? item.output ?? "";
+  } else {
+    return null;
+  }
+
+  return {
+    timestamp: item.timestamp ?? null,
+    call_id: item.id ?? `item_${index}`,
+    name,
+    server,
+    ...classifyCrewCall(name, input, output, directMcp),
+    input_chars: stringifyPayload(input).length,
+    input_bytes: Buffer.byteLength(stringifyPayload(input)),
+    input_sha256: digestPayload(input),
+    output_chars: stringifyPayload(output).length,
+    output_bytes: Buffer.byteLength(stringifyPayload(output)),
+    output_sha256: digestPayload(output),
+    status: item.status ?? null,
+    exit_code: item.exit_code ?? null,
+    error: item.error ? stringifyPayload(item.error) : null,
+  };
+}
+
+function execEvidence(events) {
+  const completedItems = events
+    .filter((event) => event?.type === "item.completed" && event.item)
+    .map((event) => event.item);
+  const calls = completedItems
+    .map((item, index) => execCall(item, index))
+    .filter(Boolean);
+  const transportMcpCalls = calls.filter((call) => call.server);
+  const signatures = new Map();
+  for (const call of calls) {
+    const signature = `${call.name}\0${call.input_sha256}`;
+    signatures.set(signature, (signatures.get(signature) ?? 0) + 1);
+  }
+  const steps = completedItems.map((item, index) => {
+    const input =
+      item.command ?? item.arguments ?? item.input ?? item.query ?? item.changes ?? "";
+    const output =
+      item.aggregated_output ??
+      item.result ??
+      item.output ??
+      item.text ??
+      item.message ??
+      item.error ??
+      "";
+    return {
+      index,
+      id: item.id ?? null,
+      type: item.type ?? "unknown",
+      status: item.status ?? "completed",
+      exit_code: item.exit_code ?? null,
+      input_bytes: Buffer.byteLength(stringifyPayload(input)),
+      input_sha256: digestPayload(input),
+      output_bytes: Buffer.byteLength(stringifyPayload(output)),
+      output_sha256: digestPayload(output),
+      failed:
+        item.type === "error" ||
+        item.status === "failed" ||
+        (typeof item.exit_code === "number" && item.exit_code !== 0) ||
+        Boolean(item.error),
+    };
+  });
+  const topLevelErrors = events
+    .filter((event) => event?.type === "error" || event?.type === "turn.failed")
+    .map((event) => ({
+      type: event.type,
+      bytes: Buffer.byteLength(stringifyPayload(event)),
+      sha256: digestPayload(event),
+    }));
+  const failedSteps = steps.filter((step) => step.failed);
+  const finalText =
+    completedItems.filter((item) => item.type === "agent_message").at(-1)?.text ?? "";
+
+  return {
+    calls: {
+      calls,
+      transportMcpCalls,
+      exact_repeat_count: [...signatures.values()].reduce(
+        (sum, count) => sum + Math.max(0, count - 1),
+        0,
+      ),
+    },
+    steps,
+    errors: {
+      count: topLevelErrors.length + failedSteps.length,
+      top_level: topLevelErrors,
+      failed_steps: failedSteps,
+    },
+    finalText,
+  };
+}
+
 function execUsage(events) {
   const completed = events.filter((event) => event?.type === "turn.completed").at(-1);
   if (!completed) return null;
@@ -300,10 +425,20 @@ export function analyzeCodexTrace(text, options = {}) {
   if (!turn) {
     const usage = execUsage(events);
     if (!usage) throw new Error("No Codex task_started or turn.completed event found");
+    const evidence = execEvidence(events);
     return {
       format: "codex-exec-jsonl",
       invalid_lines_ignored: invalidLines,
       usage,
+      tools: summarizeCalls(evidence.calls),
+      steps: evidence.steps,
+      errors: evidence.errors,
+      final_output: {
+        chars: evidence.finalText.length,
+        bytes: Buffer.byteLength(evidence.finalText),
+        sha256: digestPayload(evidence.finalText),
+        available: Boolean(evidence.finalText),
+      },
       limitation:
         "The codex exec JSONL stream gives exact turn totals and item events, but not a source-by-source input-token decomposition.",
     };
@@ -325,6 +460,7 @@ export function analyzeCodexTrace(text, options = {}) {
     final_output: {
       chars: finalText.length,
       bytes: Buffer.byteLength(finalText),
+      sha256: digestPayload(finalText),
       available: turn.complete,
     },
     limitation:
