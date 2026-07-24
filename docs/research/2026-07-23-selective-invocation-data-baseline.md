@@ -177,3 +177,22 @@ for a production optimization claim, and Codex whole-task variance is large.
 The stronger result is the quality floor: the candidate preserved the
 same-repo operational and failure surfaces, answered the explicit recall case,
 rejected an unrelated cross-repo note, and abstained on the local refactor.
+
+## Repeated validation
+
+The same four-case fixture was rerun with two repetitions per variant (16
+isolated Codex runs, 8 matched pairs). Both variants passed all executable and
+harmful-guidance checks in every repetition: **8 / 8 paired outcomes**, with
+zero baseline-only, candidate-only, or harmful failures.
+
+| Variant | Paired outcomes | Cases with Crew contact | Total tokens |
+| --- | ---: | ---: | ---: |
+| Current broad | 8 / 8 | 7 / 8 | 1,974,591 |
+| Evidence-derived | 8 / 8 | 6 / 8 | 1,160,061 |
+
+The candidate's paired token delta ranged from **−333,138** to **+26,407**
+tokens, with median **−80,353** and mean **−101,816.25**. This is sufficient
+to close the disposable prototype as non-inferior on its frozen fixtures, but
+it is not evidence to silently rewrite the installed skill: the remaining
+decision belongs to the parent optimization ticket and should include
+prospective task-success telemetry before rollout.
