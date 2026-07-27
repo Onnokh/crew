@@ -11,7 +11,8 @@
     "test": "vitest run",
     "bake-model": "node --import tsx scripts/bake-model.ts",
     "seed:fake": "node --env-file-if-exists=../../.env --import tsx scripts/seed-fake-usage.ts",
-    "research:candidate-traces": "node --import tsx scripts/research/candidate-traces.ts"
+    "research:candidate-traces": "node --import tsx scripts/research/candidate-traces.ts",
+    "research:resource-read": "node --import tsx ../../scripts/research/resource-read-benchmark.ts"
   },
   "dependencies": {
     "@better-auth/api-key": "^1.6.19",
