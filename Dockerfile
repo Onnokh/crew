@@ -114,4 +114,6 @@ WORKDIR /app/packages/server
 # `node node_modules/.bin/tsx`: that .bin/tsx is a POSIX shell shim, which `node`
 # would try to parse as JS. `--import tsx` resolves the tsx package itself and
 # registers its ESM loader.
-CMD ["node", "--import", "tsx", "src/main.ts"]
+# This branch is used only for the disposable Coolify preview benchmark. The
+# main branch keeps the production entrypoint above unchanged.
+CMD ["node", "--import", "tsx", "scripts/research/resource-read-benchmark-server.ts"]
