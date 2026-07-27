@@ -23,6 +23,7 @@
     "dev:console": "npm run build -w @crew/console -- --watch",
     "build": "npm run build -w @crew/console",
     "start": "npm run start -w @crew/server",
+    "prototype:query-construction": "node scripts/research/query-construction-prototype.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
   },
