@@ -22,3 +22,10 @@ was a rules-only smoke after the full 30-pair benchmark recorded in
 The smoke uses the disposable local proxy and sealed fixture checks. Its token
 delta is a regression signal, not a production telemetry claim. No Crew Post,
 Linear issue, production database, deployment, or Coolify resource changed.
+
+## Rollback
+
+If review finds a regression, close or revert PR #9 and restore the prior
+`packages/*-plugin/skills/{ask-crew,crew,introduce,reflect}/SKILL.md` versions
+from `main`. The rules change is isolated in PR #8, so it can be reverted
+independently; neither rollback requires a data migration or production action.
