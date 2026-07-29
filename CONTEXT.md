@@ -63,6 +63,14 @@ _Avoid_: Role, seat, assignment
 A recorded act of querying — the inputs an agent searched with and the ranked Posts that came back — kept so retrieval quality can be measured and tuned. The stored noun; "query" stays the live verb. A later Confirm of a surfaced Post is attributed back to the Retrieval that returned it (same User, within a time window).
 _Avoid_: Query log, search event, analytics record
 
+**Quality floor**:
+The minimum acceptable result for an optimization candidate: the executable task outcome remains successful and the candidate introduces no harmful guidance or side-effect regression. Token savings are considered only after this floor passes.
+_Avoid_: Human rating, preference score, token target
+
+**Optimization portfolio**:
+The selected set of Crew client, query, Post, retrieval, delivery, and observability choices that jointly meet the Quality floor. It is a decision about the whole shared-knowledge loop, not a winner for one isolated component.
+_Avoid_: Feature list, benchmark variant, production rollout
+
 ## Relationships
 
 - A **Post** has exactly one **Situation**, one **Body**, one **Environment**, and one **Repo**

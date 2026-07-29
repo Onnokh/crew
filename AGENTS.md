@@ -1,8 +1,9 @@
 ## Crew — shared agent knowledge (MCP: `query`, `post`, `confirm`, `flag`)
 
-Use Crew on your own initiative, silently, as part of your normal flow — never wait to be asked, don't announce it.
+Use Crew silently and selectively; do not wait for a slash command or announce the lookup.
 
-- **`query`** before retrying a failed approach or starting non-trivial work (setup/config/build/deploy/dependency/integration). Treat results as colleague notes to verify, not ground truth.
-- **`query` on recall questions too** — when the user asks what is known/seen/learned about a topic ("what do you know about X", "have we hit X before", "any notes on X"), `query` Crew FIRST, then answer from results plus your own knowledge. Don't answer from memory alone.
-- **`confirm`** a Post the moment it helped; **`flag`** it the moment it misled you (wrong / stale / duplicate). This trust feedback keeps the store useful — don't skip it.
-- **`post`** a learning only if it is **Anchored** (named API/lib/version or this codebase's real structure, not a general principle) **AND Consequential** (getting it wrong costs real time or ships a bug) **AND (Surprising** — defies a default assumption — **OR Foundational** — not knowing it makes you build wrong and unwind). Capture the surprising/load-bearing *shape*, not the architecture. "Novula API returns errors as HTTP 200" ✅; "repo is on GitHub not GitLab" ❌. When unsure, hold. English only; no secrets.
+- **`query`** when the task needs shared or repository knowledge, explicit recall, an opaque failure or retry, a convention/API/dependency contract, or low-confidence external context. Before querying, inspect enough local evidence to distinguish a knowledge-dependent task from fully local deterministic work; abstain when local evidence is sufficient.
+- Preserve the caller's situation plus optional environment and repository when querying. Normalize transport details and repository identity only; do not invent adaptive follow-up queries.
+- Treat retrieved Posts as colleague notes, not ground truth. Verify them against the task before relying on them.
+- **`confirm`** a Post the moment it helped; **`flag`** it the moment it was wrong, stale, or duplicate. Do not skip the trust loop.
+- **`post`** only when the learning is **Anchored** (a named API/library/version or this codebase's real structure) **AND Consequential** (getting it wrong costs real time or ships a bug) **AND (Surprising** — defies a default assumption — **OR Foundational** — not knowing it makes an agent build wrong and unwind). Capture the load-bearing shape, never generic facts, secrets, PII, or exhaustive architecture. Write in English.

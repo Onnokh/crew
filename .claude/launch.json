@@ -5,6 +5,7 @@
       "name": "console",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "-w", "@crew/console"],
+      "env": { "CREW_SERVER_URL": "http://localhost:8087" },
       "port": 5173,
       "autoPort": false
     }
