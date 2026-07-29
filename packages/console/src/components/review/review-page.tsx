@@ -11,7 +11,7 @@ import {
   CursorLogo,
   OpenCodeLogo,
 } from "../ui/brand-logos/brand-logos";
-import { InstallPrompt } from "./install-prompt";
+import { CopyButton, InstallPrompt } from "./install-prompt";
 import { PostList } from "./post-list";
 import { buildSetupContent, type ManualInstruction } from "./setup-snippets";
 import {
@@ -40,9 +40,15 @@ function SetupPanel({
           {manualInstructions.map((instruction) => (
             <div className={styles.setupCommand} key={instruction.label}>
               <p className={styles.setupStep}>{instruction.label}</p>
-              <pre className={styles.setupCode}>
-                <code>{instruction.code}</code>
-              </pre>
+              <div className={styles.setupCodeWrapper}>
+                <CopyButton
+                  value={instruction.code}
+                  label={`Copy ${instruction.label}`}
+                />
+                <pre className={styles.setupCode}>
+                  <code>{instruction.code}</code>
+                </pre>
+              </div>
             </div>
           ))}
         </div>
