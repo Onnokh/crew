@@ -397,6 +397,11 @@
     border-color 0.15s ease,
     color 0.15s ease;
 
+  option {
+    background: $color-bg;
+    color: $color-text;
+  }
+
   &:hover {
     color: $color-text;
     border-color: $color-border-strong;

@@ -4,6 +4,8 @@
 // Runtime palette. `:root` is light, `.dark` inverts each role — keep both
 // blocks in sync, key for key.
 :root {
+  color-scheme: light;
+
   --color-bg: #ffffff;
   --color-surface: #fafafa;
   --color-surface-hover: #f3f3f3;
@@ -35,6 +37,8 @@
 }
 
 .dark {
+  color-scheme: dark;
+
   --color-bg: #0a0a0a;
   --color-surface: #141414;
   --color-surface-hover: #1d1d1d;
