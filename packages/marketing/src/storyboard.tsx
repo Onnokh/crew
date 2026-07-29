@@ -3,6 +3,7 @@ import { AnimatePresence, useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 import { PostCard } from "../../console/src/components/review/post-card.js";
 import type { ReviewRow } from "../../console/src/components/review/review-data.js";
+import { Clouds } from "./components/canvasui/Clouds.js";
 import "./storyboard.css";
 
 const FRAMES = [
@@ -599,7 +600,23 @@ export function MemoryStoryboard() {
       onPointerEnter={() => setPaused(true)}
       onPointerLeave={() => setPaused(false)}
     >
-      <div className="memory-storyboard-grid" aria-hidden="true" />
+      <div className="storyboard-atmosphere" aria-hidden="true">
+        <Clouds
+          className="storyboard-clouds"
+          scale={0.58}
+          speed={0.2}
+          cover={0.08}
+          density={2.8}
+          shading={0.14}
+          color={[0.78, 0.87, 0.96]}
+          opacity={0.5}
+          shadow={0.05}
+          wind={0}
+          quality={0.45}
+        >
+          <div className="storyboard-atmosphere-base" />
+        </Clouds>
+      </div>
       <div className="storyboard-scene">
         <QueryTool frame={frame} scenario={scenario} />
         <AnimatePresence initial={false}>

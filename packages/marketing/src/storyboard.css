@@ -1,24 +1,36 @@
 .memory-storyboard {
-  background: var(--color-surface);
+  background: #fbfcfb;
   height: 100%;
   min-height: 100dvh;
   overflow: hidden;
   position: relative;
 }
 
-.memory-storyboard-grid {
-  background-image:
-    linear-gradient(#1a1a1a0a 1px, transparent 1px),
-    linear-gradient(90deg, #1a1a1a0a 1px, transparent 1px);
-  background-size: 42px 42px;
+.storyboard-atmosphere {
   inset: 0;
-  mask-image: radial-gradient(circle at center, #000 0%, #0000 82%);
+  overflow: hidden;
+  pointer-events: none;
   position: absolute;
+  z-index: 0;
+}
+
+.storyboard-clouds,
+.storyboard-atmosphere-base {
+  height: 100%;
+  width: 100%;
+}
+
+.storyboard-atmosphere-base {
+  background:
+    radial-gradient(circle at 18% 24%, #dbeafe 0, transparent 48%),
+    radial-gradient(circle at 84% 72%, #e9e7fb 0, transparent 50%),
+    #f8fbff;
 }
 
 .storyboard-scene {
   inset: clamp(60px, 9vh, 96px) clamp(28px, 5vw, 72px) clamp(160px, 22vh, 220px);
   position: absolute;
+  z-index: 1;
 }
 
 .query-tool {
