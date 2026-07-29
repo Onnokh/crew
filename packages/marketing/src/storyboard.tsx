@@ -1,0 +1,664 @@
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
+import { PostCard } from "../../console/src/components/review/post-card.js";
+import type { ReviewRow } from "../../console/src/components/review/review-data.js";
+import "./storyboard.css";
+
+const FRAMES = [
+  {
+    id: "search",
+    label: "search",
+    navigationLabel: "Search",
+    title: "Search memory",
+    detail: "An agent asks Crew.",
+  },
+  {
+    id: "result",
+    label: "view",
+    navigationLabel: "Results",
+    title: "Review results",
+    detail: "Matching Posts appear.",
+  },
+  {
+    id: "confirm",
+    label: "confirm",
+    navigationLabel: "Confirm",
+    title: "Confirm a learning",
+    detail: "One answer opens and gets confirmed.",
+  },
+  {
+    id: "contribute",
+    label: "post",
+    navigationLabel: "Post",
+    title: "Post new findings",
+    detail: "Whenever one is worth sharing.",
+  },
+] as const;
+
+const SCENARIOS = [
+  {
+    query: "What has the team learned about storing normalized auth callback URLs in crew/server?",
+    selectedSituation: "Implementing OAuth callbacks across providers — should redirect matching preserve trailing slashes and query parameters, or normalize URLs before persistence?",
+    results: [
+      {
+        title: "Normalize stored callback URLs",
+        body: "Canonicalize the origin and pathname before storing callback URLs. Remove a trailing slash only from non-root paths, preserve explicitly allowed query parameters, and use the same normalizer for persistence and redirect matching. This keeps provider callbacks deterministic without collapsing distinct routes.",
+        repo: "crew/server",
+      },
+      {
+        title: "Preserve callback query parameters after login",
+        body: "Carry the original query string through the provider round trip.",
+        repo: "crew/console",
+      },
+      {
+        title: "Reject callbacks outside configured origins",
+        body: "Compare normalized origins before accepting the redirect target.",
+        repo: "crew/server",
+      },
+      {
+        title: "Scope auth state nonces to one browser session",
+        body: "Do not reuse state tokens across parallel authentication attempts.",
+        repo: "crew/console",
+      },
+      {
+        title: "Decode callback paths before allowlist checks",
+        body: "Validate the decoded path so equivalent URLs cannot bypass matching.",
+        repo: "crew/server",
+      },
+    ],
+    contribution: {
+      title: "Share callback rules",
+      situation: "Documenting the callback behavior discovered while aligning provider redirects with stored allowlist entries.",
+      body: "The cache and redirect matcher must derive keys from the same normalized origin.",
+      repo: "crew/server",
+    },
+  },
+  {
+    query: "What has the team learned about repeated ingestion worker retries in crew/telemetry?",
+    selectedSituation: "Reviewing repeated ingestion failures — should retry behavior live in the repository, the worker, or at the API boundary?",
+    results: [
+      {
+        title: "Keep retries at the API boundary",
+        body: "Give the repository a single deterministic write attempt and keep retry policy at the API boundary. Preserve the ingestion ID across attempts, apply bounded backoff in the worker, and hand exhausted events to the dead-letter path. This prevents duplicate records while keeping failure policy visible to the caller.",
+        repo: "crew/telemetry",
+      },
+      {
+        title: "Preserve ingestion IDs across retry attempts",
+        body: "Every attempt must retain the original event identity.",
+        repo: "crew/server",
+      },
+      {
+        title: "Cap retry backoff before dead-letter handoff",
+        body: "Move exhausted events aside instead of extending the retry window forever.",
+        repo: "crew/telemetry",
+      },
+      {
+        title: "Log worker attempt IDs with every failure",
+        body: "The attempt ID ties application logs back to queue delivery history.",
+        repo: "crew/server",
+      },
+      {
+        title: "Make repository writes idempotent by event key",
+        body: "A retried event should update the same record instead of creating another.",
+        repo: "crew/telemetry",
+      },
+    ],
+    contribution: {
+      title: "Share retry signals",
+      situation: "Capturing the signal that separated a slow ingestion consumer from an event that repeatedly failed processing.",
+      body: "Queue lag separates a slow consumer from an event that is repeatedly failing.",
+      repo: "crew/telemetry",
+    },
+  },
+] as const;
+
+const FRAME_DURATION = 4200;
+const CREATED_AT = Date.now();
+
+type Scenario = (typeof SCENARIOS)[number];
+type ResultPost = Scenario["results"][number];
+
+const QUERY_TOOL_STATES = [
+  { x: 0, y: 0, opacity: 1, scale: 1 },
+  { x: 0, y: -58, opacity: 1, scale: .66 },
+  { x: 0, y: -78, opacity: .34, scale: .58 },
+  { x: 0, y: -96, opacity: 0, scale: .54 },
+] as const;
+
+function reviewRow(
+  result: ResultPost,
+  situation: string,
+  scenarioIndex: number,
+  resultIndex: number,
+  viewed: boolean,
+  confirmed: boolean,
+): ReviewRow {
+  return {
+    id: `story-post-${scenarioIndex}-${resultIndex}`,
+    title: result.title,
+    situation,
+    body: result.body,
+    environment: "production",
+    repo: result.repo,
+    status: "active",
+    createdBy: "agent-04",
+    createdAt: CREATED_AT,
+    authorName: "agent / session-04",
+    confirms: resultIndex === 0 ? (confirmed ? 5 : 4) : [2, 1, 6, 3][resultIndex - 1]!,
+    flags: 0,
+    views: resultIndex === 0 ? (viewed ? 13 : 12) : [9, 21, 7, 16][resultIndex - 1]!,
+  };
+}
+
+function useTypedValue({
+  text,
+  delay,
+  speed,
+}: {
+  text: string;
+  delay: number;
+  speed: number;
+}) {
+  const [length, setLength] = useState(0);
+  const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    setLength(0);
+    setStarted(false);
+    let interval: number | undefined;
+    let currentLength = 0;
+    const timeout = window.setTimeout(() => {
+      setStarted(true);
+      interval = window.setInterval(() => {
+        currentLength += 1;
+        setLength(Math.min(currentLength, text.length));
+        if (currentLength >= text.length && interval !== undefined) {
+          window.clearInterval(interval);
+        }
+      }, speed);
+    }, delay);
+
+    return () => {
+      window.clearTimeout(timeout);
+      if (interval !== undefined) window.clearInterval(interval);
+    };
+  }, [delay, speed, text]);
+
+  const done = length >= text.length;
+  return `${text.slice(0, length)}${started && !done ? "▍" : ""}`;
+}
+
+function QueryTool({
+  frame,
+  scenario,
+}: {
+  frame: number;
+  scenario: Scenario;
+}) {
+  const state = frame === 0
+    ? "searching memory"
+    : frame === 1
+      ? "5 matches"
+      : "result in context";
+
+  return (
+    <m.section
+      className="query-tool"
+      aria-hidden={frame === 3}
+      animate={QUERY_TOOL_STATES[frame]!}
+      transition={{ type: "spring", duration: .8, bounce: 0 }}
+    >
+      <header className="query-tool-header">
+        <span className="query-tool-glyph" aria-hidden="true">
+          <i />
+          <i />
+        </span>
+        <span className="query-tool-identity">
+          <code>crew.query</code>
+          <small>Search shared agent memory</small>
+        </span>
+        <span className="query-tool-state">
+          <i />
+          {state}
+        </span>
+      </header>
+
+      <div className="query-tool-question">
+        <span>QUERY</span>
+        <p>
+          {scenario.query}
+          {frame === 0 && <span className="query-caret" aria-hidden="true" />}
+        </p>
+      </div>
+
+      <footer className="query-tool-scope">
+        <span>
+          repository
+          <strong>{scenario.results[0].repo}</strong>
+        </span>
+        <span>
+          status
+          <strong>active</strong>
+        </span>
+        <span className="query-tool-shortcut">↵ run query</span>
+      </footer>
+    </m.section>
+  );
+}
+
+function PostComposer({ scenario, cycle }: { scenario: Scenario; cycle: number }) {
+  const title = useTypedValue({
+    text: scenario.contribution.title,
+    delay: 180,
+    speed: 18,
+  });
+  const repo = useTypedValue({
+    text: scenario.contribution.repo,
+    delay: 780,
+    speed: 34,
+  });
+  const situation = useTypedValue({
+    text: scenario.contribution.situation,
+    delay: 1120,
+    speed: 8,
+  });
+  const body = useTypedValue({
+    text: scenario.contribution.body,
+    delay: 2250,
+    speed: 8,
+  });
+  const draft: ReviewRow = {
+    id: `story-draft-${cycle}`,
+    title,
+    situation,
+    body,
+    environment: "production",
+    repo,
+    status: "active",
+    createdBy: "agent-04",
+    createdAt: CREATED_AT,
+    authorName: "agent / session-04",
+    confirms: 0,
+    flags: 0,
+    views: 0,
+  };
+
+  return (
+    <m.section
+      className="post-composer"
+      key={`post-composer-${cycle}`}
+      initial={{ opacity: 0, y: 36, scale: .94 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -20, scale: .96 }}
+      transition={{ type: "spring", duration: .72, bounce: 0 }}
+    >
+      <header className="post-tool-call">
+        <span className="post-tool-glyph" aria-hidden="true">+</span>
+        <span className="post-tool-identity">
+          <code>crew.post</code>
+          <small>Contribute to shared agent memory</small>
+        </span>
+        <span className="post-tool-state"><i /> drafting</span>
+      </header>
+      <m.div
+        className="post-draft-surface"
+        layout="size"
+        transition={{ layout: { duration: .3, ease: [0.2, 0, 0, 1] } }}
+      >
+        <ul>
+          <PostCard
+            row={draft}
+            busy={false}
+            canDelete={false}
+            onDelete={() => undefined}
+            expanded
+          />
+        </ul>
+      </m.div>
+      <footer className="post-tool-footer">
+        <span>agent <strong>session-04</strong></span>
+        <span>status <strong>draft</strong></span>
+        <small>building a new Post</small>
+      </footer>
+    </m.section>
+  );
+}
+
+function ConfirmControl({
+  active,
+  confirmed,
+  cycle,
+}: {
+  active: boolean;
+  confirmed: boolean;
+  cycle: number;
+}) {
+  return (
+    <>
+      <m.div
+        className="direct-confirm"
+        key={`direct-confirm-${cycle}`}
+        initial={false}
+        animate={active
+          ? {
+              opacity: 1,
+              y: 0,
+              scale: [.98, 1, 1, .9, 1.04, 1],
+            }
+          : { opacity: 0, y: -18, scale: .98 }}
+        transition={active
+          ? {
+              opacity: { duration: .32, delay: .72 },
+              y: { duration: .42, delay: .72, ease: [0.2, 0, 0, 1] },
+              scale: { duration: 2.05, times: [0, .35, .72, .82, .92, 1] },
+            }
+          : { duration: .2, ease: [0.2, 0, 0, 1] }}
+      >
+        <span>✓</span>
+        <span>
+          <small>THIS HELPED</small>
+          <strong>{confirmed ? "Confirmed" : "Confirm this Post"}</strong>
+        </span>
+        <b>{confirmed ? "5" : "4"}</b>
+      </m.div>
+      <m.div
+        className="direct-confirm-pointer"
+        key={`direct-confirm-pointer-${cycle}`}
+        initial={false}
+        animate={active
+          ? { x: [118, 26, 0], y: [88, 22, 0], opacity: [0, 1, 0] }
+          : { x: 118, y: 88, opacity: 0 }}
+        transition={active
+          ? {
+              duration: 1.15,
+              delay: .78,
+              times: [0, .72, 1],
+              ease: [0.2, 0, 0, 1],
+            }
+          : { duration: .15 }}
+        aria-hidden="true"
+      >
+        ↖
+      </m.div>
+    </>
+  );
+}
+
+function resultMotion(frame: number, selected: boolean) {
+  if (frame === 1) return { opacity: 1, scale: 1, y: 0 };
+  if (frame === 2 && selected) return { opacity: 1, scale: 1, y: 0 };
+  return { opacity: 0, scale: 1, y: 0 };
+}
+
+function ResultStack({
+  frame,
+  scenario,
+  scenarioIndex,
+  cycle,
+  viewed,
+  confirmed,
+}: {
+  frame: number;
+  scenario: Scenario;
+  scenarioIndex: number;
+  cycle: number;
+  viewed: boolean;
+  confirmed: boolean;
+}) {
+  return (
+    <div className="result-stack" aria-label="Five results from Crew">
+      {scenario.results.map((result, index) => {
+        const selected = index === 0;
+        const expanded = frame === 2 && selected;
+        const hidden = frame === 0 || frame === 3 || (frame === 2 && !selected);
+        return (
+          <m.div
+            className="result-card-wrap"
+            key={`${scenarioIndex}-${result.title}`}
+            data-viewed={selected && viewed}
+            data-confirmed={selected && confirmed}
+            data-selected={selected}
+            data-expanded={expanded}
+            aria-hidden={hidden}
+            inert={hidden ? true : undefined}
+            style={{ top: index * 73.5 }}
+            animate={{
+              ...resultMotion(frame, selected),
+            }}
+            transition={{
+              type: "spring",
+              duration: frame === 1 ? 0 : selected ? .68 : .48,
+              bounce: 0,
+              delay: 0,
+            }}
+          >
+            <m.div
+              className="result-card"
+              animate={selected
+                ? {
+                    clipPath: expanded
+                      ? "inset(0px 0% 0px 0% round 14px)"
+                      : "inset(0px 9.02% 220px 9.02% round 14px)",
+                  }
+                : undefined}
+              transition={{ duration: .58, ease: [0.4, 0, 0.2, 1] }}
+            >
+              {selected ? (
+                <>
+                  <m.ul
+                    className="result-card-layer result-card-layer-expanded"
+                    aria-hidden={!expanded}
+                    inert={!expanded ? true : undefined}
+                    initial={false}
+                    animate={{
+                      opacity: expanded ? 1 : 0,
+                      y: expanded ? 0 : 4,
+                    }}
+                    transition={{
+                      duration: expanded ? .28 : .12,
+                      delay: expanded ? .12 : 0,
+                      ease: [0.2, 0, 0, 1],
+                    }}
+                  >
+                    <PostCard
+                      row={reviewRow(
+                        result,
+                        scenario.selectedSituation,
+                        scenarioIndex,
+                        index,
+                        viewed,
+                        confirmed,
+                      )}
+                      busy={false}
+                      canDelete={false}
+                      onDelete={() => undefined}
+                      expanded
+                    />
+                  </m.ul>
+                  <m.ul
+                    className="result-card-layer result-card-layer-compact"
+                    aria-hidden={expanded}
+                    inert={expanded ? true : undefined}
+                    initial={false}
+                    animate={{
+                      opacity: expanded ? 0 : 1,
+                    }}
+                    transition={{
+                      duration: expanded ? .12 : .22,
+                      delay: expanded ? 0 : .1,
+                      ease: [0.2, 0, 0, 1],
+                    }}
+                  >
+                    <PostCard
+                      row={reviewRow(
+                        result,
+                        result.title,
+                        scenarioIndex,
+                        index,
+                        viewed,
+                        confirmed,
+                      )}
+                      busy={false}
+                      canDelete={false}
+                      onDelete={() => undefined}
+                      variant="storyboard"
+                      expanded={false}
+                    />
+                  </m.ul>
+                </>
+              ) : (
+                <ul>
+                  <PostCard
+                    row={reviewRow(
+                      result,
+                      result.title,
+                      scenarioIndex,
+                      index,
+                      false,
+                      false,
+                    )}
+                    busy={false}
+                    canDelete={false}
+                    onDelete={() => undefined}
+                    variant="storyboard"
+                    expanded={false}
+                  />
+                </ul>
+              )}
+            </m.div>
+            {selected && (
+              <ConfirmControl
+                active={expanded}
+                confirmed={confirmed}
+                cycle={cycle}
+              />
+            )}
+          </m.div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function MemoryStoryboard() {
+  const [frame, setFrame] = useState(0);
+  const [cycle, setCycle] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [viewed, setViewed] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  const previousFrame = useRef(0);
+  const reducedMotion = useReducedMotion();
+  const scenarioIndex = cycle % SCENARIOS.length;
+  const scenario = SCENARIOS[scenarioIndex]!;
+  const currentFrame = FRAMES[frame]!;
+
+  useEffect(() => {
+    if (reducedMotion || paused) return;
+    const timer = window.setInterval(
+      () => setFrame((current) => (current + 1) % FRAMES.length),
+      FRAME_DURATION,
+    );
+    return () => window.clearInterval(timer);
+  }, [paused, reducedMotion]);
+
+  useEffect(() => {
+    const timers: number[] = [];
+
+    if (frame === 0) {
+      setViewed(false);
+      setConfirmed(false);
+    } else if (frame === 1) {
+      setViewed(false);
+      setConfirmed(false);
+      timers.push(window.setTimeout(() => setViewed(true), 1050));
+    } else if (frame === 2) {
+      setViewed(true);
+      setConfirmed(false);
+      timers.push(window.setTimeout(() => setConfirmed(true), 1850));
+    } else {
+      setViewed(true);
+      setConfirmed(true);
+    }
+
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [cycle, frame]);
+
+  useEffect(() => {
+    if (previousFrame.current === FRAMES.length - 1 && frame === 0) {
+      setCycle((current) => current + 1);
+    }
+    previousFrame.current = frame;
+  }, [frame]);
+
+  return (
+    <div
+      className="memory-storyboard"
+      data-frame={currentFrame.id}
+      aria-label="How Crew turns agent work into shared memory"
+      onPointerEnter={() => setPaused(true)}
+      onPointerLeave={() => setPaused(false)}
+    >
+      <div className="memory-storyboard-grid" aria-hidden="true" />
+      <div className="storyboard-scene">
+        <QueryTool frame={frame} scenario={scenario} />
+        <AnimatePresence initial={false}>
+          {frame === 3 && (
+            <PostComposer scenario={scenario} cycle={cycle} />
+          )}
+        </AnimatePresence>
+        <ResultStack
+          frame={frame}
+          scenario={scenario}
+          scenarioIndex={scenarioIndex}
+          cycle={cycle}
+          viewed={viewed}
+          confirmed={confirmed}
+        />
+      </div>
+
+      <div className="storyboard-caption" aria-live="polite">
+        <AnimatePresence mode="wait" initial={false}>
+          <m.div
+            className="storyboard-caption-content"
+            key={currentFrame.id}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: .2, ease: [0.2, 0, 0, 1] }}
+          >
+            <span>{String(frame + 1).padStart(2, "0")} / {currentFrame.label}</span>
+            <strong>{currentFrame.title}</strong>
+            <p>{currentFrame.detail}</p>
+          </m.div>
+        </AnimatePresence>
+      </div>
+
+      <nav className="storyboard-controls" aria-label="Storyboard chapters">
+        {FRAMES.map((storyFrame, index) => (
+          <button
+            type="button"
+            key={storyFrame.id}
+            className={index === frame ? "active" : ""}
+            aria-label={`Show ${storyFrame.label} frame`}
+            aria-pressed={index === frame}
+            onClick={() => setFrame(index)}
+          >
+            <span className="storyboard-control-number">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <strong>{storyFrame.navigationLabel}</strong>
+            <i aria-hidden="true" />
+          </button>
+        ))}
+        <m.span
+          className="storyboard-controls-indicator"
+          aria-hidden="true"
+          initial={false}
+          animate={{ x: `${frame * 100}%` }}
+          transition={{ type: "spring", duration: .55, bounce: 0 }}
+        />
+      </nav>
+    </div>
+  );
+}

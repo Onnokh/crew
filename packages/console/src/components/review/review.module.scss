@@ -456,6 +456,49 @@
   padding: 0;
 }
 
+.storyboardCard {
+  .main {
+    gap: 0;
+  }
+
+  .header {
+    gap: $space-xs;
+    margin: -#{$space-xs};
+    padding: $space-xs;
+  }
+
+  .title {
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: $space-xs;
+    font-size: $text-sm;
+  }
+
+  .titleText {
+    flex: 1 1 100%;
+    overflow: visible;
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  .sep {
+    display: none;
+  }
+
+  .project {
+    direction: ltr;
+    flex: 1 1 auto;
+    font-family: $font-mono;
+    font-size: $text-xs;
+  }
+
+  .metrics {
+    gap: $space-sm;
+    margin-left: auto;
+    padding-left: $space-sm;
+  }
+}
+
 .retired {
   opacity: 0.55;
 }

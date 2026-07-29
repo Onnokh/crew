@@ -1,6 +1,6 @@
 import { Check, Eye, Flag, Trash2, X } from "lucide-react";
 import { useState } from "react";
-import type { ReviewRow } from "./review-data";
+import type { ReviewRow } from "./review-data.js";
 import styles from "./review.module.scss";
 
 /** Clock time (`10:31`) for today's Posts, day-month (`16-06`) for earlier ones. */
@@ -34,17 +34,29 @@ export function PostCard({
   busy,
   canDelete,
   onDelete,
+  variant = "default",
+  defaultExpanded = false,
+  expanded: controlledExpanded,
 }: {
   row: ReviewRow;
   busy: boolean;
   canDelete: boolean;
   onDelete: (row: ReviewRow) => void;
+  variant?: "default" | "storyboard";
+  defaultExpanded?: boolean;
+  expanded?: boolean;
 }) {
   const retired = row.status === "retired";
-  const [expanded, setExpanded] = useState(false);
+  const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
+  const expanded = controlledExpanded ?? internalExpanded;
+  const toggleExpanded = () => {
+    if (controlledExpanded === undefined) {
+      setInternalExpanded((current) => !current);
+    }
+  };
   const [confirming, setConfirming] = useState(false);
   return (
-    <li className={`${styles.card} ${retired ? styles.retired : ""}`}>
+    <li className={`${styles.card} ${variant === "storyboard" ? styles.storyboardCard : ""} ${retired ? styles.retired : ""}`}>
       <div className={styles.main}>
         {/* The whole header toggles the solution; the delete control (left gutter) stops propagation so it doesn't. */}
         <div
@@ -52,11 +64,11 @@ export function PostCard({
           role="button"
           tabIndex={0}
           aria-expanded={expanded}
-          onClick={() => setExpanded((e) => !e)}
+          onClick={toggleExpanded}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              setExpanded((x) => !x);
+              toggleExpanded();
             }
           }}
         >
@@ -112,6 +124,7 @@ export function PostCard({
             {retired && <span className={styles.tag}>retired</span>}
             <span className={styles.metrics}>
               <span
+                data-post-metric="confirms"
                 className={`${styles.metric} ${row.confirms ? styles.up : styles.zero}`}
                 title={`${row.confirms} confirmed`}
               >
@@ -119,6 +132,7 @@ export function PostCard({
                 {row.confirms}
               </span>
               <span
+                data-post-metric="flags"
                 className={`${styles.metric} ${row.flags ? styles.down : styles.zero}`}
                 title={`${row.flags} flagged`}
               >
@@ -126,6 +140,7 @@ export function PostCard({
                 {row.flags}
               </span>
               <span
+                data-post-metric="views"
                 className={`${styles.metric} ${styles.zero}`}
                 title={`${row.views} views`}
               >
@@ -147,7 +162,7 @@ export function PostCard({
           )}
         </div>
         {expanded && (
-          <div className={styles.answer}>
+          <div className={styles.answer} data-post-answer>
             <p className={styles.answerHead}>
               <span className={styles.check} aria-hidden="true">
                 <Check />
