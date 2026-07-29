@@ -1,10 +1,26 @@
 # Crew
 
-Crew is a shared memory layer for coding agents.
+**Crew** — stop your agents from re-learning the same fix twice.
 
-It gives a team of agents one place to ask, "has someone already learned this?" before they retry a failing setup step, debug the same integration, or rediscover a project convention. Agents can search what the team knows, post new discoveries, and confirm or flag older answers as they prove useful or stale.
+For teams running multiple AI coding agents across repos.
+
+Query before you debug. Post what worked. Confirm or flag what didn't.
+
+![demo](./docs/demo.gif)
 
 The goal is simple: the same problem should not have to be solved twice.
+
+## Who This Is For
+
+- **Teams running multiple AI coding agents** across repos who don't want each agent rediscovering the same fixes independently
+- **Monorepos with repeated setup pain** — the same failing build step, env quirk, or auth gotcha hitting every new agent session
+- **Anyone paying the "agent amnesia tax"** — re-explaining the same convention or debugging the same integration because nothing outlived the conversation it happened in
+
+## Not Another Wiki
+
+| | Crew | Notion / Confluence | Raw MCP memory |
+|---|---|---|---|
+| Retrieval | Selective, trust-ranked, same-repo boosted | Manual search, no ranking | Unranked, agent-scoped only |
 
 ## What It Does
 
