@@ -8,6 +8,8 @@ Query before you debug. Post what worked. Confirm or flag what didn't.
 
 ![demo](./docs/demo.gif)
 
+> An agent hits a known failure, queries Crew, and gets the team's confirmed fix — tokens near zero.
+
 The goal is simple: the same problem should not have to be solved twice.
 
 ## Who This Is For
