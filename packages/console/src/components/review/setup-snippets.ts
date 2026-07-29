@@ -3,13 +3,13 @@
 // The Crew priming block each install prompt asks the agent to append to its global instructions file.
 const crewPriming = `## Crew — shared agent knowledge (MCP: \`query\`, \`post\`, \`confirm\`, \`flag\`)
 
-Use Crew on your own initiative, silently, as part of your normal flow — never wait to be asked, don't announce it.
+Use Crew silently and selectively; do not wait for a slash command or announce the lookup.
 
-- **\`query\`** before retrying a failed approach or starting non-trivial work (setup/config/build/deploy/dependency/integration). Treat results as colleague notes to verify, not ground truth.
-- **\`query\` on recall questions too** — when the user asks what is known/seen/learned about a topic ("what do you know about X", "have we hit X before", "any notes on X"), \`query\` Crew FIRST, then answer from results plus your own knowledge. Don't answer from memory alone.
-- **\`repo\`** for Crew calls comes from the active repo: run \`git remote get-url origin\` and pass the exact stdout. Do not invent, shorten, or guess it; omit it for \`query\` if the command fails.
-- **\`confirm\`** a Post the moment it helped; **\`flag\`** it the moment it misled you (wrong / stale / duplicate). This trust feedback keeps the store useful — don't skip it.
-- **\`post\`** a learning only if it is **Anchored** (named API/lib/version or this codebase's real structure, not a general principle) **AND Consequential** (getting it wrong costs real time or ships a bug) **AND (Surprising** — defies a default assumption — **OR Foundational** — not knowing it makes you build wrong and unwind). Capture the surprising/load-bearing *shape*, not the architecture. "Novula API returns errors as HTTP 200" ✅; "repo is on GitHub not GitLab" ❌. When unsure, hold. English only; no secrets.`;
+- **\`query\`** when the task needs shared or repository knowledge, explicit recall, an opaque failure or retry, a convention/API/dependency contract, or low-confidence external context. Before querying, inspect enough local evidence to distinguish a knowledge-dependent task from fully local deterministic work; abstain when local evidence is sufficient.
+- Preserve the caller's situation plus optional environment and repository when querying. Normalize transport details and repository identity only; do not invent adaptive follow-up queries.
+- Treat retrieved Posts as colleague notes, not ground truth. Verify them against the task before relying on them.
+- **\`confirm\`** a Post the moment it helped; **\`flag\`** it the moment it was wrong, stale, or duplicate. Do not skip the trust loop.
+- **\`post\`** only when the learning is **Anchored** (a named API/library/version or this codebase's real structure) **AND Consequential** (getting it wrong costs real time or ships a bug) **AND (Surprising** — defies a default assumption — **OR Foundational** — not knowing it makes an agent build wrong and unwind). Capture the load-bearing shape, never generic facts, secrets, PII, or exhaustive architecture. Write in English.`;
 
 /** Everything the setup tabs render, built once from the live MCP endpoint. */
 export type SetupContent = {
@@ -45,6 +45,11 @@ export function buildSetupContent(mcpEndpoint: string): SetupContent {
   ${mcpEndpoint} \\
   --header "Authorization: Bearer <YOUR_TOKEN>"`;
 
+  const addMcpCommand = `npx add-mcp "${mcpEndpoint}" --name crew --global --agent claude-code --agent codex --agent cursor --header "Authorization: Bearer <YOUR_TOKEN>" --yes`;
+  const addMcpClaudeCommand = `npx add-mcp "${mcpEndpoint}" --name crew --global --agent claude-code --header "Authorization: Bearer <YOUR_TOKEN>" --yes`;
+  const addMcpCodexCommand = `npx add-mcp "${mcpEndpoint}" --name crew --global --agent codex --header "Authorization: Bearer <YOUR_TOKEN>" --yes`;
+  const addMcpCursorCommand = `npx add-mcp "${mcpEndpoint}" --name crew --global --agent cursor --header "Authorization: Bearer <YOUR_TOKEN>" --yes`;
+
   // OpenCode reads an `opencode.json` with an `mcp` block; a remote server uses `type: "remote"`.
   const openCodeSnippet = `{
   "$schema": "https://opencode.ai/config.json",
@@ -62,6 +67,7 @@ export function buildSetupContent(mcpEndpoint: string): SetupContent {
     { label: "Add the Crew plugin marketplace.", code: "claude plugin marketplace add Onnokh/crew" },
     { label: "Install the Crew plugin.", code: "claude plugin install crew@crew" },
     { label: "Register Crew as a user-scoped MCP server.", code: mcpAddCommand },
+    { label: "Or add the MCP server with add-mcp.", code: addMcpClaudeCommand },
     { label: "Append this block to your global ~/.claude/CLAUDE.md (create it if missing).", code: crewPriming },
   ];
 
@@ -69,6 +75,7 @@ export function buildSetupContent(mcpEndpoint: string): SetupContent {
     { label: "Add the Crew plugin marketplace.", code: "codex plugin marketplace add Onnokh/crew" },
     { label: "Install the Crew plugin.", code: "codex plugin add crew@crew" },
     { label: "Add this MCP server config.", code: mcpConfigSnippet },
+    { label: "Or add the MCP server with add-mcp.", code: addMcpCodexCommand },
     { label: "Append this block to your global ~/.codex/AGENTS.md (create it if missing).", code: crewPriming },
   ];
 
@@ -82,6 +89,7 @@ export function buildSetupContent(mcpEndpoint: string): SetupContent {
     }
   }
 }` },
+    { label: "Or add the MCP server with add-mcp.", code: addMcpCursorCommand },
     { label: "Paste this block into Cursor Settings → Rules → User Rules.", code: crewPriming },
   ];
 
@@ -94,6 +102,7 @@ export function buildSetupContent(mcpEndpoint: string): SetupContent {
   const manualManualInstructions = [
     { label: "Install the Crew skills.", code: "npx skills add Onnokh/crew --global --skill crew --skill ask-crew --skill reflect --skill introduce" },
     { label: "Add this global MCP config.", code: mcpConfigSnippet },
+    { label: "Or add Crew to Claude Code, Codex, and Cursor with add-mcp.", code: addMcpCommand },
     { label: "Append this block to your global agent instructions file (~/.claude/CLAUDE.md, ~/.codex/AGENTS.md, ~/.config/opencode/AGENTS.md, or Cursor User Rules).", code: crewPriming },
   ];
 
@@ -106,6 +115,10 @@ npx skills add Onnokh/crew --global --skill crew --skill ask-crew --skill reflec
 2. Add Crew as a global MCP server named "crew":
 
 ${mcpConfigSnippet}
+
+Alternatively, install it for Claude Code, Codex, and Cursor with add-mcp:
+
+${addMcpCommand}
 
 Replace <YOUR_TOKEN> with the API key I'll give you (minted on the Crew admin page).
 
@@ -134,6 +147,10 @@ claude mcp add --scope user --transport http crew \\
   ${mcpEndpoint} \\
   --header "Authorization: Bearer <YOUR_TOKEN>"
 
+Alternatively, register it with add-mcp:
+
+${addMcpClaudeCommand}
+
 Replace <YOUR_TOKEN> with the API key I'll give you (minted on the Crew admin page).
 
 4. Append the block below to my global ~/.claude/CLAUDE.md (create the file if it doesn't exist), then tell me what you changed:
@@ -155,6 +172,10 @@ codex plugin add crew@crew
 ${mcpEndpoint}
 
 Authorization: Bearer <YOUR_TOKEN>
+
+Alternatively, register it with add-mcp:
+
+${addMcpCodexCommand}
 
 Replace <YOUR_TOKEN> with the API key I'll give you (minted on the Crew admin page).
 
@@ -180,6 +201,10 @@ npx skills add Onnokh/crew --agent cursor --global --skill crew --skill ask-crew
 }
 
 Replace <YOUR_TOKEN> with the API key I'll give you (minted on the Crew admin page).
+
+Alternatively, register it with add-mcp:
+
+${addMcpCursorCommand}
 
 3. Append the block below to ./AGENTS.md at the project root (create it if missing) so Cursor picks up the priming. For every project, also paste the same block into Cursor Settings → Rules → User Rules.
 
