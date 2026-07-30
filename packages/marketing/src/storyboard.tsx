@@ -379,6 +379,7 @@ function ResultStack({
         const selected = index === 0;
         const expanded = frame === 2 && selected;
         const hidden = frame === 0 || frame === 3 || (frame === 2 && !selected);
+        const motionState = resultMotion(frame, selected);
         return (
           <m.div
             className="result-card-wrap"
@@ -389,9 +390,8 @@ function ResultStack({
             aria-hidden={hidden}
             inert={hidden ? true : undefined}
             style={{ top: index * 73.5 }}
-            animate={{
-              ...resultMotion(frame, selected),
-            }}
+            initial={motionState}
+            animate={motionState}
             transition={{
               type: "spring",
               duration: frame === 1 ? .6 : selected ? .68 : .48,
