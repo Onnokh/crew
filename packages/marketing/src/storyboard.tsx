@@ -562,8 +562,8 @@ export function MemoryStoryboard() {
       className="memory-storyboard"
       data-frame={currentFrame.id}
       aria-label="How Crew turns agent work into shared memory"
-      onPointerEnter={() => setPaused(true)}
-      onPointerLeave={() => setPaused(false)}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
     >
       <div className="storyboard-atmosphere" aria-hidden="true">
         <Clouds

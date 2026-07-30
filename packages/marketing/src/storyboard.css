@@ -627,8 +627,8 @@
   .storyboard-scene {
     inset: 44px 12px 100px;
     transform: scale(.76);
-    transform-origin: center top;
-    width: calc(100% / .76);
+    transform-origin: left top;
+    width: 131.58%;
   }
 
   .storyboard-caption {
