@@ -118,6 +118,16 @@
   white-space: pre;
 }
 
+.setupCodeWrapper {
+  position: relative;
+  width: 100%;
+
+  .setupCode {
+    margin-bottom: 0;
+    padding-right: calc($space-xl * 2);
+  }
+}
+
 .setupSection {
   width: 100%;
   margin-top: $space-sm;
@@ -362,6 +372,11 @@
   transition:
     border-color 0.15s ease,
     color 0.15s ease;
+
+  option {
+    background: $color-bg;
+    color: $color-text;
+  }
 
   &:hover {
     color: $color-text;
