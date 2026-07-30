@@ -57,6 +57,8 @@ h1 em { color: var(--color-text-muted); font-style: normal; font-weight: 500; }
 .pill { align-items: center; border-radius: 4px; display: inline-flex; font-size: 16px; font-weight: 500; gap: 12px; justify-content: center; min-height: 48px; padding: 0 22px; transition: background-color 160ms ease, box-shadow 200ms ease; }
 .pill.primary { background: var(--color-accent); box-shadow: 0 2px 6px #0000001a, inset 0 1px #ffffff29; color: #fff; }
 .pill.primary:hover { background: #000; box-shadow: 0 6px 20px #00000029, inset 0 1px #ffffff33; }
+.pill.secondary { border: 1px solid var(--color-border-strong); background: var(--color-bg); color: var(--color-text); }
+.pill.secondary:hover { background: var(--color-surface-hover); box-shadow: 0 4px 14px #00000012; }
 .pill.coming-soon,
 .pill.coming-soon:hover { background: var(--color-accent); box-shadow: 0 2px 6px #0000001a, inset 0 1px #ffffff29; cursor: not-allowed; }
 .footer { align-items: center; color: var(--color-text-muted); display: flex; flex: none; font-size: 13px; justify-content: space-between; letter-spacing: -.005em; padding: clamp(12px, 1.8vh, 18px) clamp(16px, 3vw, 32px) clamp(12px, 2vh, 21px); }

@@ -48,6 +48,7 @@ function App() {
             </div>
             <div className="actions">
               <span className="pill primary coming-soon" aria-disabled="true">Coming soon.</span>
+              <a className="pill secondary" href="/console">Console</a>
             </div>
           </main>
           <Footer />
