@@ -5,7 +5,7 @@ import { createRoot } from "react-dom/client";
 import { routeTree } from "./routeTree.gen";
 import "./styles/global.scss";
 
-const router = createRouter({ routeTree });
+const router = createRouter({ routeTree, basepath: "/console" });
 
 // `retry: false` so an auth failure (401/403) surfaces at once rather than being
 // retried as a transient network blip.

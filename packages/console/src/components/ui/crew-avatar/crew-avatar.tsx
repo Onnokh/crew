@@ -1,4 +1,4 @@
-import crewProfile from "../../../assets/crew-profile.png";
+import crewProfile from "../../../assets/crew-profile.webp";
 import styles from "./crew-avatar.module.scss";
 
 export function CrewAvatar() {

@@ -4,6 +4,7 @@ import { mountAdmin } from "./api/admin.js";
 import { mountAuth } from "./api/auth.js";
 import { mountCommunity } from "./api/community.js";
 import { mountConsole } from "./api/console.js";
+import { mountMarketing } from "./api/marketing.js";
 import { mountMe } from "./api/me.js";
 import { mountReview } from "./api/review.js";
 import { mountTelemetry } from "./api/telemetry.js";
@@ -66,10 +67,10 @@ export function buildServer(deps: Deps): FastMCP<Principal> {
   // console so its SPA catch-all doesn't swallow it; cheap (no SPA render).
   server.getApp().get("/healthz", (c) => c.json({ ok: true }));
 
-  // The built console SPA, served statically with a client-route fallback.
-  // Mounted LAST so its catch-all only sees what `/api/auth/*` and `/mcp` left
-  // behind. No-ops when the console hasn't been built (dev, tests).
+  // The built frontend SPAs, served after all API/MCP routes so their
+  // catch-alls only see what the product routes left behind.
   mountConsole(server.getApp());
+  mountMarketing(server.getApp());
 
   return server;
 }

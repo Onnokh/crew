@@ -7,6 +7,7 @@ import { defineConfig } from "vite";
 const serverUrl = process.env.CREW_SERVER_URL ?? "http://localhost:8080";
 
 export default defineConfig({
+  base: "/console/",
   plugins: [
     tanstackRouter({ target: "react", autoCodeSplitting: true }),
     react(),

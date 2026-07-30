@@ -11,7 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { authClient, useSession } from "../../auth/client";
-import crewProfile from "../../assets/crew-profile.png";
+import crewProfile from "../../assets/crew-profile.webp";
 import type { TeamRow, UserRow } from "../../hooks/use-admin-data";
 import { avatarUrl } from "../ui/user-avatar/user-avatar";
 import { ThemeToggle } from "../ui/theme-toggle/theme-toggle";
