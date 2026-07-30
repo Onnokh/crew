@@ -32,11 +32,12 @@ ENV ONNXRUNTIME_NODE_INSTALL_CUDA=skip
 
 # Install with the lockfile first, using only the manifests, so this layer caches
 # across source-only changes. `npm ci` validates the lockfile against EVERY
-# workspace manifest, so both must be present even though only the server builds
-# here.
+# workspace manifest, so all workspace manifests must be present even though
+# only the server builds here.
 COPY package-lock.json package.json tsconfig.base.json ./
 COPY packages/server/package.json packages/server/
 COPY packages/console/package.json packages/console/
+COPY packages/marketing/package.json packages/marketing/
 RUN npm ci
 
 # Now the source.
@@ -46,28 +47,29 @@ COPY packages/server/ packages/server/
 ENV CREW_MODEL_CACHE_DIR=/app/models
 RUN cd packages/server && npm run bake-model
 
-# ── Console builder: Vite-build the web SPA (pure JS, NO native toolchain) ───────
-# The frontend build needs no C/C++ toolchain (no better-sqlite3 / onnxruntime
-# here), so this stage stays off `builder` and skips apt entirely — keeping it
-# light and parallelisable. Its node_modules + source never reach the runner;
-# only the resulting `dist/` is copied across below.
-FROM base AS console-builder
+# ── Frontend builder: Vite-build the marketing site and console ───────────────
+# The frontend builds need no C/C++ toolchain (no better-sqlite3 / onnxruntime
+# here), so this stage stays off `builder` and skips apt entirely. Its
+# node_modules + source never reach the runner; only the resulting `dist/`
+# directories are copied across below.
+FROM base AS frontend-builder
 
 # `npm ci` validates the lockfile against EVERY workspace manifest, so all
-# package.json files must be present even though we only build the console. The
-# workspace has two members (server + console); claude-plugin is not an npm
-# package. Copy manifests first so this layer caches across source edits,
-# mirroring the server builder's structure.
+# package.json files must be present for every npm workspace. Copy manifests
+# first so this layer caches across source edits, mirroring the server builder's
+# structure.
 COPY package-lock.json package.json tsconfig.base.json ./
 COPY packages/server/package.json packages/server/
 COPY packages/console/package.json packages/console/
+COPY packages/marketing/package.json packages/marketing/
 RUN npm ci
 
-# Now the console source + the shared base tsconfig it extends. `vite build` runs
-# the TanStack Router plugin, which generates src/routeTree.gen.ts fresh, then
-# emits the static bundle to packages/console/dist.
+# The marketing build imports a shared avatar component from the console
+# package, so both frontend sources are present in this stage.
 COPY packages/console/ packages/console/
-RUN npm run build -w @crew/console
+COPY packages/marketing/ packages/marketing/
+RUN npm run build -w @crew/console \
+  && npm run build -w @crew/marketing
 
 # ── Runner: slim, toolchain-free, non-root ──────────────────────────────────────
 FROM base AS runner
@@ -87,13 +89,10 @@ ENV NODE_ENV=production \
 # Carry over the compiled deps, source, and baked model from the builder.
 COPY --from=builder /app /app
 
-# Bundle the built console SPA. The server's CWD is /app/packages/server, and
-# mountConsole's default dist path is resolve(cwd, "../console/dist") =>
-# /app/packages/console/dist — so dropping the Vite output exactly there lets the
-# Hono app find and serve it with no CREW_CONSOLE_DIST override. The console
-# builder never had the server's node_modules and the server builder never had
-# the console, so this dist MUST come from console-builder via its own COPY.
-COPY --from=console-builder /app/packages/console/dist /app/packages/console/dist
+# Bundle the built frontend SPAs. The server's CWD is /app/packages/server, and
+# the static mounts resolve their sibling package dist directories from there.
+COPY --from=frontend-builder /app/packages/console/dist /app/packages/console/dist
+COPY --from=frontend-builder /app/packages/marketing/dist /app/packages/marketing/dist
 
 # Persisted SQLite lives on a volume mounted at /data; create it owned by the
 # unprivileged `node` user that ships with the base image.

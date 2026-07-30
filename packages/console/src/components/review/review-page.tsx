@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { useReducer, useRef } from "react";
 import { apiFetch } from "../../api/client";
-import crewProfile from "../../assets/crew-profile.png";
 import { useSession } from "../../auth/client";
 import {
   ClaudeLogo,
@@ -11,6 +10,7 @@ import {
   CursorLogo,
   OpenCodeLogo,
 } from "../ui/brand-logos/brand-logos";
+import { CrewAvatar } from "../ui/crew-avatar/crew-avatar";
 import { CopyButton, InstallPrompt } from "./install-prompt";
 import { PostList } from "./post-list";
 import { buildSetupContent, type ManualInstruction } from "./setup-snippets";
@@ -240,16 +240,7 @@ export function ReviewPage() {
   return (
     <section className={styles.page}>
       <header className={styles.hero}>
-        <div className={styles.avatarFrame}>
-          <img
-            className={styles.avatar}
-            src={crewProfile}
-            alt="Crew profile"
-            width={80}
-            height={80}
-            decoding="async"
-          />
-        </div>
+        <CrewAvatar />
         <h1 className={styles.heroHeading}>
           <span className={styles.heroName}>I'm Crew.</span>{" "}
           <span className={styles.heroRest}>

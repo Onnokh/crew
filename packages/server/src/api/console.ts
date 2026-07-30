@@ -4,7 +4,7 @@ import { isAbsolute, relative, resolve } from "node:path";
 import type { Hono } from "hono";
 
 /**
- * Serves the built console SPA from `dist/` as static assets, with a GET
+ * Serves the built console SPA under `/console` as static assets, with a GET
  * catch-all falling back to `index.html` so client-route deep links load the
  * shell. Must mount AFTER auth and `/mcp` so it only catches what they didn't.
  * If `dist/` is absent, mounts nothing and returns `false` (boots without a build).
@@ -23,24 +23,31 @@ export function mountConsole(app: Hono): boolean {
   // `serveStatic`'s `root` must be CWD-relative with forward slashes (absolute
   // paths unsupported; the middleware can't read Windows back-slashes).
   const root = relative(process.cwd(), distDir).split("\\").join("/");
+  const rewriteRequestPath = (path: string) =>
+    path.replace(/^\/console(?=\/|$)/, "") || "/";
+
+  app.get("/console", (c) => c.redirect("/console/"));
 
   // Cache policy that survives deploys (set after the response so it sticks —
   // serveStatic's own onFound runs too late to add headers). Vite content-hashes
   // everything under /assets/, so cache it immutably for a year; the un-hashed
   // HTML shell must revalidate every load so a deploy's new chunk names take
   // effect immediately instead of a stale shell pointing at deleted chunks.
-  app.use("/assets/*", async (c, next) => {
+  app.use("/console/assets/*", async (c, next) => {
     await next();
     c.header("Cache-Control", "public, max-age=31536000, immutable");
   });
-  app.use("/*", async (c, next) => {
+  app.use("/console/*", async (c, next) => {
     await next();
     if (c.res.headers.get("Content-Type")?.includes("text/html")) {
       c.header("Cache-Control", "no-cache");
     }
   });
 
-  app.use("/*", serveStatic({ root }));
+  app.use(
+    "/console/*",
+    serveStatic({ root, rewriteRequestPath }),
+  );
 
   // A MISSING hashed asset must 404 — never fall through to the SPA shell.
   // Otherwise a request for a chunk that briefly doesn't exist (e.g. the window
@@ -48,10 +55,13 @@ export function mountConsole(app: Hono): boolean {
   // happily caches UNDER THE ASSET URL. After the deploy the real chunk exists,
   // but caches keep serving that HTML, and the module loader rejects it with
   // "Failed to fetch dynamically imported module". 404 keeps the cache clean.
-  app.get("/assets/*", (c) => c.text("Not found", 404));
+  app.get("/console/assets/*", (c) => c.text("Not found", 404));
 
   // Client-route fallback: a non-asset GET that matched no file gets the SPA shell.
-  app.get("/*", serveStatic({ root, path: "index.html" }));
+  app.get(
+    "/console/*",
+    serveStatic({ root, path: "index.html" }),
+  );
 
   return true;
 }

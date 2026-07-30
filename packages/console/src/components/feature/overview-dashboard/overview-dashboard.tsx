@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, FileText, Users } from "lucide-react";
 import { useMemo } from "react";
 import { apiFetch } from "../../../api/client";
-import crewProfile from "../../../assets/crew-profile.png";
+import crewProfile from "../../../assets/crew-profile.webp";
 import { useSession } from "../../../auth/client";
 import {
   telemetryKeys,
