@@ -641,6 +641,51 @@
   .storyboard-caption-content strong { font-size: 22px; }
   .storyboard-caption-content p { display: none; }
 
+  .query-tool-header,
+  .post-tool-call {
+    gap: 10px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .query-tool-state,
+  .post-tool-state {
+    gap: 5px;
+    padding: 6px 7px;
+  }
+
+  .query-tool-scope {
+    flex-wrap: wrap;
+    min-height: 0;
+    padding: 10px 12px 12px;
+  }
+
+  .query-tool-scope > span:not(.query-tool-shortcut) {
+    flex: 1 1 auto;
+  }
+
+  .query-tool-shortcut {
+    flex: 1 0 100%;
+    margin-left: 0;
+    text-align: right;
+  }
+
+  .post-tool-footer {
+    flex-wrap: wrap;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .post-tool-footer > span {
+    flex: 1 1 auto;
+  }
+
+  .post-tool-footer small {
+    flex: 1 0 100%;
+    margin-left: 0;
+    text-align: right;
+  }
+
   .storyboard-controls {
     bottom: 12px;
     left: 18px;
