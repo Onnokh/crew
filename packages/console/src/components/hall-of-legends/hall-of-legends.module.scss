@@ -231,3 +231,22 @@
     rgba(0, 0, 0, 0.4) 4px
   );
 }
+
+@media (max-width: 640px) {
+  .podiumRestRow {
+    grid-template-columns: 1.25rem 1.75rem minmax(0, 1fr) auto;
+    gap: $space-sm;
+  }
+
+  .restName {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .restMeta {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

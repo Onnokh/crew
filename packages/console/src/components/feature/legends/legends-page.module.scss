@@ -14,7 +14,7 @@ $chart-body-height: 300px;
 }
 
 .chartBody {
-  width: $chart-body-height;
+  width: min(100%, $chart-body-height);
   min-height: $chart-body-height;
   height: $chart-body-height;
 }
@@ -64,5 +64,9 @@ $chart-body-height: 300px;
 @media (max-width: 700px) {
   .pieRow {
     grid-template-columns: 1fr;
+  }
+
+  .chartBody {
+    justify-self: center;
   }
 }

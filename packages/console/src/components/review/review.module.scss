@@ -750,3 +750,80 @@
     background: transparent;
   }
 }
+
+@media (max-width: 640px) {
+  .hero {
+    gap: $space-md;
+    margin-bottom: $space-xl;
+  }
+
+  .setupTabs {
+    width: 100%;
+  }
+
+  .setupTab {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .listHeader {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .tabList {
+    gap: $space-lg;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .listFilters {
+    flex-wrap: wrap;
+    margin-bottom: $space-sm;
+  }
+
+  .projectSelect {
+    flex: 1 1 12rem;
+    min-width: 0;
+  }
+
+  .header {
+    gap: $space-xs;
+  }
+
+  .title {
+    flex-wrap: wrap;
+    row-gap: $space-xs;
+  }
+
+  .titleText {
+    flex: 1 1 100%;
+    overflow: visible;
+    white-space: normal;
+  }
+
+  .sep {
+    display: none;
+  }
+
+  .project {
+    direction: ltr;
+    flex: 1 1 auto;
+  }
+
+  .metrics {
+    gap: $space-sm;
+    padding-left: $space-sm;
+  }
+}

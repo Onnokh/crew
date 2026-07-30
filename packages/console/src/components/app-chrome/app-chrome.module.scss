@@ -209,3 +209,21 @@ $measure: 57.5rem; // 920px
   max-width: $measure;
   margin: 0 auto;
 }
+
+@media (max-width: 640px) {
+  .content {
+    padding: $space-md $space-md calc($space-xl * 2);
+  }
+
+  .actions {
+    gap: $space-sm;
+    margin-bottom: $space-xl;
+  }
+
+  .userName {
+    max-width: 8rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
