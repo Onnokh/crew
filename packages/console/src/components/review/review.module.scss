@@ -495,7 +495,7 @@
 .main {
   display: flex;
   flex-direction: column;
-  gap: $space-sm;
+  gap: $space-md;
 }
 
 // The clickable header (title + situation) toggles the solution. Inset padding
@@ -656,9 +656,11 @@
 
 .situation {
   margin: 0;
+  max-width: 90ch;
   color: $color-text-muted;
   font-size: $text-base;
   line-height: $lh-base;
+  text-wrap: pretty;
 }
 
 .tag {
@@ -677,6 +679,9 @@
 .answer {
   display: flex;
   flex-direction: column;
+  gap: $space-sm;
+  padding-top: $space-md;
+  box-shadow: inset 0 1px $color-border;
 }
 
 .answerHead {
@@ -714,11 +719,12 @@
 
 .body {
   margin: 0;
-  max-width: 100ch;
+  max-width: 90ch;
   color: $color-text;
   font-size: $text-base;
   line-height: $lh-base;
   white-space: pre-wrap;
+  text-wrap: pretty;
 }
 
 // Delete reddens on hover; the neutral controls keep the standard .iconButton hover.

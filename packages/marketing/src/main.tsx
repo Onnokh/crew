@@ -17,7 +17,7 @@ function Brand() {
 function Footer() {
   return (
     <footer className="footer">
-      <span className="footer-byline"><span>Built by <a href="https://github.com/Onnokh">Onkie</a></span></span>
+      <span className="footer-byline">Built by <a href="https://github.com/Onnokh">Onkie</a></span>
       <nav aria-label="Footer navigation">
         <a href="https://github.com/Onnokh/crew">GitHub</a>
         <a href="/privacy">Privacy</a>

@@ -39,83 +39,47 @@ const FRAMES = [
 
 const SCENARIOS = [
   {
-    query: "What has the team learned about storing normalized auth callback URLs in crew/server?",
-    selectedSituation: "Implementing OAuth callbacks across providers — should redirect matching preserve trailing slashes and query parameters, or normalize URLs before persistence?",
+    query: "How does the team stop background jobs from finishing in the wrong order?",
+    selectedSituation: "Several workers can finish jobs in a different order. Can we trust the queue, or should each record check which job is newer?",
     results: [
       {
-        title: "Normalize stored callback URLs",
-        body: "Canonicalize the origin and pathname before storing callback URLs. Remove a trailing slash only from non-root paths, preserve explicitly allowed query parameters, and use the same normalizer for persistence and redirect matching. This keeps provider callbacks deterministic without collapsing distinct routes.",
-        repo: "crew/server",
+        title: "Local testing hides job order bugs",
+        body: "The local queue runs one job at a time, but production runs many jobs together. An older job can finish after a newer one. Give each job a version number and ignore jobs older than the saved version.",
+        repo: "acme/dispatch",
       },
       {
-        title: "Preserve callback query parameters after login",
-        body: "Carry the original query string through the provider round trip.",
-        repo: "crew/console",
+        title: "Keep job IDs across retries",
+        body: "Keep the original job ID every time the queue retries it.",
+        repo: "northstar/api",
       },
       {
-        title: "Reject callbacks outside configured origins",
-        body: "Compare normalized origins before accepting the redirect target.",
-        repo: "crew/server",
+        title: "Queue lag can mean slow workers",
+        body: "A growing queue can mean workers are slow even when jobs are healthy.",
+        repo: "relay/ops",
       },
       {
-        title: "Scope auth state nonces to one browser session",
-        body: "Do not reuse state tokens across parallel authentication attempts.",
-        repo: "crew/console",
+        title: "Move jobs aside after too many failures",
+        body: "Stop retrying a broken job forever and let fresh work continue.",
+        repo: "acme/dispatch",
       },
       {
-        title: "Decode callback paths before allowlist checks",
-        body: "Validate the decoded path so equivalent URLs cannot bypass matching.",
-        repo: "crew/server",
+        title: "Run scheduled tasks only once",
+        body: "Use a lock so two workers cannot start the same scheduled task.",
+        repo: "relay/ops",
       },
     ],
     contribution: {
-      title: "Share callback rules",
-      situation: "Documenting the callback behavior discovered while aligning provider redirects with stored allowlist entries.",
-      body: "The cache and redirect matcher must derive keys from the same normalized origin.",
-      repo: "crew/server",
-    },
-  },
-  {
-    query: "What has the team learned about repeated ingestion worker retries in crew/telemetry?",
-    selectedSituation: "Reviewing repeated ingestion failures — should retry behavior live in the repository, the worker, or at the API boundary?",
-    results: [
-      {
-        title: "Keep retries at the API boundary",
-        body: "Give the repository a single deterministic write attempt and keep retry policy at the API boundary. Preserve the ingestion ID across attempts, apply bounded backoff in the worker, and hand exhausted events to the dead-letter path. This prevents duplicate records while keeping failure policy visible to the caller.",
-        repo: "crew/telemetry",
-      },
-      {
-        title: "Preserve ingestion IDs across retry attempts",
-        body: "Every attempt must retain the original event identity.",
-        repo: "crew/server",
-      },
-      {
-        title: "Cap retry backoff before dead-letter handoff",
-        body: "Move exhausted events aside instead of extending the retry window forever.",
-        repo: "crew/telemetry",
-      },
-      {
-        title: "Log worker attempt IDs with every failure",
-        body: "The attempt ID ties application logs back to queue delivery history.",
-        repo: "crew/server",
-      },
-      {
-        title: "Make repository writes idempotent by event key",
-        body: "A retried event should update the same record instead of creating another.",
-        repo: "crew/telemetry",
-      },
-    ],
-    contribution: {
-      title: "Share retry signals",
-      situation: "Capturing the signal that separated a slow ingestion consumer from an event that repeatedly failed processing.",
-      body: "Queue lag separates a slow consumer from an event that is repeatedly failing.",
-      repo: "crew/telemetry",
+      title: "Skip jobs with an old version",
+      situation: "An older job can arrive after the same record has already been updated by a newer job.",
+      body: "Save the latest version number with the record. Skip any job with the same or a lower number.",
+      repo: "acme/dispatch",
     },
   },
 ] as const;
 
 const FRAME_DURATION = 4200;
 const CREATED_AT = Date.now();
+const RESULT_VIEWS = [12, 9, 21, 7, 16] as const;
 
 type Scenario = (typeof SCENARIOS)[number];
 type ResultPost = Scenario["results"][number];
@@ -148,7 +112,7 @@ function reviewRow(
     authorName: "agent / session-04",
     confirms: resultIndex === 0 ? (confirmed ? 5 : 4) : [2, 1, 6, 3][resultIndex - 1]!,
     flags: 0,
-    views: resultIndex === 0 ? (viewed ? 13 : 12) : [9, 21, 7, 16][resultIndex - 1]!,
+    views: RESULT_VIEWS[resultIndex]! + (viewed ? 1 : 0),
   };
 }
 
@@ -387,9 +351,11 @@ function ConfirmControl({
 }
 
 function resultMotion(frame: number, selected: boolean) {
+  if (frame === 0) return { opacity: 0, scale: .985, y: 18 };
   if (frame === 1) return { opacity: 1, scale: 1, y: 0 };
   if (frame === 2 && selected) return { opacity: 1, scale: 1, y: 0 };
-  return { opacity: 0, scale: 1, y: 0 };
+  if (frame === 2) return { opacity: 0, scale: 1, y: 0 };
+  return { opacity: 0, scale: 1, y: -8 };
 }
 
 function ResultStack({
@@ -417,7 +383,6 @@ function ResultStack({
           <m.div
             className="result-card-wrap"
             key={`${scenarioIndex}-${result.title}`}
-            data-viewed={selected && viewed}
             data-confirmed={selected && confirmed}
             data-selected={selected}
             data-expanded={expanded}
@@ -429,18 +394,18 @@ function ResultStack({
             }}
             transition={{
               type: "spring",
-              duration: frame === 1 ? 0 : selected ? .68 : .48,
+              duration: frame === 1 ? .6 : selected ? .68 : .48,
               bounce: 0,
-              delay: 0,
+              delay: frame === 1 ? .18 + index * .08 : 0,
             }}
           >
             <m.div
               className="result-card"
               animate={selected
                 ? {
-                    clipPath: expanded
+                  clipPath: expanded
                       ? "inset(0px 0% 0px 0% round 14px)"
-                      : "inset(0px 9.02% 220px 9.02% round 14px)",
+                      : "inset(0px 9.02% 252px 9.02% round 14px)",
                   }
                 : undefined}
               transition={{ duration: .58, ease: [0.4, 0, 0.2, 1] }}
@@ -516,7 +481,7 @@ function ResultStack({
                       result.title,
                       scenarioIndex,
                       index,
-                      false,
+                      viewed,
                       false,
                     )}
                     busy={false}
@@ -572,7 +537,7 @@ export function MemoryStoryboard() {
     } else if (frame === 1) {
       setViewed(false);
       setConfirmed(false);
-      timers.push(window.setTimeout(() => setViewed(true), 1050));
+      timers.push(window.setTimeout(() => setViewed(true), 1450));
     } else if (frame === 2) {
       setViewed(true);
       setConfirmed(false);
