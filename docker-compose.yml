@@ -9,6 +9,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VITE_RYBBIT_SITE_ID: ${VITE_RYBBIT_SITE_ID:-}
+        VITE_RYBBIT_SCRIPT_SRC: ${VITE_RYBBIT_SCRIPT_SRC:-https://rybbit.missingmounts.com/api/script.js}
     # The container always listens on 8080 internally (Dockerfile PORT default);
     # CREW_HOST_PORT (.env) picks the published host port — 8087 to match the plugin.
     ports:

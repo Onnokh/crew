@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
 import { CrewAvatar } from "../../console/src/components/ui/crew-avatar/crew-avatar.js";
 import { MemoryStoryboard } from "./storyboard.js";
+import { RybbitScript } from "./rybbit-script.js";
 import "./styles.css";
 
 function Brand() {
@@ -31,6 +32,7 @@ function App() {
 
   return (
     <div className="page" id="top">
+      <RybbitScript />
       <header className="mobile-header">
         <Brand />
         <button type="button" className="menu-button" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><span /><span /></button>

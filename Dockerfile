@@ -54,6 +54,13 @@ RUN cd packages/server && npm run bake-model
 # directories are copied across below.
 FROM base AS frontend-builder
 
+# Rybbit's public site ID and script URL are intentionally build-time values;
+# no Rybbit API key is sent to the browser.
+ARG VITE_RYBBIT_SITE_ID
+ARG VITE_RYBBIT_SCRIPT_SRC=https://rybbit.missingmounts.com/api/script.js
+ENV VITE_RYBBIT_SITE_ID=$VITE_RYBBIT_SITE_ID \
+    VITE_RYBBIT_SCRIPT_SRC=$VITE_RYBBIT_SCRIPT_SRC
+
 # `npm ci` validates the lockfile against EVERY workspace manifest, so all
 # package.json files must be present for every npm workspace. Copy manifests
 # first so this layer caches across source edits, mirroring the server builder's
