@@ -70,18 +70,44 @@
   --tone-pink-fg: #e072b8;
 }
 
-// Kill the default cross-fade so the only motion is the toggle's clip expansion;
-// stack the incoming theme over the outgoing one.
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
+// Theme swap (armed by `useTheme`, which supplies the origin of the circle).
+// The outgoing theme just sits still while the incoming one is revealed through
+// a growing circular clip, so the default cross-fade has to go.
+//
+// The radius is measured in CSS, not script: `lvw`/`lvh` are the box the browser
+// snapshots, whereas `window.innerWidth`/`innerHeight` shrink under a retracting
+// mobile URL bar. A radius from those falls short of the far corner, and the
+// uncovered strip snaps in when the animation ends.
+:root[data-theme-reveal] {
+  --theme-reveal-radius: hypot(
+    max(var(--theme-reveal-x), 100lvw - var(--theme-reveal-x)),
+    max(var(--theme-reveal-y), 100lvh - var(--theme-reveal-y))
+  );
+
+  &::view-transition-old(root) {
+    animation: none;
+    mix-blend-mode: normal;
+    z-index: 1;
+  }
+
+  &::view-transition-new(root) {
+    animation: theme-reveal 500ms linear;
+    mix-blend-mode: normal;
+    z-index: 2;
+  }
 }
-::view-transition-old(root) {
-  z-index: 1;
-}
-::view-transition-new(root) {
-  z-index: 2;
+
+// Linear: the edge of the circle travels at one speed from the toggle to the far
+// corner. Eased, it crawls at both ends, which reads as the swap stalling.
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0 at var(--theme-reveal-x) var(--theme-reveal-y));
+  }
+  to {
+    clip-path: circle(
+      var(--theme-reveal-radius) at var(--theme-reveal-x) var(--theme-reveal-y)
+    );
+  }
 }
 
 * {

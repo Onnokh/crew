@@ -37,6 +37,10 @@ function setTheme(next: Theme): void {
   for (const cb of listeners) cb();
 }
 
+// Distinguishes overlapping reveals: a superseded transition still settles, and
+// it must not strip the rule out from under the one now running.
+let revealToken = 0;
+
 export function useTheme() {
   const theme = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
@@ -55,30 +59,25 @@ export function useTheme() {
         return;
       }
 
-      const x = event.clientX;
-      const y = event.clientY;
-      const radius = Math.hypot(
-        Math.max(x, window.innerWidth - x),
-        Math.max(y, window.innerHeight - y),
-      );
+      // The reveal itself is CSS (see `theme-reveal` in styles/global.scss); this
+      // only hands it the origin and arms the rule. Keeping the keyframes in CSS
+      // means the transition lasts exactly as long as the reveal: an animation
+      // attached from `ready` starts a frame late, and the browser's own 250ms
+      // default can tear the snapshots down while the circle is still growing —
+      // the reveal then stops part-way and the rest of the page snaps over.
+      const root = document.documentElement;
+      root.style.setProperty("--theme-reveal-x", `${event.clientX}px`);
+      root.style.setProperty("--theme-reveal-y", `${event.clientY}px`);
+      root.dataset.themeReveal = "";
 
-      document
-        .startViewTransition(() => setTheme(next))
-        .ready.then(() => {
-          document.documentElement.animate(
-            {
-              clipPath: [
-                `circle(0px at ${x}px ${y}px)`,
-                `circle(${radius}px at ${x}px ${y}px)`,
-              ],
-            },
-            {
-              duration: 500,
-              easing: "ease-in-out",
-              pseudoElement: "::view-transition-new(root)",
-            },
-          );
-        });
+      const token = ++revealToken;
+      const transition = document.startViewTransition(() => setTheme(next));
+      // A second toggle supersedes this one; only the last one may disarm, or the
+      // fast clicker loses the clip half-way through the reveal they can see.
+      const disarm = () => {
+        if (token === revealToken) delete root.dataset.themeReveal;
+      };
+      transition.finished.then(disarm, disarm);
     },
     [theme],
   );
