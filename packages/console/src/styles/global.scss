@@ -70,28 +70,42 @@
   --tone-pink-fg: #e072b8;
 }
 
-// Theme swap (armed by `useTheme`, which supplies the origin of the circle).
-// The outgoing theme just sits still while the incoming one is revealed through
-// a growing circular clip, so the default cross-fade has to go.
+// Theme swap (armed by `useTheme`, which supplies the origin and the radius of
+// the circle). The outgoing theme just sits still while the incoming one is
+// revealed through a growing circular clip, so the default cross-fade has to go.
 //
-// The radius is measured in CSS, not script: `lvw`/`lvh` are the box the browser
-// snapshots, whereas `window.innerWidth`/`innerHeight` shrink under a retracting
-// mobile URL bar. A radius from those falls short of the far corner, and the
-// uncovered strip snaps in when the animation ends.
-:root[data-theme-reveal] {
-  --theme-reveal-radius: hypot(
-    max(var(--theme-reveal-x), 100lvw - var(--theme-reveal-x)),
-    max(var(--theme-reveal-y), 100lvh - var(--theme-reveal-y))
-  );
+// A view transition lives as long as the animations in its pseudo tree, and the
+// browser's own animations run for 250ms. Where an engine measures that lifetime
+// against only one of them — the group, or the old snapshot — the snapshots are
+// torn down at 250ms and the half-grown circle snaps to full screen. So every
+// animation here is pinned to $theme-reveal-hold, one beat longer than the
+// reveal: whichever one an engine watches, the circle is already complete.
+$theme-reveal: 500ms;
+$theme-reveal-hold: 620ms;
 
+:root[data-theme-reveal] {
+  // The group keeps its own geometry animation, stretched; the image pair has
+  // none of its own, so it is held like the snapshots.
+  &::view-transition-group(root) {
+    animation-duration: $theme-reveal-hold;
+  }
+
+  &::view-transition-image-pair(root) {
+    animation: theme-hold $theme-reveal-hold linear;
+  }
+
+  // `theme-hold` is the UA cross-fade's replacement, not an effect of its own:
+  // it holds the outgoing theme at full strength for the whole reveal.
   &::view-transition-old(root) {
-    animation: none;
+    animation: theme-hold $theme-reveal-hold linear;
     mix-blend-mode: normal;
     z-index: 1;
   }
 
   &::view-transition-new(root) {
-    animation: theme-reveal 500ms linear;
+    animation:
+      theme-reveal $theme-reveal linear,
+      theme-hold $theme-reveal-hold linear;
     mix-blend-mode: normal;
     z-index: 2;
   }
@@ -107,6 +121,13 @@
     clip-path: circle(
       var(--theme-reveal-radius) at var(--theme-reveal-x) var(--theme-reveal-y)
     );
+  }
+}
+
+@keyframes theme-hold {
+  from,
+  to {
+    opacity: 1;
   }
 }
 

@@ -60,14 +60,32 @@ export function useTheme() {
       }
 
       // The reveal itself is CSS (see `theme-reveal` in styles/global.scss); this
-      // only hands it the origin and arms the rule. Keeping the keyframes in CSS
-      // means the transition lasts exactly as long as the reveal: an animation
-      // attached from `ready` starts a frame late, and the browser's own 250ms
-      // default can tear the snapshots down while the circle is still growing —
-      // the reveal then stops part-way and the rest of the page snaps over.
+      // only hands it the geometry and arms the rule. Keeping the keyframes in
+      // CSS means they are in place on the first frame of the transition — an
+      // animation attached from `ready` arrives a frame late, by which time the
+      // browser may already have sized the transition to its own 250ms default.
+      const x = event.clientX;
+      const y = event.clientY;
+      // The far corner of the box the browser snapshots. `innerWidth`/
+      // `innerHeight` shrink under a retracting mobile URL bar and `clientWidth`/
+      // `clientHeight` shrink by the scrollbar, so neither alone reaches it.
+      const width = Math.max(
+        window.innerWidth,
+        document.documentElement.clientWidth,
+      );
+      const height = Math.max(
+        window.innerHeight,
+        document.documentElement.clientHeight,
+      );
+      const radius = Math.hypot(
+        Math.max(x, width - x),
+        Math.max(y, height - y),
+      );
+
       const root = document.documentElement;
-      root.style.setProperty("--theme-reveal-x", `${event.clientX}px`);
-      root.style.setProperty("--theme-reveal-y", `${event.clientY}px`);
+      root.style.setProperty("--theme-reveal-x", `${x}px`);
+      root.style.setProperty("--theme-reveal-y", `${y}px`);
+      root.style.setProperty("--theme-reveal-radius", `${radius}px`);
       root.dataset.themeReveal = "";
 
       const token = ++revealToken;
