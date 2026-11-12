@@ -57,7 +57,7 @@ FROM base AS frontend-builder
 # Rybbit's public site ID and script URL are intentionally build-time values;
 # no Rybbit API key is sent to the browser.
 ARG VITE_RYBBIT_SITE_ID
-ARG VITE_RYBBIT_SCRIPT_SRC=https://rybbit.missingmounts.com/api/script.js
+ARG VITE_RYBBIT_SCRIPT_SRC=https://rybbit.onkie.dev/api/script.js
 ENV VITE_RYBBIT_SITE_ID=$VITE_RYBBIT_SITE_ID \
     VITE_RYBBIT_SCRIPT_SRC=$VITE_RYBBIT_SCRIPT_SRC
 
